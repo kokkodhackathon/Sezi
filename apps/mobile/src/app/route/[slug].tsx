@@ -1,6 +1,6 @@
-import { Camera, GeoJSONSource, Layer, Map } from '@maplibre/maplibre-react-native';
+import { Camera, GeoJSONSource, Layer } from '@maplibre/maplibre-react-native';
 import { distanceM, type LngLat, type ThemeColors } from '@sezi/shared';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -8,13 +8,15 @@ import { InfoIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
 import { CengelMark } from '@/design/motif';
 import { radius, space, type, upper } from '@/design/type';
 import { colorForType, WorkGlyph } from '@/design/work-glyph';
+import { DeferredMap } from '@/components/deferred-map';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
 import { boundsOf, planRoute, walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { useGuidanceSimulation } from '@/lib/simulation';
+import { useSettings } from '@/lib/settings';
+import { Button } from '@/components/ui';
 
-const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const SPEEDS = [1, 3, 8];
 
 export default function RouteScreen() {
@@ -25,7 +27,8 @@ export default function RouteScreen() {
   const { profile } = useProfile();
   const plan = useMemo(() => (profile ? planRoute(slug, profile) : null), [slug, profile]);
   const [speed, setSpeed] = useState(1);
-  const sim = useGuidanceSimulation(plan, profile!, speed);
+  const { settings, markVisited } = useSettings();
+  const sim = useGuidanceSimulation(plan, profile!, speed, { speechRate: settings.speechRate, onArrive: () => markVisited(slug) });
 
   if (!profile || !plan) {
     return (
@@ -82,7 +85,7 @@ export default function RouteScreen() {
         </View>
 
         <View style={s.map} accessible accessibilityLabel={tr('route.mapLabel', { m: Math.round(plan.route.lengthM) })} importantForAccessibility="no-hide-descendants">
-          <Map style={StyleSheet.absoluteFill} mapStyle={MAP_STYLE}>
+          <DeferredMap>
             <Camera initialViewState={{ bounds: boundsOf(plan.geometry.line), padding: { top: 36, bottom: 36, left: 36, right: 36 } }} />
             <GeoJSONSource id="route" data={routeLine}>
               <Layer id="route-casing" type="line" layout={{ 'line-cap': 'round', 'line-join': 'round' }} paint={{ 'line-color': t.surface, 'line-width': 10 }} />
@@ -102,7 +105,7 @@ export default function RouteScreen() {
               <Layer id="walker-halo" type="circle" paint={{ 'circle-radius': 16, 'circle-color': t.accent, 'circle-opacity': 0.22 }} />
               <Layer id="walker-dot" type="circle" paint={{ 'circle-radius': 8, 'circle-color': t.accent, 'circle-stroke-width': 3, 'circle-stroke-color': t.surface }} />
             </GeoJSONSource>
-          </Map>
+          </DeferredMap>
         </View>
 
         {/* Canlı talimat kartı: ekran okuyucu her yeni talimatı duyurur. */}
@@ -149,6 +152,16 @@ export default function RouteScreen() {
             <Text style={[type.button, { color: t.text }]}>{tr('route.repeat')}</Text>
           </Pressable>
         </View>
+
+        <Button
+          variant="outline"
+          label={tr('guide.fullscreen')}
+          hint={tr('guide.fullscreenHint')}
+          onPress={() => {
+            sim.pause();
+            router.push({ pathname: '/guide/[slug]', params: { slug } });
+          }}
+        />
 
         <View style={s.speedRow} accessibilityRole="radiogroup" accessibilityLabel={tr('route.speed')}>
           <Text style={[type.eyebrow, { color: t.textMuted }]}>{upper(tr('route.speed'), lang)}</Text>

@@ -2,7 +2,8 @@
  * Lab: native modül risk testi (harita, mekânsal ses, pusula, haptik, TTS).
  * Demo ekranı değildir; özellikler gerçek ekranlara taşındıkça sadeleşecek.
  */
-import { Camera, GeoJSONSource, Layer, Map } from '@maplibre/maplibre-react-native';
+import { Camera, GeoJSONSource, Layer } from '@maplibre/maplibre-react-native';
+import { DeferredMap } from '@/components/deferred-map';
 import { bearingDeg, stereoPan, themes, type LngLat } from '@sezi/shared';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
@@ -12,7 +13,6 @@ import { Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'r
 import { AudioContext, type OscillatorNode, type StereoPannerNode } from 'react-native-audio-api';
 
 const SULEYMANIYE: LngLat = [28.9639, 41.0162];
-const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
 export default function Lab() {
   const t = themes[useColorScheme() === 'dark' ? 'dark' : 'light'];
@@ -82,7 +82,7 @@ export default function Lab() {
   return (
     <ScrollView style={{ backgroundColor: t.background }} contentContainerStyle={styles.body}>
       <View style={styles.map}>
-        <Map style={StyleSheet.absoluteFill} mapStyle={MAP_STYLE}>
+        <DeferredMap>
           <Camera initialViewState={{ center: SULEYMANIYE, zoom: 16 }} />
           {/* Marker (ViewAnnotation) RN 0.86 Fabric ile çöküyor; noktalar GeoJSON katmanıyla çizilir. */}
           <GeoJSONSource id="works" data={{ type: 'Point', coordinates: SULEYMANIYE }}>
@@ -92,7 +92,7 @@ export default function Lab() {
               paint={{ 'circle-radius': 9, 'circle-color': t.accent, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' }}
             />
           </GeoJSONSource>
-        </Map>
+        </DeferredMap>
       </View>
 
       <Text style={[styles.h, { color: t.text }]}>Pusula</Text>

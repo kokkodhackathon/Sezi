@@ -1,3 +1,4 @@
+import { enApp, trApp } from './messages-app';
 import { useProfile } from './profile';
 
 export type Lang = 'tr' | 'en';
@@ -108,9 +109,10 @@ const tr = {
   'route.dataNote': 'Yol verisi: OpenStreetMap. Basamak ve zemin bilgisi saha ölçümüyle doğrulanacak.',
 } as const;
 
-export type MessageKey = keyof typeof tr;
+type CoreKey = keyof typeof tr;
+export type MessageKey = CoreKey | keyof typeof trApp;
 
-const en: Record<MessageKey, string> = {
+const en: Record<CoreKey, string> = {
   'tabs.explore': 'Explore',
   'tabs.profile': 'Profile',
   'tabs.lab': 'Lab',
@@ -216,7 +218,7 @@ const en: Record<MessageKey, string> = {
   'route.dataNote': 'Path data: OpenStreetMap. Steps and surfaces will be verified on site.',
 };
 
-const dictionaries: Record<Lang, Record<MessageKey, string>> = { tr, en };
+const dictionaries: Record<Lang, Record<MessageKey, string>> = { tr: { ...tr, ...trApp }, en: { ...en, ...enApp } };
 
 export function translate(lang: Lang, key: MessageKey, vars?: Record<string, string | number>): string {
   let s = dictionaries[lang][key];

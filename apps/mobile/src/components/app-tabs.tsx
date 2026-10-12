@@ -13,6 +13,7 @@ export default function AppTabs() {
       backgroundColor={t.surface}
       // Seçili sekme göstergesi: birincil rengin açık tonu; simge ve yazı birincil renkte kalır.
       indicatorColor={`${t.primary}2E`}
+      labelVisibilityMode="labeled"
       iconColor={{ default: t.textMuted, selected: t.primary }}
       labelStyle={{
         default: { color: t.textMuted, fontFamily: font.bodySemi, fontSize: 13 },
@@ -23,14 +24,19 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon sf={{ default: 'map', selected: 'map.fill' }} md="explore" />
       </NativeTabs.Trigger>
 
+      <NativeTabs.Trigger name="tours">
+        <NativeTabs.Trigger.Label>{tr('tabs.tours')}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="point.topleft.down.to.point.bottomright.curvepath" md="route" />
+      </NativeTabs.Trigger>
+
+      <NativeTabs.Trigger name="ask">
+        <NativeTabs.Trigger.Label>{tr('tabs.ask')}</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf={{ default: 'bubble.left.and.text.bubble.right', selected: 'bubble.left.and.text.bubble.right.fill' }} md="forum" />
+      </NativeTabs.Trigger>
+
       <NativeTabs.Trigger name="profile">
         <NativeTabs.Trigger.Label>{tr('tabs.profile')}</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} md="accessibility_new" />
-      </NativeTabs.Trigger>
-
-      <NativeTabs.Trigger name="lab">
-        <NativeTabs.Trigger.Label>{tr('tabs.lab')}</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="waveform" md="graphic_eq" />
       </NativeTabs.Trigger>
     </NativeTabs>
   );

@@ -96,3 +96,29 @@ export function boundsOf(line: LngLat[]): [number, number, number, number] {
 }
 
 export const pilotLandmarks = [...nodes.values()].filter((n) => n.lynchType === 'landmark');
+
+/** İki düğüm arası rota uzunluğu ve basamak sayısı (tur planlama için). */
+export function legBetween(fromId: string, toId: string, profile: UserProfile): { lengthM: number; stairs: number } | null {
+  const r = findRoute(segments, profile, fromId, toId);
+  if (!r) return null;
+  return { lengthM: r.lengthM, stairs: r.segmentIds.filter((id) => (segMap.get(id)?.steps ?? 0) > 0).length };
+}
+
+/** Bir esere en yakın yol segmenti (erişilebilirlik bildirimi bu segmente bağlanır). */
+export function nearestSegmentId(p: LngLat): string {
+  let best = segments[0]!.id;
+  let bestD = Infinity;
+  for (const s of segments) {
+    const pts = s.geometry ?? [nodes.get(s.from)!.location, nodes.get(s.to)!.location];
+    for (const q of pts) {
+      const d = distanceM(p, q);
+      if (d < bestD) {
+        bestD = d;
+        best = s.id;
+      }
+    }
+  }
+  return best;
+}
+
+export const DEFAULT_START_POINT = DEFAULT_START;

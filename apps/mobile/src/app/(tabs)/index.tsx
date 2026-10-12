@@ -1,4 +1,4 @@
-import { Camera, GeoJSONSource, Layer, Map } from '@maplibre/maplibre-react-native';
+import { Camera, GeoJSONSource, Layer } from '@maplibre/maplibre-react-native';
 import type { ThemeColors } from '@sezi/shared';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -6,14 +6,15 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, V
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ScreenHeader } from '@/components/screen-header';
-import { ChevronIcon } from '@/design/icons';
+import { ChevronIcon, SearchIcon } from '@/design/icons';
+import { Medallion } from '@/design/motif';
 import { radius, space, type } from '@/design/type';
 import { typeColor, WorkGlyph, WorkGlyphInline } from '@/design/work-glyph';
+import { DeferredMap } from '@/components/deferred-map';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT, type Lang } from '@/lib/i18n';
 import { loc, useWorks, type WorkRow } from '@/lib/works';
 
-const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const SULEYMANIYE: [number, number] = [28.9639, 41.0162];
 
 // Harita noktaları liste glifleriyle aynı tür rengini taşır.
@@ -62,12 +63,21 @@ export default function Explore() {
         subtitle={works ? `${tr('explore.subtitle')} · ${tr('explore.count', { n: works.length })}` : tr('explore.subtitle')}
       />
 
+      <Pressable
+        onPress={() => router.push('/search')}
+        accessibilityRole="search"
+        accessibilityLabel={tr('explore.searchCta')}
+        style={({ pressed }) => [s.search, pressed && { borderColor: t.primary }]}>
+        <SearchIcon color={t.textMuted} />
+        <Text style={[type.body, { color: t.textMuted, flex: 1 }]}>{tr('explore.searchCta')}</Text>
+      </Pressable>
+
       <View
         style={s.map}
         accessible
         accessibilityLabel={tr('explore.mapLabel', { n: visible.length })}
         importantForAccessibility="no-hide-descendants">
-        <Map style={StyleSheet.absoluteFill} mapStyle={MAP_STYLE}>
+        <DeferredMap>
           <Camera initialViewState={{ center: SULEYMANIYE, zoom: 15.7 }} />
           <GeoJSONSource
             id="works"
@@ -83,8 +93,21 @@ export default function Explore() {
               paint={{ 'circle-radius': 9, 'circle-color': circleColor as never, 'circle-stroke-width': 2, 'circle-stroke-color': t.surface }}
             />
           </GeoJSONSource>
-        </Map>
+        </DeferredMap>
       </View>
+
+      <Pressable
+        onPress={() => router.push({ pathname: '/complex/[slug]', params: { slug: 'suleymaniye' } })}
+        accessibilityRole="button"
+        accessibilityHint={tr('explore.complexCtaHint')}
+        style={({ pressed }) => [s.complex, pressed && { opacity: 0.9 }]}>
+        <Medallion primary={t.onPrimary} accent={t.accent} ink={t.primary} size={56} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={[type.itemTitle, { color: t.onPrimary }]}>{tr('explore.complexCta')}</Text>
+          <Text style={[type.meta, { color: t.onPrimary, opacity: 0.85 }]}>{tr('explore.subtitle')}</Text>
+        </View>
+        <ChevronIcon color={t.onPrimary} />
+      </Pressable>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips} style={s.chipsRow}>
         <Chip label={tr('explore.all')} selected={type_ === null} onPress={() => setType(null)} t={t} />
@@ -173,6 +196,8 @@ const makeStyles = (t: ThemeColors) =>
     header: { gap: space.lg, paddingBottom: space.md },
     map: { height: 280, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },
     chipsRow: { marginHorizontal: -space.lg },
+    search: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56, paddingHorizontal: space.lg, borderRadius: radius.pill, borderWidth: 1.5, borderColor: t.border, backgroundColor: t.surface },
+    complex: { flexDirection: 'row', alignItems: 'center', gap: space.lg, padding: space.lg, borderRadius: radius.lg, backgroundColor: t.primary },
     chips: { gap: space.sm, paddingHorizontal: space.lg },
     empty: { gap: space.md, alignItems: 'flex-start', paddingTop: space.lg },
   });

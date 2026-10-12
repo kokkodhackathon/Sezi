@@ -63,7 +63,14 @@ function playLandmarkCue(pan: number) {
   }
 }
 
-export function useGuidanceSimulation(plan: PlannedRoute | null, profile: UserProfile, speedFactor: number) {
+export function useGuidanceSimulation(
+  plan: PlannedRoute | null,
+  profile: UserProfile,
+  speedFactor: number,
+  opts: { speechRate?: number; onArrive?: () => void } = {},
+) {
+  const optsRef = useRef(opts);
+  optsRef.current = opts;
   const total = plan ? plan.geometry.nodeAtM.at(-1)! : 0;
   const start = plan?.geometry.line[0] ?? ([0, 0] as LngLat);
   const [state, setState] = useState<SimState>({ running: false, finished: false, distance: 0, position: start, heading: 0, stepIndex: -1 });
@@ -78,7 +85,7 @@ export function useGuidanceSimulation(plan: PlannedRoute | null, profile: UserPr
       if (profile.senses.haptic) void hapticForTurn(step.turn, arrived);
       if (profile.senses.audio) {
         Speech.stop();
-        Speech.speak(step.text, { language: profile.lang === 'tr' ? 'tr-TR' : 'en-US', rate: 0.95 });
+        Speech.speak(step.text, { language: profile.lang === 'tr' ? 'tr-TR' : 'en-US', rate: optsRef.current.speechRate ?? 0.95 });
       }
     },
     [plan, profile],
@@ -106,6 +113,7 @@ export function useGuidanceSimulation(plan: PlannedRoute | null, profile: UserPr
         announce(plan.steps[stepIndex]!, stepIndex, position, heading);
       }
       const finished = distance >= total && stepIndex === plan.steps.length - 1;
+      if (finished && !prev.finished) optsRef.current.onArrive?.();
       setState({ running: !finished, finished, distance, position, heading, stepIndex });
     }, TICK_MS);
     return () => clearInterval(id);

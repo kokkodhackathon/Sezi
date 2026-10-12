@@ -61,3 +61,12 @@ export function TurnIcon({ turn, arrived, color, size = 28 }: IconProps & { turn
     </Svg>
   );
 }
+
+export function SearchIcon({ color, size = 20 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Circle cx="10.5" cy="10.5" r="6.5" stroke={color} strokeWidth={2.4} fill="none" />
+      <Path d="M15.5 15.5 L20.5 20.5" stroke={color} strokeWidth={2.6} strokeLinecap="round" />
+    </Svg>
+  );
+}

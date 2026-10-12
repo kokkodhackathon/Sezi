@@ -1,4 +1,4 @@
-import { Camera, GeoJSONSource, Layer, Map } from '@maplibre/maplibre-react-native';
+import { Camera, GeoJSONSource, Layer } from '@maplibre/maplibre-react-native';
 import type { ThemeColors } from '@sezi/shared';
 import * as Speech from 'expo-speech';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
@@ -8,13 +8,16 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, Vi
 import { ExternalIcon, InfoIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
 import { CengelMark, KilimBand } from '@/design/motif';
 import { radius, space, type, upper } from '@/design/type';
-import { colorForType, WorkGlyph } from '@/design/work-glyph';
+import { colorForType, WorkGlyph, WorkGlyphInline } from '@/design/work-glyph';
+import { DeferredMap } from '@/components/deferred-map';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
-import { hasRouteTo } from '@/lib/nav';
+import { Badge, Card, ListRow } from '@/components/ui';
+import { hasRouteTo, planRoute } from '@/lib/nav';
+import { useProfile } from '@/lib/profile';
+import { useSettings } from '@/lib/settings';
 import { loc, useWork, type WorkRow } from '@/lib/works';
 
-const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 
 export default function WorkDetail() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -47,6 +50,10 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
   const kind = loc(work.type_name, lang);
   const complex = loc(work.complex_name, lang);
   const history = loc(work.history, lang);
+  const { profile } = useProfile();
+  const { visited, settings } = useSettings();
+  const isVisited = visited.includes(work.slug);
+  const access = profile && hasRouteTo(work.slug) ? planRoute(work.slug, profile) : null;
 
   useEffect(() => () => void Speech.stop(), []);
 
@@ -60,6 +67,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
     setSpeaking(true);
     Speech.speak(narration, {
       language: lang === 'tr' ? 'tr-TR' : 'en-US',
+      rate: settings.speechRate,
       onDone: () => setSpeaking(false),
       onStopped: () => setSpeaking(false),
     });
@@ -77,6 +85,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
             {name}
           </Text>
           {complex ? <Text style={[type.meta, { color: t.textMuted }]}>{complex}</Text> : null}
+          {isVisited ? <Badge label={tr('work.visited')} tone='primary' /> : null}
         </View>
       </View>
 
@@ -100,7 +109,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
       ) : null}
 
       <View style={s.map} accessible accessibilityLabel={tr('work.mapLabel', { name })} importantForAccessibility="no-hide-descendants">
-        <Map style={StyleSheet.absoluteFill} mapStyle={MAP_STYLE} dragPan={false} touchZoom={false} touchRotate={false}>
+        <DeferredMap dragPan={false} touchZoom={false} touchRotate={false}>
           <Camera initialViewState={{ center: [work.lng, work.lat], zoom: 17 }} />
           <GeoJSONSource id="work" data={{ type: 'Point', coordinates: [work.lng, work.lat] }}>
             <Layer id="work-halo" type="circle" paint={{ 'circle-radius': 18, 'circle-color': t.surface, 'circle-opacity': 0.9 }} />
@@ -110,7 +119,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
               paint={{ 'circle-radius': 11, 'circle-color': colorForType(work.type_slug), 'circle-stroke-width': 3, 'circle-stroke-color': t.surface }}
             />
           </GeoJSONSource>
-        </Map>
+        </DeferredMap>
       </View>
 
       {t.motifOpacity > 0 ? (
@@ -128,6 +137,31 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
             <Text style={[type.meta, { color: t.textMuted, flex: 1 }]}>{tr('work.noHistory')}</Text>
           </View>
         )}
+      </Section>
+
+      <Section title={tr('work.gallery')} t={t}>
+        <View style={s.gallery}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={[s.galleryTile, { borderColor: t.border, backgroundColor: t.surface }]} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+              <View style={[StyleSheet.absoluteFill, { backgroundColor: colorForType(work.type_slug), opacity: 0.06 + i * 0.04, borderRadius: radius.md }]} />
+              <WorkGlyphInline slug={work.type_slug} color={colorForType(work.type_slug)} size={28} />
+            </View>
+          ))}
+        </View>
+        <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.noGallery')}</Text>
+      </Section>
+
+      <Section title={tr('work.access')} t={t}>
+        <Card padded={false}>
+          {access ? (
+            <>
+              <ListRow first title={access.stairSegments === 0 ? tr('work.accessStepFree') : tr('work.accessStairs', { n: access.stairSegments })} subtitle={tr('work.accessRoute', { m: Math.round(access.route.lengthM) })} />
+              <ListRow title={tr('work.report')} hint={tr('work.reportHint')} onPress={() => router.push({ pathname: '/report/new', params: { work: work.slug } })} />
+            </>
+          ) : (
+            <ListRow first title={tr('work.accessUnknown')} />
+          )}
+        </Card>
       </Section>
 
       <Section title={tr('work.sources')} t={t}>
@@ -199,6 +233,8 @@ const makeStyles = (t: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'center',
     },
+    gallery: { flexDirection: 'row', gap: space.sm },
+    galleryTile: { flex: 1, height: 88, borderRadius: radius.md, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', opacity: 0.8 },
     map: { height: 200, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },
     band: { height: 10, marginHorizontal: -space.lg },
     note: {
