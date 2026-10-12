@@ -1,0 +1,60 @@
+# Sezi
+
+Vakıf eserlerine Kevin Lynch'in bilişsel haritalama yaklaşımıyla (landmark / node) yönlendiren, çok duyulu ve erişilebilir keşif asistanı. Takım LAHMACUN, 42 Türkiye x Vakıf Katılım KÖK&KOD Hackathon. Plan: [PLAN.md](PLAN.md).
+
+## Yapı
+
+```
+apps/mobile      Expo (SDK 57) + Expo Router
+apps/admin       Vite + React admin paneli
+packages/shared  zod şemaları, rota motoru (profil ağırlıklı Dijkstra), yönlendirme motoru, geo
+supabase/        migrations + seed (Supabase Cloud)
+data/            ham veri → model dönüşüm pipeline'ı (Python)
+docs/            yarışma dokümanları
+```
+
+## Kurulum
+
+Gereken: Node 22, pnpm 10.
+
+```bash
+pnpm install
+pnpm test        # shared testleri
+pnpm typecheck   # tüm paketler
+pnpm dev:mobile  # Expo dev server
+pnpm dev:admin   # admin paneli (http://localhost:5173)
+```
+
+Mobil uygulama native modüller (harita, mekânsal ses) eklendikten sonra Expo Go ile değil development build ile çalışır: `cd apps/mobile && npx expo run:android`.
+
+## Veritabanı (Supabase Cloud, free tier)
+
+1. Supabase CLI ile projeye bağlanın (`<project-ref>` Dashboard → Project Settings'te yazar):
+   ```bash
+   npx supabase login
+   npx supabase link --project-ref <project-ref>
+   ```
+2. Migration'ları uygulayın. `sezi-eu` projesinde (ref `jejsvycpzulpleftkssj`, Frankfurt) init ve seed zaten uygulandı. Yalnızca yeni bir projede `--include-seed` kullanın, aksi halde seed kayıtları çift eklenir:
+   ```bash
+   npx supabase db push
+   ```
+3. Admin kullanıcısı: Dashboard → SQL Editor'da şunu çalıştırın:
+   ```sql
+   update auth.users set raw_app_meta_data = raw_app_meta_data || '{"role":"admin"}' where email = '<e-posta>';
+   ```
+   Kullanıcının yeni token alması için çıkış yapıp tekrar girmesi gerekir.
+
+Free tier sınırları ve önlemler:
+- **7 gün işlem olmazsa proje duraklar.** `.github/workflows/supabase-keepalive.yml` her gün bir okuma yapar. Repo secrets'a `SUPABASE_URL` ve `SUPABASE_ANON_KEY` eklenmeli.
+- **Storage 1 GB, veritabanı 500 MB.** Ses kayıtları AAC/Opus ile 64–96 kbps'e sıkıştırılır, görseller en fazla 1600 px ve WebP olur.
+- **Yedekleme yok.** `npx supabase db dump` ile haftalık dump alınır.
+- **Demo internetten bağımsız.** Pilot verisi uygulama paketine gömülü olduğu için olası bir kesinti demoyu durdurmaz.
+
+Erişim kuralları (RLS):
+- Anonim kullanıcı yalnızca `verified` içeriği okur.
+- Yazma işlemlerini yalnızca admin yapar.
+- Erişilebilirlik bildirimini yalnızca giriş yapmış kullanıcı gönderir. Admin onaylayınca segment kendiliğinden güncellenir ve rota motoru o segmentten kaçınır.
+
+## Ortam değişkenleri
+
+`.env.example` dosyasını `apps/mobile/.env` ve `apps/admin/.env` olarak kopyalayın.
