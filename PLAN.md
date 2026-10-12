@@ -112,3 +112,21 @@ Veri seti geç gelirse bloke olmayız. Şema hazır olur, sadece pipeline'ın gi
 ## Açık konular
 - LLM ve embedding sağlayıcısı (sonra karar verilecek)
 - Vakıf Katılım veri setinin formatı (gelince pipeline uyarlanacak)
+
+## İlerleme (13 Ekim 2026)
+
+**Bitti**
+- [x] Monorepo, Supabase (sezi-eu, Frankfurt) şeması + RLS, `works_view`
+- [x] Rota motoru (profil ağırlıklı) + Lynch yönlendirme motoru, 17 test
+- [x] Mobil: onboarding (algısal profil), Profil, Keşfet (harita + liste + tür filtresi), eser detayı (sesli dinle, kaynaklar), TR/EN
+- [x] Görsel dil: Atkinson Hyperlegible + Fraunces, kilim motifleri, eser türü glifleri, yüksek kontrast modu
+- [x] Pilot veri: Wikidata'dan 85 eser (19 doğrulanmış), OSM'den Süleymaniye yaya grafiği
+- [x] Rota ekranı + simülasyon modu (TTS, titreşim, yönlü ses ipucu)
+
+**Sırada**
+- [ ] Gerçek telefonda ses/titreşim/pusula testi (README kontrol listesi) — Ediz
+- [ ] Saha gezisi: basamak/eğim/zemin ölçümü, ortam sesi kayıtları, elle yazılmış talimatlar — Zehra
+- [ ] Uygulama ikonu ve açılış ekranı, ekran tasarımlarının gözden geçirilmesi — İnci
+- [ ] Gerçek GPS modu (konuma göre başlangıç ve canlı takip) — Eda
+- [ ] Admin paneli: giriş, eser CRUD, taslak onayı, grafik düzenleme, bildirim moderasyonu — Ediz
+- [ ] Erişilebilirlik bildirimi akışı (mobil), RAG asistanı (LLM sağlayıcısı seçilince)
