@@ -1,0 +1,176 @@
+import { useProfile } from './profile';
+
+export type Lang = 'tr' | 'en';
+
+const tr = {
+  'tabs.explore': 'Keşfet',
+  'tabs.profile': 'Profil',
+  'tabs.lab': 'Lab',
+
+  'onb.step': 'Adım {n} / {total}',
+  'onb.back': 'Geri',
+  'onb.next': 'Devam',
+  'onb.start': 'Keşfe başla',
+  'onb.welcome.title': 'Sezi’ye hoş geldiniz',
+  'onb.welcome.body':
+    'Sezi, vakıf eserlerine haritadaki mavi çizgiyle değil; sesler, dokular ve dikkat çeken yapılarla yön bulmanızı sağlar. Sizi daha iyi yönlendirebilmemiz için birkaç soru soracağız.',
+  'onb.lang.title': 'Hangi dili kullanmak istersiniz?',
+  'onb.vision.title': 'Görme durumunuz nasıl?',
+  'onb.vision.hint': 'Yönlendirmelerin dili ve arayüzün kontrastı buna göre ayarlanır.',
+  'onb.vision.full': 'Rahat görüyorum',
+  'onb.vision.full.d': 'Görsel yer işaretleri ve harita öne çıkar.',
+  'onb.vision.low': 'Az görüyorum',
+  'onb.vision.low.d': 'Yüksek kontrast, büyük yazı ve sesli ipuçları.',
+  'onb.vision.blind': 'Görmüyorum',
+  'onb.vision.blind.d': 'Ses ve titreşim öncelikli, ekrana bakmadan kullanım.',
+  'onb.mobility.title': 'Nasıl hareket ediyorsunuz?',
+  'onb.mobility.hint': 'Rotalar basamak, eğim ve zemine göre seçilir.',
+  'onb.mobility.none': 'Rahat yürüyorum',
+  'onb.mobility.none.d': 'En kısa ve en anlamlı rota.',
+  'onb.mobility.cane': 'Baston kullanıyorum / yavaş yürüyorum',
+  'onb.mobility.cane.d': 'Basamaklar ve dik yokuşlar mümkün olduğunca azaltılır.',
+  'onb.mobility.wheelchair': 'Tekerlekli sandalye kullanıyorum',
+  'onb.mobility.wheelchair.d': 'Basamaklı, dar veya %8’den dik yollar hiç kullanılmaz.',
+  'onb.senses.title': 'Sizi nasıl yönlendirelim?',
+  'onb.senses.hint': 'Birden fazla seçebilirsiniz.',
+  'onb.senses.audio': 'Sesli yönlendirme',
+  'onb.senses.audio.d': 'Talimatlar okunur, yer işaretlerinin sesi kulaklıkta yönüne göre duyulur.',
+  'onb.senses.haptic': 'Titreşim',
+  'onb.senses.haptic.d': 'Sola dönüş tek, sağa dönüş çift titreşim; varışta uzun titreşim.',
+  'onb.senses.visual': 'Görsel ipuçları',
+  'onb.senses.visual.d': 'Harita ve görünür yer işaretleri ekranda gösterilir.',
+  'onb.senses.none': 'En az bir yönlendirme biçimi seçin.',
+  'onb.summary.title': 'Sezi sizin için hazır',
+  'onb.summary.wheelchair': 'Rotalar basamaksız ve geniş yollardan seçilecek.',
+  'onb.summary.cane': 'Basamaklar ve dik yokuşlar en aza indirilecek.',
+  'onb.summary.none': 'En anlamlı yer işaretlerinden geçen rotalar seçilecek.',
+  'onb.summary.blind': 'Gürültülü sokaklar yerine ses ipuçlarının duyulduğu yollar tercih edilecek.',
+  'onb.summary.low': 'Yüksek kontrast mod açık.',
+  'onb.summary.audio': 'Yönlendirmeler sesli okunacak.',
+  'onb.summary.haptic': 'Dönüşlerde titreşimle uyarılacaksınız.',
+  'onb.summary.change': 'Bu tercihleri Profil sekmesinden istediğiniz zaman değiştirebilirsiniz.',
+
+  'profile.title': 'Profil',
+  'profile.edit': 'Tercihleri düzenle',
+  'profile.vision': 'Görme',
+  'profile.mobility': 'Hareket',
+  'profile.senses': 'Yönlendirme',
+  'profile.lang': 'Dil',
+
+  'explore.title': 'Keşfet',
+  'explore.subtitle': 'Süleymaniye Külliyesi ve çevresi',
+  'explore.all': 'Tümü',
+  'explore.mapLabel': 'Harita: {n} eser. Eserlerin listesi aşağıdadır.',
+  'explore.loading': 'Eserler yükleniyor',
+  'explore.error': 'Eserler yüklenemedi. İnternet bağlantınızı kontrol edin.',
+  'explore.retry': 'Tekrar dene',
+  'explore.empty': 'Bu türde eser yok.',
+  'explore.cardHint': 'Eser ayrıntılarını açar',
+  'work.listen': '▶ Sesli dinle',
+  'work.stop': '■ Durdur',
+  'work.partOf': '{complex} yapılarından',
+  'work.mapLabel': '{name} konumunu gösteren harita',
+  'work.history': 'Tarihçe',
+  'work.noHistory': 'Bu eser için doğrulanmış tarihçe metni henüz eklenmedi.',
+  'work.sources': 'Kaynaklar',
+  'work.noSources': 'Kaynak yok.',
+  'work.sourceHint': 'Kaynağı tarayıcıda açar',
+  'work.loading': 'Eser yükleniyor',
+  'work.error': 'Eser yüklenemedi.',
+  'work.notFound': 'Bu eser bulunamadı veya henüz doğrulanmadı.',
+} as const;
+
+export type MessageKey = keyof typeof tr;
+
+const en: Record<MessageKey, string> = {
+  'tabs.explore': 'Explore',
+  'tabs.profile': 'Profile',
+  'tabs.lab': 'Lab',
+
+  'onb.step': 'Step {n} of {total}',
+  'onb.back': 'Back',
+  'onb.next': 'Continue',
+  'onb.start': 'Start exploring',
+  'onb.welcome.title': 'Welcome to Sezi',
+  'onb.welcome.body':
+    'Sezi guides you to foundation heritage not with a blue line on a map, but with sounds, textures and landmarks you can notice. A few questions will help us guide you better.',
+  'onb.lang.title': 'Which language would you like to use?',
+  'onb.vision.title': 'How is your vision?',
+  'onb.vision.hint': 'This sets how directions are phrased and the interface contrast.',
+  'onb.vision.full': 'I see well',
+  'onb.vision.full.d': 'Visual landmarks and the map come first.',
+  'onb.vision.low': 'I have low vision',
+  'onb.vision.low.d': 'High contrast, large text and audio cues.',
+  'onb.vision.blind': 'I am blind',
+  'onb.vision.blind.d': 'Sound and vibration first, no need to look at the screen.',
+  'onb.mobility.title': 'How do you get around?',
+  'onb.mobility.hint': 'Routes are chosen by steps, slope and surface.',
+  'onb.mobility.none': 'I walk comfortably',
+  'onb.mobility.none.d': 'The shortest, most meaningful route.',
+  'onb.mobility.cane': 'I use a cane / walk slowly',
+  'onb.mobility.cane.d': 'Steps and steep slopes are minimised.',
+  'onb.mobility.wheelchair': 'I use a wheelchair',
+  'onb.mobility.wheelchair.d': 'Paths with steps, narrow passages or slopes over 8% are never used.',
+  'onb.senses.title': 'How should we guide you?',
+  'onb.senses.hint': 'You can choose more than one.',
+  'onb.senses.audio': 'Spoken guidance',
+  'onb.senses.audio.d': 'Directions are read aloud; landmark sounds come from their direction in your headphones.',
+  'onb.senses.haptic': 'Vibration',
+  'onb.senses.haptic.d': 'One pulse to turn left, two to turn right, a long one on arrival.',
+  'onb.senses.visual': 'Visual cues',
+  'onb.senses.visual.d': 'The map and visible landmarks are shown on screen.',
+  'onb.senses.none': 'Choose at least one way of guidance.',
+  'onb.summary.title': 'Sezi is ready for you',
+  'onb.summary.wheelchair': 'Routes will avoid steps and narrow paths.',
+  'onb.summary.cane': 'Steps and steep slopes will be minimised.',
+  'onb.summary.none': 'Routes will pass the most meaningful landmarks.',
+  'onb.summary.blind': 'Paths where sound cues can be heard are preferred over noisy streets.',
+  'onb.summary.low': 'High contrast mode is on.',
+  'onb.summary.audio': 'Directions will be read aloud.',
+  'onb.summary.haptic': 'You will feel a vibration at each turn.',
+  'onb.summary.change': 'You can change these preferences any time in the Profile tab.',
+
+  'profile.title': 'Profile',
+  'profile.edit': 'Edit preferences',
+  'profile.vision': 'Vision',
+  'profile.mobility': 'Mobility',
+  'profile.senses': 'Guidance',
+  'profile.lang': 'Language',
+
+  'explore.title': 'Explore',
+  'explore.subtitle': 'Süleymaniye Complex and surroundings',
+  'explore.all': 'All',
+  'explore.mapLabel': 'Map: {n} sites. The list of sites follows below.',
+  'explore.loading': 'Loading sites',
+  'explore.error': 'Could not load sites. Check your internet connection.',
+  'explore.retry': 'Try again',
+  'explore.empty': 'No sites of this type.',
+  'explore.cardHint': 'Opens site details',
+  'work.listen': '▶ Listen',
+  'work.stop': '■ Stop',
+  'work.partOf': 'Part of {complex}',
+  'work.mapLabel': 'Map showing the location of {name}',
+  'work.history': 'History',
+  'work.noHistory': 'A verified history text has not been added for this site yet.',
+  'work.sources': 'Sources',
+  'work.noSources': 'No sources.',
+  'work.sourceHint': 'Opens the source in the browser',
+  'work.loading': 'Loading site',
+  'work.error': 'Could not load the site.',
+  'work.notFound': 'This site was not found or is not verified yet.',
+};
+
+const dictionaries: Record<Lang, Record<MessageKey, string>> = { tr, en };
+
+export function translate(lang: Lang, key: MessageKey, vars?: Record<string, string | number>): string {
+  let s = dictionaries[lang][key];
+  if (vars) for (const [k, v] of Object.entries(vars)) s = s.replace(`{${k}}`, String(v));
+  return s;
+}
+
+/** Profil dilini kullanır; profil yoksa (onboarding öncesi) Türkçe. */
+export function useT() {
+  const { profile } = useProfile();
+  const lang: Lang = profile?.lang ?? 'tr';
+  return { lang, t: (key: MessageKey, vars?: Record<string, string | number>) => translate(lang, key, vars) };
+}

@@ -6,28 +6,29 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { useT } from '@/lib/i18n';
 import { loc, useWork, type WorkRow } from '@/lib/works';
 
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
-const LANG = 'tr' as const;
 
 export default function WorkDetail() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const t = useSeziTheme();
   const s = useMemo(() => makeStyles(t), [t]);
+  const { t: tr } = useT();
   const { data: work, isLoading, error } = useWork(slug);
 
   if (isLoading) {
     return (
       <View style={s.center}>
-        <ActivityIndicator color={t.primary} accessibilityLabel="Eser yükleniyor" />
+        <ActivityIndicator color={t.primary} accessibilityLabel={tr('work.loading')} />
       </View>
     );
   }
   if (error || !work) {
     return (
       <View style={s.center}>
-        <Text style={s.body}>{error ? 'Eser yüklenemedi.' : 'Bu eser bulunamadı veya henüz doğrulanmadı.'}</Text>
+        <Text style={s.body}>{error ? tr('work.error') : tr('work.notFound')}</Text>
       </View>
     );
   }
@@ -36,14 +37,15 @@ export default function WorkDetail() {
 
 function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<typeof makeStyles> }) {
   const [speaking, setSpeaking] = useState(false);
-  const name = loc(work.name, LANG);
-  const kind = loc(work.type_name, LANG);
-  const complex = loc(work.complex_name, LANG);
-  const history = loc(work.history, LANG);
+  const { t: tr, lang } = useT();
+  const name = loc(work.name, lang);
+  const kind = loc(work.type_name, lang);
+  const complex = loc(work.complex_name, lang);
+  const history = loc(work.history, lang);
 
   useEffect(() => () => void Speech.stop(), []);
 
-  const narration = [name, kind, complex && `${complex} yapılarından`, history].filter(Boolean).join('. ');
+  const narration = [name, kind, complex && tr('work.partOf', { complex }), history].filter(Boolean).join('. ');
   const toggleSpeech = () => {
     if (speaking) {
       Speech.stop();
@@ -51,7 +53,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
       return;
     }
     setSpeaking(true);
-    Speech.speak(narration, { language: 'tr-TR', onDone: () => setSpeaking(false), onStopped: () => setSpeaking(false) });
+    Speech.speak(narration, { language: lang === 'tr' ? 'tr-TR' : 'en-US', onDone: () => setSpeaking(false), onStopped: () => setSpeaking(false) });
   };
 
   return (
@@ -71,10 +73,10 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
         accessibilityRole="button"
         accessibilityState={{ busy: speaking }}
         style={({ pressed }) => [s.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}>
-        <Text style={s.primaryBtnText}>{speaking ? '■ Durdur' : '▶ Sesli dinle'}</Text>
+        <Text style={s.primaryBtnText}>{speaking ? tr('work.stop') : tr('work.listen')}</Text>
       </Pressable>
 
-      <View style={s.map} accessible accessibilityLabel={`${name} konumunu gösteren harita`} importantForAccessibility="no-hide-descendants">
+      <View style={s.map} accessible accessibilityLabel={tr('work.mapLabel', { name })} importantForAccessibility="no-hide-descendants">
         <Map style={StyleSheet.absoluteFill} mapStyle={MAP_STYLE} dragPan={false} touchZoom={false} touchRotate={false}>
           <Camera initialViewState={{ center: [work.lng, work.lat], zoom: 17 }} />
           <GeoJSONSource id="work" data={{ type: 'Point', coordinates: [work.lng, work.lat] }}>
@@ -88,19 +90,19 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
       </View>
 
       <Text style={s.h2} accessibilityRole="header">
-        Tarihçe
+        {tr('work.history')}
       </Text>
       {history ? (
         <Text style={s.body}>{history}</Text>
       ) : (
-        <Text style={s.muted}>Bu eser için doğrulanmış tarihçe metni henüz eklenmedi.</Text>
+        <Text style={s.muted}>{tr('work.noHistory')}</Text>
       )}
 
       <Text style={s.h2} accessibilityRole="header">
-        Kaynaklar
+        {tr('work.sources')}
       </Text>
       {work.sources.length === 0 ? (
-        <Text style={s.muted}>Kaynak yok.</Text>
+        <Text style={s.muted}>{tr('work.noSources')}</Text>
       ) : (
         work.sources.map((src) => (
           <Pressable
@@ -108,7 +110,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
             disabled={!src.url}
             onPress={() => src.url && Linking.openURL(src.url)}
             accessibilityRole={src.url ? 'link' : 'text'}
-            accessibilityHint={src.url ? 'Kaynağı tarayıcıda açar' : undefined}
+            accessibilityHint={src.url ? tr('work.sourceHint') : undefined}
             style={s.source}>
             <Text style={[s.body, src.url && s.link]}>{src.title}</Text>
             <Text style={s.muted}>{[src.publisher, src.year, src.page && `s. ${src.page}`].filter(Boolean).join(' · ')}</Text>

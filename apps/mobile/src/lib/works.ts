@@ -1,6 +1,7 @@
 import type { LocalizedText } from '@sezi/shared';
 import { useQuery } from '@tanstack/react-query';
 
+import type { Lang } from './i18n';
 import { supabase } from './supabase';
 
 export interface WorkSource {
@@ -30,8 +31,6 @@ export interface WorkRow {
   lat: number;
   sources: WorkSource[];
 }
-
-export type Lang = 'tr' | 'en';
 
 export function loc(text: LocalizedText | null | undefined, lang: Lang): string {
   if (!text) return '';

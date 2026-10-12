@@ -48,7 +48,8 @@
           "iosBackgroundMode": true,
           "androidForegroundService": false
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,

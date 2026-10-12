@@ -6,27 +6,28 @@ import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, V
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { useT, type Lang } from '@/lib/i18n';
 import { loc, useWorks, type WorkRow } from '@/lib/works';
 
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const SULEYMANIYE: [number, number] = [28.9639, 41.0162];
-const LANG = 'tr' as const; // i18n gelene kadar
 
 export default function Explore() {
   const t = useSeziTheme();
   const s = useMemo(() => makeStyles(t), [t]);
+  const { t: tr, lang } = useT();
   const { data: works, isLoading, error, refetch } = useWorks();
   const [type, setType] = useState<string | null>(null);
 
   const types = useMemo(() => {
     const seen = new globalThis.Map<string, string>();
-    for (const w of works ?? []) seen.set(w.type_slug, loc(w.type_name, LANG));
+    for (const w of works ?? []) seen.set(w.type_slug, loc(w.type_name, lang));
     return [...seen].sort((a, b) => a[1].localeCompare(b[1], 'tr'));
-  }, [works]);
+  }, [works, lang]);
 
   const visible = useMemo(
-    () => (works ?? []).filter((w) => !type || w.type_slug === type).sort((a, b) => loc(a.name, LANG).localeCompare(loc(b.name, LANG), 'tr')),
-    [works, type],
+    () => (works ?? []).filter((w) => !type || w.type_slug === type).sort((a, b) => loc(a.name, lang).localeCompare(loc(b.name, lang), 'tr')),
+    [works, type, lang],
   );
 
   const geojson = useMemo<GeoJSON.FeatureCollection>(
@@ -46,14 +47,14 @@ export default function Explore() {
   const header = (
     <View style={s.header}>
       <Text style={s.title} accessibilityRole="header">
-        Keşfet
+        {tr('explore.title')}
       </Text>
-      <Text style={s.subtitle}>Süleymaniye Külliyesi ve çevresi</Text>
+      <Text style={s.subtitle}>{tr('explore.subtitle')}</Text>
 
       <View
         style={s.map}
         accessible
-        accessibilityLabel={`Harita: ${visible.length} eser. Eserlerin listesi aşağıdadır.`}
+        accessibilityLabel={tr('explore.mapLabel', { n: visible.length })}
         importantForAccessibility="no-hide-descendants">
         <Map style={StyleSheet.absoluteFill} mapStyle={MAP_STYLE}>
           <Camera initialViewState={{ center: SULEYMANIYE, zoom: 15.7 }} />
@@ -79,7 +80,7 @@ export default function Explore() {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
-        <Chip label="Tümü" selected={type === null} onPress={() => setType(null)} t={t} />
+        <Chip label={tr('explore.all')} selected={type === null} onPress={() => setType(null)} t={t} />
         {types.map(([slug, name]) => (
           <Chip key={slug} label={name} selected={type === slug} onPress={() => setType(slug)} t={t} />
         ))}
@@ -94,17 +95,17 @@ export default function Explore() {
         keyExtractor={(w) => w.id}
         ListHeaderComponent={header}
         contentContainerStyle={s.list}
-        renderItem={({ item }) => <WorkCard work={item} onPress={() => open(item.slug)} t={t} />}
+        renderItem={({ item }) => <WorkCard work={item} onPress={() => open(item.slug)} t={t} lang={lang} hint={tr('explore.cardHint')} />}
         ListEmptyComponent={
           isLoading ? (
-            <ActivityIndicator color={t.primary} accessibilityLabel="Eserler yükleniyor" />
+            <ActivityIndicator color={t.primary} accessibilityLabel={tr('explore.loading')} />
           ) : error ? (
             <View style={s.empty}>
-              <Text style={s.body}>Eserler yüklenemedi. İnternet bağlantınızı kontrol edin.</Text>
-              <Chip label="Tekrar dene" selected onPress={() => refetch()} t={t} />
+              <Text style={s.body}>{tr('explore.error')}</Text>
+              <Chip label={tr('explore.retry')} selected onPress={() => refetch()} t={t} />
             </View>
           ) : (
-            <Text style={s.body}>Bu türde eser yok.</Text>
+            <Text style={s.body}>{tr('explore.empty')}</Text>
           )
         }
       />
@@ -127,15 +128,15 @@ function Chip({ label, selected, onPress, t }: { label: string; selected: boolea
   );
 }
 
-function WorkCard({ work, onPress, t }: { work: WorkRow; onPress: () => void; t: ThemeColors }) {
-  const name = loc(work.name, LANG);
-  const kind = loc(work.type_name, LANG);
+function WorkCard({ work, onPress, t, lang, hint }: { work: WorkRow; onPress: () => void; t: ThemeColors; lang: Lang; hint: string }) {
+  const name = loc(work.name, lang);
+  const kind = loc(work.type_name, lang);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={`${name}, ${kind}`}
-      accessibilityHint="Eser ayrıntılarını açar"
+      accessibilityHint={hint}
       style={({ pressed }) => [cardStyles.card, { backgroundColor: t.surface, borderColor: t.border, opacity: pressed ? 0.85 : 1 }]}>
       <View style={[cardStyles.dot, { backgroundColor: t.accent }]} />
       <View style={cardStyles.text}>
