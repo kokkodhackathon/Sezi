@@ -2,7 +2,7 @@
  * Lab: native modül risk testi (harita, mekânsal ses, pusula, haptik, TTS).
  * Demo ekranı değildir; özellikler gerçek ekranlara taşındıkça sadeleşecek.
  */
-import { Camera, Map, Marker } from '@maplibre/maplibre-react-native';
+import { Camera, GeoJSONSource, Layer, Map } from '@maplibre/maplibre-react-native';
 import { bearingDeg, stereoPan, themes, type LngLat } from '@sezi/shared';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
@@ -84,9 +84,14 @@ export default function Lab() {
       <View style={styles.map}>
         <Map style={StyleSheet.absoluteFill} mapStyle={MAP_STYLE}>
           <Camera initialViewState={{ center: SULEYMANIYE, zoom: 16 }} />
-          <Marker lngLat={SULEYMANIYE}>
-            <View style={[styles.pin, { backgroundColor: t.accent }]} accessibilityLabel="Süleymaniye Camii" />
-          </Marker>
+          {/* Marker (ViewAnnotation) RN 0.86 Fabric ile çöküyor; noktalar GeoJSON katmanıyla çizilir. */}
+          <GeoJSONSource id="works" data={{ type: 'Point', coordinates: SULEYMANIYE }}>
+            <Layer
+              id="works-circle"
+              type="circle"
+              paint={{ 'circle-radius': 9, 'circle-color': t.accent, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' }}
+            />
+          </GeoJSONSource>
         </Map>
       </View>
 
@@ -133,7 +138,6 @@ export default function Lab() {
 const styles = StyleSheet.create({
   body: { padding: 16, gap: 8, paddingBottom: 48 },
   map: { height: 260, borderRadius: 12, overflow: 'hidden' },
-  pin: { width: 18, height: 18, borderRadius: 9, borderWidth: 2, borderColor: '#fff' },
   h: { fontSize: 17, fontWeight: '600', marginTop: 12 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   btn: { minHeight: 48, paddingHorizontal: 16, borderRadius: 10, justifyContent: 'center' },

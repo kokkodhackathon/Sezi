@@ -58,3 +58,10 @@ Erişim kuralları (RLS):
 ## Ortam değişkenleri
 
 `.env.example` dosyasını `apps/mobile/.env` ve `apps/admin/.env` olarak kopyalayın.
+
+## Android development build notları
+
+- **Proje yolu ASCII olmalı** (örn. `C:\Projeler\sezi`). Türkçe karakterli yolda Gradle ve autolinking kırılır.
+- İlk build: `cd apps/mobile && npx expo run:android` (yaklaşık 9 dk). Sonraki JS değişiklikleri için sadece `npx expo start --dev-client` yeterli.
+- Emülatör Metro'ya LAN IP'si üzerinden bağlanamazsa (Windows güvenlik duvarı): `adb reverse tcp:8081 tcp:8081`, ardından uygulamada `http://127.0.0.1:8081` ile bağlanın.
+- MapLibre `Marker` bileşeni RN 0.86 Fabric ile çöküyor (SIGSEGV, `MountingCoordinator::pullTransaction`). Noktaları `GeoJSONSource` + `Layer type="circle"` ile çizin.
