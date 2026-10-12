@@ -59,6 +59,7 @@ function AppStack() {
         <Stack.Protected guard={profile !== null}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="work/[slug]" options={{ title: '', headerBackTitle: tr('onb.back') }} />
+          <Stack.Screen name="route/[slug]" options={{ title: '', headerBackTitle: tr('onb.back') }} />
         </Stack.Protected>
         <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: profile !== null }} />
       </Stack>

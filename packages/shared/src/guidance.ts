@@ -1,6 +1,16 @@
-import { bearingDeg, relativeBearing } from "./geo";
-import type { Route } from "./routing";
-import type { CueType, Instruction, NavNode, UserProfile } from "./schemas";
+import { bearingDeg, distanceM, relativeBearing } from "./geo";
+import type { Route, RouteGeometry } from "./routing";
+import type { CueType, Instruction, LngLat, NavNode, UserProfile } from "./schemas";
+
+/** Çizgi boyunca baştan en az `d` metre ilerideki ilk nokta (kısa geometri parçalarının yön gürültüsünü bastırır). */
+function pointAway(line: LngLat[], d: number): LngLat {
+  let acc = 0;
+  for (let i = 1; i < line.length; i++) {
+    acc += distanceM(line[i - 1]!, line[i]!);
+    if (acc >= d) return line[i]!;
+  }
+  return line[line.length - 1]!;
+}
 
 export type Turn = "straight" | "slight_left" | "left" | "slight_right" | "right" | "back";
 
@@ -38,6 +48,10 @@ export interface GuidanceStep {
   turn: Turn;
   /** Kaynağı elle yazılmış onaylı talimat mı, yoksa genel yedek mi. */
   authored: boolean;
+  /** Düğümün rota başından uzaklığı (metre); geometri verilmediyse düğümler arası düz mesafe. */
+  atM: number;
+  /** Bu adımda yaklaşılan landmark (ses ipucu ve ekran için). */
+  landmark?: { name: string; location: LngLat };
 }
 
 /** Profile göre ipucu tipi tercih sırası. */
@@ -70,6 +84,7 @@ export function buildGuidance(
   nodes: Map<string, NavNode>,
   instructions: Instruction[],
   profile: UserProfile,
+  geometry?: RouteGeometry,
 ): GuidanceStep[] {
   const byNode = new Map<string, Instruction[]>();
   for (const i of instructions) {
@@ -79,6 +94,11 @@ export function buildGuidance(
   }
 
   const lang = profile.lang;
+  const cumulative = (k: number) => {
+    let d = 0;
+    for (let i = 1; i <= k; i++) d += distanceM(nodes.get(route.nodeIds[i - 1]!)!.location, nodes.get(route.nodeIds[i]!)!.location);
+    return d;
+  };
   const steps: GuidanceStep[] = [];
   const ids = route.nodeIds;
 
@@ -90,10 +110,22 @@ export function buildGuidance(
 
     let turn: Turn = "straight";
     if (nextId) {
-      const inBearing = bearingDeg(nodes.get(prevId)!.location, node.location);
-      const outBearing = bearingDeg(node.location, nodes.get(nextId)!.location);
+      let inBearing: number;
+      let outBearing: number;
+      const legIn = geometry?.legs[k - 1];
+      const legOut = geometry?.legs[k];
+      if (legIn && legOut) {
+        inBearing = bearingDeg(pointAway([...legIn].reverse(), 10), node.location);
+        outBearing = bearingDeg(node.location, pointAway(legOut, 10));
+      } else {
+        inBearing = bearingDeg(nodes.get(prevId)!.location, node.location);
+        outBearing = bearingDeg(node.location, nodes.get(nextId)!.location);
+      }
       turn = classifyTurn(relativeBearing(inBearing, outBearing));
     }
+    const atM = geometry?.nodeAtM[k] ?? cumulative(k);
+    const lmName = node.lynchType === "landmark" ? (node.name?.[lang] ?? node.name?.tr) : undefined;
+    const landmark = lmName ? { name: lmName, location: node.location } : undefined;
 
     const authored = pickInstruction(byNode.get(id) ?? [], prevId, profile);
     if (authored) {
@@ -103,6 +135,8 @@ export function buildGuidance(
         cueType: authored.cueType,
         turn,
         authored: true,
+        atM,
+        landmark,
       });
       continue;
     }
@@ -120,7 +154,7 @@ export function buildGuidance(
       const t = TURN_TEXT[lang][turn];
       text = t.charAt(0).toUpperCase() + t.slice(1) + ".";
     }
-    steps.push({ nodeId: id, text, cueType: "generic", turn, authored: false });
+    steps.push({ nodeId: id, text, cueType: "generic", turn, authored: false, atM, landmark });
   }
   return steps;
 }

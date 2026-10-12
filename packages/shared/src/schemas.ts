@@ -88,6 +88,8 @@ export const NavSegment = z.object({
   landmarkVisibility: z.number().min(0).max(1).default(0),
   /** Onaylı erişilebilirlik bildirimiyle geçici kapatıldı. */
   blocked: z.boolean().default(false),
+  /** from → to yönünde çizgi geometrisi; yoksa iki uç arası düz kabul edilir. */
+  geometry: z.array(LngLat).optional(),
 });
 export type NavSegment = z.infer<typeof NavSegment>;
 export type NavSegmentInput = z.input<typeof NavSegment>;

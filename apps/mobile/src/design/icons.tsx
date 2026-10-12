@@ -43,3 +43,21 @@ export function InfoIcon({ color, size = 20 }: IconProps) {
     </Svg>
   );
 }
+
+/** Dönüş oku: düz, hafif/sert sağ-sol, geri; varışta hedef işareti. */
+export function TurnIcon({ turn, arrived, color, size = 28 }: IconProps & { turn: string; arrived?: boolean }) {
+  if (arrived) {
+    return (
+      <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+        <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={2.4} fill="none" />
+        <Circle cx="12" cy="12" r="4" fill={color} />
+      </Svg>
+    );
+  }
+  const rotate = { straight: 0, slight_right: 40, right: 90, slight_left: -40, left: -90, back: 180 }[turn] ?? 0;
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false} style={{ transform: [{ rotate: `${rotate}deg` }] }}>
+      <Path d="M12 20 V5 M6 10.5 L12 4.5 L18 10.5" stroke={color} strokeWidth={2.6} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}

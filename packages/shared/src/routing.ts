@@ -1,4 +1,5 @@
-import type { NavNode, NavSegment, UserProfile } from "./schemas";
+import { distanceM } from "./geo";
+import type { LngLat, NavNode, NavSegment, UserProfile } from "./schemas";
 
 /**
  * Segmentin bu profil için maliyeti (metre eşdeğeri). `null` = geçilemez.
@@ -150,11 +151,44 @@ export function findRoute(
   return { nodeIds, segmentIds, lengthM, cost: dist.get(toId)! };
 }
 
-/** Rota node'larının koordinatlarından polyline (harita ve simülasyon için). */
-export function routePolyline(route: Route, nodes: Map<string, NavNode>) {
-  return route.nodeIds.map((id) => {
+export interface RouteGeometry {
+  /** Rota boyunca tek parça çizgi (harita ve simülasyon). */
+  line: LngLat[];
+  /** route.nodeIds[i] düğümünün rota başından uzaklığı (metre, çizgi üzerinden). */
+  nodeAtM: number[];
+  /** route.segmentIds[i] segmentinin yürüme yönündeki geometrisi. */
+  legs: LngLat[][];
+}
+
+/** Rotanın yönlendirilmiş geometrisi; segment geometrisi yoksa düğümler arası düz çizgi. */
+export function routeGeometry(route: Route, nodes: Map<string, NavNode>, segments: Map<string, NavSegment>): RouteGeometry {
+  const loc = (id: string) => {
     const n = nodes.get(id);
     if (!n) throw new Error(`node bulunamadı: ${id}`);
     return n.location;
+  };
+  const legs = route.segmentIds.map((sid, i) => {
+    const seg = segments.get(sid);
+    const from = route.nodeIds[i]!;
+    const to = route.nodeIds[i + 1]!;
+    if (!seg?.geometry || seg.geometry.length < 2) return [loc(from), loc(to)];
+    return seg.from === from ? seg.geometry : [...seg.geometry].reverse();
   });
+
+  const line: LngLat[] = [loc(route.nodeIds[0]!)];
+  const nodeAtM = [0];
+  let total = 0;
+  for (const leg of legs) {
+    for (let k = 1; k < leg.length; k++) {
+      total += distanceM(leg[k - 1]!, leg[k]!);
+      line.push(leg[k]!);
+    }
+    nodeAtM.push(total);
+  }
+  return { line, nodeAtM, legs };
+}
+
+/** Geriye dönük: yalnızca düğüm koordinatlarından polyline. */
+export function routePolyline(route: Route, nodes: Map<string, NavNode>) {
+  return routeGeometry(route, nodes, new Map()).line;
 }

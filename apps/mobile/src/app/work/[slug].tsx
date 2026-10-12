@@ -1,16 +1,17 @@
 import { Camera, GeoJSONSource, Layer, Map } from '@maplibre/maplibre-react-native';
 import type { ThemeColors } from '@sezi/shared';
 import * as Speech from 'expo-speech';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { ExternalIcon, InfoIcon, PlayIcon, StopIcon } from '@/design/icons';
+import { ExternalIcon, InfoIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
 import { CengelMark, KilimBand } from '@/design/motif';
 import { radius, space, type, upper } from '@/design/type';
 import { colorForType, WorkGlyph } from '@/design/work-glyph';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
+import { hasRouteTo } from '@/lib/nav';
 import { loc, useWork, type WorkRow } from '@/lib/works';
 
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
@@ -87,6 +88,16 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
         {speaking ? <StopIcon color={t.onPrimary} /> : <PlayIcon color={t.onPrimary} />}
         <Text style={[type.button, { color: t.onPrimary }]}>{speaking ? tr('work.stop') : tr('work.listen')}</Text>
       </Pressable>
+
+      {hasRouteTo(work.slug) ? (
+        <Pressable
+          onPress={() => router.push({ pathname: '/route/[slug]', params: { slug: work.slug } })}
+          accessibilityRole="button"
+          style={({ pressed }) => [s.secondaryBtn, pressed && { opacity: 0.85 }]}>
+          <TurnIcon turn="slight_right" color={t.primary} size={22} />
+          <Text style={[type.button, { color: t.primary }]}>{tr('work.directions')}</Text>
+        </Pressable>
+      ) : null}
 
       <View style={s.map} accessible accessibilityLabel={tr('work.mapLabel', { name })} importantForAccessibility="no-hide-descendants">
         <Map style={StyleSheet.absoluteFill} mapStyle={MAP_STYLE} dragPan={false} touchZoom={false} touchRotate={false}>
@@ -173,6 +184,18 @@ const makeStyles = (t: ThemeColors) =>
       minHeight: 56,
       borderRadius: radius.pill,
       backgroundColor: t.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    secondaryBtn: {
+      flexDirection: 'row',
+      gap: space.sm,
+      minHeight: 56,
+      marginTop: -space.md,
+      borderRadius: radius.pill,
+      borderWidth: 2,
+      borderColor: t.primary,
+      backgroundColor: t.surface,
       alignItems: 'center',
       justifyContent: 'center',
     },
