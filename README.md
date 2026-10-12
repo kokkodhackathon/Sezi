@@ -66,3 +66,11 @@ Erişim kuralları (RLS):
 - Emülatör Metro'ya LAN IP'si üzerinden bağlanamazsa (Windows güvenlik duvarı): `adb reverse tcp:8081 tcp:8081`, ardından uygulamada `http://127.0.0.1:8081` ile bağlanın.
 - MapLibre `Marker` bileşeni RN 0.86 Fabric ile çöküyor (SIGSEGV, `MountingCoordinator::pullTransaction`). Noktaları `GeoJSONSource` + `Layer type="circle"` ile çizin.
 - Emülatör depolaması dolarsa `expo run:android` APK'yı sessizce kuramaz (`INSTALL_FAILED_INSUFFICIENT_STORAGE`). Önce `adb uninstall com.lahmacun.sezi`, sonra `adb install apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk`.
+
+## Gerçek telefonda test
+
+1. Telefonda Geliştirici seçenekleri → USB hata ayıklama açık; USB ile bağla (`adb devices` listede görmeli).
+2. `cd apps/mobile && npx expo run:android` (dev build kurulur, Metro başlar).
+3. Kulaklık tak. Kontrol listesi:
+   - Lab sekmesi: "Sol"/"Sağ" tonu doğru kulaktan geliyor mu, pusula yönü değişiyor mu, titreşimler hissediliyor mu.
+   - Bir eser → "Yol tarifi al" → 1× simülasyon: talimatlar okunuyor mu, sağa dönüşte çift / sola tek titreşim, yer işareti tonu doğru yönden mi.
