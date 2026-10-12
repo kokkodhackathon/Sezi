@@ -1,0 +1,47 @@
+# Product
+
+<!-- impeccable:product-schema 1 -->
+
+## Platform
+
+android
+
+## Users
+Vakıf eserlerini (cami, medrese, sebil, han, hamam, türbe…) yerinde gezen herkes: yerli ziyaretçi, turist, öğrenci. Görme kısıtlı (az gören, görme engelli) ve hareket kısıtlı (baston, tekerlekli sandalye) bireyler ürünün kenarında değil merkezinde. Tipik sahne: tarihi yarımadada, kalabalık ve tabela karmaşası içinde, çoğu zaman tek elle ya da ekrana bakmadan kullanım.
+
+## Product Purpose
+Sezi, vakıf mirasını koordinatlara indirgeyen 2D navigasyon yerine, Kevin Lynch'in bilişsel haritalama yaklaşımıyla (landmark / node / path / district) çok duyulu yönlendirme yapan bir keşif asistanıdır. Kullanıcı eseri bulmakla kalmaz; külliyenin parçalarını bir bütün olarak deneyimler ve kaynaklı, doğrulanmış bilgiye ulaşır. Başarı: kısıtı olan bir kullanıcının Süleymaniye Külliyesi'nde rehbersiz, güvenle yön bulup eserleri öğrenebilmesi.
+
+## Positioning
+"100 m sonra sağa dönün" yerine "Sebilin su sesini duyunca meydanın sağına yönelin": yön tarifi yer işaretlerine, ortam seslerine (kulaklıkta yönüne göre panlanmış), titreşime ve dokuya dayanır. Rota kullanıcının algısal ve fiziksel profiline göre hesaplanır (tekerlekli sandalye basamaklı yoldan hiç geçmez, görme engelli gürültülü sokaktan kaçınır).
+
+## Operating Context
+- KÖK&KOD Hackathon (42 Türkiye x Vakıf Katılım). Final 7–8 Kasım 2026, Bilişim Vadisi İstanbul GO; jüri Bilişim Vadisi, Vakıf Katılım, bağımsız üyeler ve Vakıflar Genel Müdürlüğü'nden oluşur. Canlı demo zorunlu; demo simülasyon moduyla ve internetsiz çalışmalı.
+- Pilot alan: Süleymaniye Külliyesi; genel keşif katmanı 60–80 eserlik veri setiyle büyüyecek.
+- İçerik ekibin admin panelinden girilir ve onaylanır; topluluk erişilebilirlik bildirimleri moderasyondan geçer.
+
+## Capabilities and Constraints
+- Expo (React Native, New Architecture), Android development build; iOS ikincil.
+- Ekranlar: algısal profil onboarding'i, Keşfet (harita + liste + tür filtresi), eser detayı (sesli dinleme, kaynaklar), Profil; sırada rota, canlı rehberlik ve simülasyon modu.
+- Harita: MapLibre + OpenFreeMap. `Marker` bileşeni çöküyor; noktalar GeoJSON katmanıyla çizilir.
+- Dil: Türkçe ve İngilizce.
+- Doğrulanmamış içerik gerçek bilgi gibi gösterilemez; her tarihî bilgi kaynak gösterir.
+
+## Brand Commitments
+- Ad: **Sezi**.
+- Renkler: moodboard paleti (docs/Moodboard.png): turkuaz, kırmızı/pas, kahve, krem kağıt zemin. Token'lar `packages/shared/src/theme.ts` içinde.
+- Modern, göz yormayan Türk motifleri (kilim, çengel, köşe meander, nazar); süs değil iz olarak, düşük yoğunlukta.
+- Yazı tipi, logo ve ikon için bağlayıcı karar yok; seçim tasarım sürecine bırakıldı.
+
+## Evidence on Hand
+- Pilot veri: Wikidata'dan Süleymaniye çevresi 85 eser (19 doğrulanmış külliye yapısı), ad/tür/konum ve kaynak bağlantısı.
+- Tarihçe metinleri, fotoğraflar ve ses kayıtları henüz yok; uydurulmamalı. Resmî veri seti henüz gelmedi.
+
+## Product Principles
+1. Erişilebilirlik özellik değil, ürünün omurgası: her akış ekrana bakmadan ve ekran okuyucuyla tamamlanabilmeli.
+2. Kaynaksız bilgi yok: doğrulanmamış içerik ya gösterilmez ya da açıkça taslak olarak işaretlenir.
+3. Yön, mekânın kendisinden okunur: harita destekleyicidir, asıl rehber yer işaretleri, ses ve dokudur.
+4. Sahada güvenilirlik: internet yokken de demo ve rehberlik çalışır.
+
+## Accessibility & Inclusion
+WCAG 2.2 AA zorunlu taban (kontrast testlerle korunur); az gören profili için yüksek kontrast (AAA metin) modu. TalkBack/VoiceOver ile tüm akışlar, dinamik yazı boyutu, en az 44–48 dp dokunma alanları, sesli anlatım ve titreşim desenleri. Renk tek başına anlam taşımaz.

@@ -12,6 +12,7 @@ const tr = {
   'onb.next': 'Devam',
   'onb.start': 'Keşfe başla',
   'onb.welcome.title': 'Sezi’ye hoş geldiniz',
+  'onb.tagline': 'Vakıf mirasını sesle, dokuyla, yer işaretiyle keşfedin.',
   'onb.welcome.body':
     'Sezi, vakıf eserlerine haritadaki mavi çizgiyle değil; sesler, dokular ve dikkat çeken yapılarla yön bulmanızı sağlar. Sizi daha iyi yönlendirebilmemiz için birkaç soru soracağız.',
   'onb.lang.title': 'Hangi dili kullanmak istersiniz?',
@@ -51,6 +52,8 @@ const tr = {
   'onb.summary.change': 'Bu tercihleri Profil sekmesinden istediğiniz zaman değiştirebilirsiniz.',
 
   'profile.title': 'Profil',
+  'profile.eyebrow': 'Algısal profil',
+  'profile.hint': 'Rotalar ve yönlendirmeler bu tercihlere göre hazırlanır.',
   'profile.edit': 'Tercihleri düzenle',
   'profile.vision': 'Görme',
   'profile.mobility': 'Hareket',
@@ -58,6 +61,8 @@ const tr = {
   'profile.lang': 'Dil',
 
   'explore.title': 'Keşfet',
+  'explore.eyebrow': 'Fatih · İstanbul',
+  'explore.count': '{n} doğrulanmış eser',
   'explore.subtitle': 'Süleymaniye Külliyesi ve çevresi',
   'explore.all': 'Tümü',
   'explore.mapLabel': 'Harita: {n} eser. Eserlerin listesi aşağıdadır.',
@@ -66,8 +71,8 @@ const tr = {
   'explore.retry': 'Tekrar dene',
   'explore.empty': 'Bu türde eser yok.',
   'explore.cardHint': 'Eser ayrıntılarını açar',
-  'work.listen': '▶ Sesli dinle',
-  'work.stop': '■ Durdur',
+  'work.listen': 'Sesli dinle',
+  'work.stop': 'Durdur',
   'work.partOf': '{complex} yapılarından',
   'work.mapLabel': '{name} konumunu gösteren harita',
   'work.history': 'Tarihçe',
@@ -92,6 +97,7 @@ const en: Record<MessageKey, string> = {
   'onb.next': 'Continue',
   'onb.start': 'Start exploring',
   'onb.welcome.title': 'Welcome to Sezi',
+  'onb.tagline': 'Discover foundation heritage by sound, touch and landmark.',
   'onb.welcome.body':
     'Sezi guides you to foundation heritage not with a blue line on a map, but with sounds, textures and landmarks you can notice. A few questions will help us guide you better.',
   'onb.lang.title': 'Which language would you like to use?',
@@ -131,6 +137,8 @@ const en: Record<MessageKey, string> = {
   'onb.summary.change': 'You can change these preferences any time in the Profile tab.',
 
   'profile.title': 'Profile',
+  'profile.eyebrow': 'Perceptual profile',
+  'profile.hint': 'Routes and guidance are prepared from these preferences.',
   'profile.edit': 'Edit preferences',
   'profile.vision': 'Vision',
   'profile.mobility': 'Mobility',
@@ -138,6 +146,8 @@ const en: Record<MessageKey, string> = {
   'profile.lang': 'Language',
 
   'explore.title': 'Explore',
+  'explore.eyebrow': 'Fatih · Istanbul',
+  'explore.count': '{n} verified sites',
   'explore.subtitle': 'Süleymaniye Complex and surroundings',
   'explore.all': 'All',
   'explore.mapLabel': 'Map: {n} sites. The list of sites follows below.',
@@ -146,8 +156,8 @@ const en: Record<MessageKey, string> = {
   'explore.retry': 'Try again',
   'explore.empty': 'No sites of this type.',
   'explore.cardHint': 'Opens site details',
-  'work.listen': '▶ Listen',
-  'work.stop': '■ Stop',
+  'work.listen': 'Listen',
+  'work.stop': 'Stop',
   'work.partOf': 'Part of {complex}',
   'work.mapLabel': 'Map showing the location of {name}',
   'work.history': 'History',

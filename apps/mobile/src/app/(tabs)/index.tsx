@@ -5,6 +5,10 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { ScreenHeader } from '@/components/screen-header';
+import { ChevronIcon } from '@/design/icons';
+import { radius, space, type } from '@/design/type';
+import { typeColor, WorkGlyph, WorkGlyphInline } from '@/design/work-glyph';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT, type Lang } from '@/lib/i18n';
 import { loc, useWorks, type WorkRow } from '@/lib/works';
@@ -12,22 +16,28 @@ import { loc, useWorks, type WorkRow } from '@/lib/works';
 const MAP_STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 const SULEYMANIYE: [number, number] = [28.9639, 41.0162];
 
+// Harita noktaları liste glifleriyle aynı tür rengini taşır.
+const circleColor = ['match', ['get', 'type'], ...Object.entries(typeColor).flat(), '#3A1A10'];
+
 export default function Explore() {
   const t = useSeziTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
   const { data: works, isLoading, error, refetch } = useWorks();
-  const [type, setType] = useState<string | null>(null);
+  const [type_, setType] = useState<string | null>(null);
 
   const types = useMemo(() => {
     const seen = new globalThis.Map<string, string>();
     for (const w of works ?? []) seen.set(w.type_slug, loc(w.type_name, lang));
-    return [...seen].sort((a, b) => a[1].localeCompare(b[1], 'tr'));
+    return [...seen].sort((a, b) => a[1].localeCompare(b[1], lang));
   }, [works, lang]);
 
   const visible = useMemo(
-    () => (works ?? []).filter((w) => !type || w.type_slug === type).sort((a, b) => loc(a.name, lang).localeCompare(loc(b.name, lang), 'tr')),
-    [works, type, lang],
+    () =>
+      (works ?? [])
+        .filter((w) => !type_ || w.type_slug === type_)
+        .sort((a, b) => loc(a.name, lang).localeCompare(loc(b.name, lang), lang)),
+    [works, type_, lang],
   );
 
   const geojson = useMemo<GeoJSON.FeatureCollection>(
@@ -36,7 +46,7 @@ export default function Explore() {
       features: visible.map((w) => ({
         type: 'Feature',
         geometry: { type: 'Point', coordinates: [w.lng, w.lat] },
-        properties: { slug: w.slug },
+        properties: { slug: w.slug, type: w.type_slug },
       })),
     }),
     [visible],
@@ -46,10 +56,11 @@ export default function Explore() {
 
   const header = (
     <View style={s.header}>
-      <Text style={s.title} accessibilityRole="header">
-        {tr('explore.title')}
-      </Text>
-      <Text style={s.subtitle}>{tr('explore.subtitle')}</Text>
+      <ScreenHeader
+        eyebrow={tr('explore.eyebrow')}
+        title={tr('explore.title')}
+        subtitle={works ? `${tr('explore.subtitle')} · ${tr('explore.count', { n: works.length })}` : tr('explore.subtitle')}
+      />
 
       <View
         style={s.map}
@@ -65,24 +76,20 @@ export default function Explore() {
               const slug = e.nativeEvent.features[0]?.properties?.slug;
               if (typeof slug === 'string') open(slug);
             }}>
+            <Layer id="works-halo" type="circle" paint={{ 'circle-radius': 13, 'circle-color': t.surface, 'circle-opacity': 0.9 }} />
             <Layer
               id="works-circle"
               type="circle"
-              paint={{
-                'circle-radius': 8,
-                'circle-color': t.accent,
-                'circle-stroke-width': 2,
-                'circle-stroke-color': t.surface,
-              }}
+              paint={{ 'circle-radius': 9, 'circle-color': circleColor as never, 'circle-stroke-width': 2, 'circle-stroke-color': t.surface }}
             />
           </GeoJSONSource>
         </Map>
       </View>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips}>
-        <Chip label={tr('explore.all')} selected={type === null} onPress={() => setType(null)} t={t} />
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips} style={s.chipsRow}>
+        <Chip label={tr('explore.all')} selected={type_ === null} onPress={() => setType(null)} t={t} />
         {types.map(([slug, name]) => (
-          <Chip key={slug} label={name} selected={type === slug} onPress={() => setType(slug)} t={t} />
+          <Chip key={slug} slug={slug} label={name} selected={type_ === slug} onPress={() => setType(slug)} t={t} />
         ))}
       </ScrollView>
     </View>
@@ -95,17 +102,20 @@ export default function Explore() {
         keyExtractor={(w) => w.id}
         ListHeaderComponent={header}
         contentContainerStyle={s.list}
-        renderItem={({ item }) => <WorkCard work={item} onPress={() => open(item.slug)} t={t} lang={lang} hint={tr('explore.cardHint')} />}
+        ItemSeparatorComponent={() => <View style={{ height: space.sm }} />}
+        renderItem={({ item }) => (
+          <WorkCard work={item} onPress={() => open(item.slug)} t={t} lang={lang} hint={tr('explore.cardHint')} />
+        )}
         ListEmptyComponent={
           isLoading ? (
-            <ActivityIndicator color={t.primary} accessibilityLabel={tr('explore.loading')} />
+            <ActivityIndicator color={t.primary} style={{ marginTop: space.xl }} accessibilityLabel={tr('explore.loading')} />
           ) : error ? (
             <View style={s.empty}>
-              <Text style={s.body}>{tr('explore.error')}</Text>
+              <Text style={[type.body, { color: t.text }]}>{tr('explore.error')}</Text>
               <Chip label={tr('explore.retry')} selected onPress={() => refetch()} t={t} />
             </View>
           ) : (
-            <Text style={s.body}>{tr('explore.empty')}</Text>
+            <Text style={[type.body, { color: t.textMuted }]}>{tr('explore.empty')}</Text>
           )
         }
       />
@@ -113,17 +123,20 @@ export default function Explore() {
   );
 }
 
-function Chip({ label, selected, onPress, t }: { label: string; selected: boolean; onPress: () => void; t: ThemeColors }) {
+function Chip({ label, slug, selected, onPress, t }: { label: string; slug?: string; selected: boolean; onPress: () => void; t: ThemeColors }) {
+  const fg = selected ? t.onPrimary : t.text;
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      style={[
+      style={({ pressed }) => [
         chipStyles.chip,
         { borderColor: selected ? t.primary : t.border, backgroundColor: selected ? t.primary : t.surface },
+        pressed && { opacity: 0.85 },
       ]}>
-      <Text style={[chipStyles.label, { color: selected ? t.onPrimary : t.text }]}>{label}</Text>
+      {slug ? <WorkGlyphInline slug={slug} color={fg} size={18} /> : null}
+      <Text style={[type.button, { color: fg, fontSize: 15 }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -131,21 +144,24 @@ function Chip({ label, selected, onPress, t }: { label: string; selected: boolea
 function WorkCard({ work, onPress, t, lang, hint }: { work: WorkRow; onPress: () => void; t: ThemeColors; lang: Lang; hint: string }) {
   const name = loc(work.name, lang);
   const kind = loc(work.type_name, lang);
+  const complex = loc(work.complex_name, lang);
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${name}, ${kind}`}
+      accessibilityLabel={[name, kind, complex].filter(Boolean).join(', ')}
       accessibilityHint={hint}
-      style={({ pressed }) => [cardStyles.card, { backgroundColor: t.surface, borderColor: t.border, opacity: pressed ? 0.85 : 1 }]}>
-      <View style={[cardStyles.dot, { backgroundColor: t.accent }]} />
+      style={({ pressed }) => [cardStyles.card, { backgroundColor: pressed ? t.background : t.surface, borderColor: t.border }]}>
+      <WorkGlyph slug={work.type_slug} size={52} />
       <View style={cardStyles.text}>
-        <Text style={[cardStyles.name, { color: t.text }]}>{name}</Text>
-        <Text style={[cardStyles.meta, { color: t.textMuted }]}>{kind}</Text>
+        <Text style={[type.itemTitle, { color: t.text }]} numberOfLines={2}>
+          {name}
+        </Text>
+        <Text style={[type.meta, { color: t.textMuted }]} numberOfLines={1}>
+          {complex ? `${kind} · ${complex}` : kind}
+        </Text>
       </View>
-      <Text style={[cardStyles.chevron, { color: t.textMuted }]} importantForAccessibility="no">
-        ›
-      </Text>
+      <ChevronIcon color={t.textMuted} />
     </Pressable>
   );
 }
@@ -153,26 +169,19 @@ function WorkCard({ work, onPress, t, lang, hint }: { work: WorkRow; onPress: ()
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    list: { paddingHorizontal: 16, paddingBottom: 32, gap: 8 },
-    header: { gap: 12, paddingTop: 8, paddingBottom: 4 },
-    title: { fontSize: 30, fontWeight: '700', color: t.text },
-    subtitle: { fontSize: 16, color: t.textMuted, marginTop: -8 },
-    map: { height: 260, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: t.border },
-    chips: { gap: 8, paddingVertical: 4 },
-    empty: { gap: 12, alignItems: 'flex-start' },
-    body: { fontSize: 16, color: t.text },
+    list: { paddingHorizontal: space.lg, paddingBottom: space.xxl },
+    header: { gap: space.lg, paddingBottom: space.md },
+    map: { height: 280, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },
+    chipsRow: { marginHorizontal: -space.lg },
+    chips: { gap: space.sm, paddingHorizontal: space.lg },
+    empty: { gap: space.md, alignItems: 'flex-start', paddingTop: space.lg },
   });
 
 const chipStyles = StyleSheet.create({
-  chip: { minHeight: 44, paddingHorizontal: 16, borderRadius: 22, borderWidth: 1, justifyContent: 'center' },
-  label: { fontSize: 15, fontWeight: '600' },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: space.lg, borderRadius: radius.pill, borderWidth: 1 },
 });
 
 const cardStyles = StyleSheet.create({
-  card: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 64, paddingHorizontal: 16, borderRadius: 14, borderWidth: 1 },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-  text: { flex: 1, paddingVertical: 12, gap: 2 },
-  name: { fontSize: 17, fontWeight: '600' },
-  meta: { fontSize: 14 },
-  chevron: { fontSize: 24 },
+  card: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, paddingRight: space.lg, borderRadius: radius.lg, borderWidth: 1 },
+  text: { flex: 1, gap: 2 },
 });

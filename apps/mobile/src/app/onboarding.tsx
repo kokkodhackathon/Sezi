@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, findNodeHandle, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { KilimBand, Medallion } from '@/design/motif';
+import { radius, space, type, upper } from '@/design/type';
 import { translate, type Lang, type MessageKey } from '@/lib/i18n';
 import { defaultSenses, useProfile } from '@/lib/profile';
 
@@ -59,6 +61,11 @@ export default function Onboarding() {
 
   return (
     <SafeAreaView style={s.screen}>
+      {t.motifOpacity > 0 ? (
+        <View style={{ height: 10 }}>
+          <KilimBand color={t.accent} accent={t.primary} height={10} opacity={0.9} />
+        </View>
+      ) : null}
       <View style={s.progress} accessibilityLabel={tr('onb.step', { n: index + 1, total: steps.length })}>
         {steps.map((x, i) => (
           <View key={x} style={[s.progressSeg, { backgroundColor: i <= index ? t.primary : t.border }]} />
@@ -67,16 +74,23 @@ export default function Onboarding() {
 
       <ScrollView contentContainerStyle={s.body}>
         <Text style={s.stepLabel} importantForAccessibility="no">
-          {tr('onb.step', { n: index + 1, total: steps.length })}
+          {upper(tr('onb.step', { n: index + 1, total: steps.length }), lang)}
         </Text>
 
         {step === 'welcome' && (
-          <>
-            <Text ref={titleRef} style={s.title} accessibilityRole="header">
+          <View style={s.welcome}>
+            <View style={s.medallion}>
+              <Medallion primary={t.primary} accent={t.accent} ink={t.text} size={176} />
+            </View>
+            <Text style={[type.hero, { color: t.text }]} accessibilityElementsHidden importantForAccessibility="no">
+              Sezi
+            </Text>
+            <Text ref={titleRef} style={[type.heading, { color: t.primary }]} accessibilityRole="header">
               {tr('onb.welcome.title')}
             </Text>
-            <Text style={s.lead}>{tr('onb.welcome.body')}</Text>
-          </>
+            <Text style={s.lead}>{tr('onb.tagline')}</Text>
+            <Text style={s.hint}>{tr('onb.welcome.body')}</Text>
+          </View>
         )}
 
         {step === 'lang' && (
@@ -257,28 +271,30 @@ function Option({
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    progress: { flexDirection: 'row', gap: 6, paddingHorizontal: 20, paddingTop: 12 },
+    progress: { flexDirection: 'row', gap: 6, paddingHorizontal: space.xl, paddingTop: space.lg },
     progressSeg: { flex: 1, height: 4, borderRadius: 2 },
-    body: { padding: 20, gap: 16, paddingBottom: 32 },
-    stepLabel: { fontSize: 14, fontWeight: '600', color: t.textMuted, letterSpacing: 0.5 },
-    title: { fontSize: 30, lineHeight: 36, fontWeight: '700', color: t.text },
-    lead: { fontSize: 18, lineHeight: 27, color: t.text, flex: 1 },
-    hint: { fontSize: 16, lineHeight: 23, color: t.textMuted },
-    options: { gap: 12, marginTop: 4 },
-    option: { flexDirection: 'row', gap: 14, alignItems: 'center', padding: 16, borderRadius: 16, backgroundColor: t.surface },
+    body: { padding: space.xl, gap: space.lg, paddingBottom: space.xxl },
+    welcome: { gap: space.md },
+    medallion: { alignItems: 'flex-start', marginBottom: space.lg, marginTop: space.sm },
+    stepLabel: { ...type.eyebrow, color: t.primary },
+    title: { ...type.title, color: t.text },
+    lead: { ...type.lead, color: t.text, flex: 1 },
+    hint: { ...type.body, color: t.textMuted },
+    options: { gap: space.md, marginTop: space.xs },
+    option: { flexDirection: 'row', gap: 14, alignItems: 'center', padding: space.lg, borderRadius: radius.lg, backgroundColor: t.surface },
     optionText: { flex: 1, gap: 4 },
-    optionLabel: { fontSize: 18, fontWeight: '600', color: t.text },
-    optionDesc: { fontSize: 15, lineHeight: 21, color: t.textMuted },
-    radio: { width: 24, height: 24, borderRadius: 12, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-    check: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+    optionLabel: { ...type.itemTitle, color: t.text },
+    optionDesc: { ...type.meta, color: t.textMuted },
+    radio: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+    check: { width: 26, height: 26, borderRadius: 7, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
     checkMark: { fontSize: 15, fontWeight: '800', lineHeight: 18 },
-    summaryRow: { flexDirection: 'row', gap: 12, alignItems: 'flex-start' },
-    summaryDot: { width: 10, height: 10, borderRadius: 5, marginTop: 9 },
-    footer: { flexDirection: 'row', gap: 12, paddingHorizontal: 20, paddingVertical: 12, borderTopWidth: 1, borderTopColor: t.border },
-    primaryBtn: { flex: 2, minHeight: 56, borderRadius: 16, backgroundColor: t.primary, alignItems: 'center', justifyContent: 'center' },
-    primaryBtnText: { fontSize: 18, fontWeight: '700', color: t.onPrimary },
-    secondaryBtn: { flex: 1, minHeight: 56, borderRadius: 16, borderWidth: 1, borderColor: t.border, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surface },
-    secondaryBtnText: { fontSize: 18, fontWeight: '600', color: t.text },
+    summaryRow: { flexDirection: 'row', gap: space.md, alignItems: 'flex-start' },
+    summaryDot: { width: 10, height: 10, borderRadius: 2, marginTop: 9, transform: [{ rotate: '45deg' }] },
+    footer: { flexDirection: 'row', gap: space.md, paddingHorizontal: space.xl, paddingVertical: space.md, borderTopWidth: 1, borderTopColor: t.border, backgroundColor: t.background },
+    primaryBtn: { flex: 2, minHeight: 56, borderRadius: radius.pill, backgroundColor: t.primary, alignItems: 'center', justifyContent: 'center' },
+    primaryBtnText: { ...type.button, fontSize: 18, color: t.onPrimary },
+    secondaryBtn: { flex: 1, minHeight: 56, borderRadius: radius.pill, borderWidth: 1.5, borderColor: t.border, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surface },
+    secondaryBtnText: { ...type.button, fontSize: 18, color: t.text },
     disabled: { opacity: 0.4 },
     pressed: { opacity: 0.85 },
   });

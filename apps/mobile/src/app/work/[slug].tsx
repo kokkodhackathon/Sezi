@@ -2,9 +2,13 @@ import { Camera, GeoJSONSource, Layer, Map } from '@maplibre/maplibre-react-nati
 import type { ThemeColors } from '@sezi/shared';
 import * as Speech from 'expo-speech';
 import { Stack, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { ExternalIcon, InfoIcon, PlayIcon, StopIcon } from '@/design/icons';
+import { CengelMark, KilimBand } from '@/design/motif';
+import { radius, space, type, upper } from '@/design/type';
+import { colorForType, WorkGlyph } from '@/design/work-glyph';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
 import { loc, useWork, type WorkRow } from '@/lib/works';
@@ -28,7 +32,7 @@ export default function WorkDetail() {
   if (error || !work) {
     return (
       <View style={s.center}>
-        <Text style={s.body}>{error ? tr('work.error') : tr('work.notFound')}</Text>
+        <Text style={[type.body, { color: t.text }]}>{error ? tr('work.error') : tr('work.notFound')}</Text>
       </View>
     );
   }
@@ -53,87 +57,145 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
       return;
     }
     setSpeaking(true);
-    Speech.speak(narration, { language: lang === 'tr' ? 'tr-TR' : 'en-US', onDone: () => setSpeaking(false), onStopped: () => setSpeaking(false) });
+    Speech.speak(narration, {
+      language: lang === 'tr' ? 'tr-TR' : 'en-US',
+      onDone: () => setSpeaking(false),
+      onStopped: () => setSpeaking(false),
+    });
   };
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.body_}>
-      <Stack.Screen options={{ title: name }} />
+    <ScrollView style={s.screen} contentContainerStyle={s.body}>
+      <Stack.Screen options={{ title: '' }} />
 
-      <Text style={s.title} accessibilityRole="header">
-        {name}
-      </Text>
-      <Text style={s.meta}>
-        {kind}
-        {complex ? ` · ${complex}` : ''}
-      </Text>
+      <View style={s.hero}>
+        <WorkGlyph slug={work.type_slug} size={72} />
+        <View style={s.heroText}>
+          <Text style={[type.eyebrow, { color: t.primary }]}>{upper(kind, lang)}</Text>
+          <Text style={[type.title, { color: t.text }]} accessibilityRole="header">
+            {name}
+          </Text>
+          {complex ? <Text style={[type.meta, { color: t.textMuted }]}>{complex}</Text> : null}
+        </View>
+      </View>
 
       <Pressable
         onPress={toggleSpeech}
         accessibilityRole="button"
         accessibilityState={{ busy: speaking }}
-        style={({ pressed }) => [s.primaryBtn, { opacity: pressed ? 0.85 : 1 }]}>
-        <Text style={s.primaryBtnText}>{speaking ? tr('work.stop') : tr('work.listen')}</Text>
+        style={({ pressed }) => [s.primaryBtn, pressed && { opacity: 0.88 }]}>
+        {speaking ? <StopIcon color={t.onPrimary} /> : <PlayIcon color={t.onPrimary} />}
+        <Text style={[type.button, { color: t.onPrimary }]}>{speaking ? tr('work.stop') : tr('work.listen')}</Text>
       </Pressable>
 
       <View style={s.map} accessible accessibilityLabel={tr('work.mapLabel', { name })} importantForAccessibility="no-hide-descendants">
         <Map style={StyleSheet.absoluteFill} mapStyle={MAP_STYLE} dragPan={false} touchZoom={false} touchRotate={false}>
           <Camera initialViewState={{ center: [work.lng, work.lat], zoom: 17 }} />
           <GeoJSONSource id="work" data={{ type: 'Point', coordinates: [work.lng, work.lat] }}>
+            <Layer id="work-halo" type="circle" paint={{ 'circle-radius': 18, 'circle-color': t.surface, 'circle-opacity': 0.9 }} />
             <Layer
               id="work-circle"
               type="circle"
-              paint={{ 'circle-radius': 10, 'circle-color': t.accent, 'circle-stroke-width': 3, 'circle-stroke-color': t.surface }}
+              paint={{ 'circle-radius': 11, 'circle-color': colorForType(work.type_slug), 'circle-stroke-width': 3, 'circle-stroke-color': t.surface }}
             />
           </GeoJSONSource>
         </Map>
       </View>
 
-      <Text style={s.h2} accessibilityRole="header">
-        {tr('work.history')}
-      </Text>
-      {history ? (
-        <Text style={s.body}>{history}</Text>
-      ) : (
-        <Text style={s.muted}>{tr('work.noHistory')}</Text>
-      )}
+      {t.motifOpacity > 0 ? (
+        <View style={s.band}>
+          <KilimBand color={t.accent} accent={t.primary} height={10} opacity={0.6} />
+        </View>
+      ) : null}
 
-      <Text style={s.h2} accessibilityRole="header">
-        {tr('work.sources')}
-      </Text>
-      {work.sources.length === 0 ? (
-        <Text style={s.muted}>{tr('work.noSources')}</Text>
-      ) : (
-        work.sources.map((src) => (
-          <Pressable
-            key={src.id}
-            disabled={!src.url}
-            onPress={() => src.url && Linking.openURL(src.url)}
-            accessibilityRole={src.url ? 'link' : 'text'}
-            accessibilityHint={src.url ? tr('work.sourceHint') : undefined}
-            style={s.source}>
-            <Text style={[s.body, src.url && s.link]}>{src.title}</Text>
-            <Text style={s.muted}>{[src.publisher, src.year, src.page && `s. ${src.page}`].filter(Boolean).join(' · ')}</Text>
-          </Pressable>
-        ))
-      )}
+      <Section title={tr('work.history')} t={t}>
+        {history ? (
+          <Text style={[type.body, { color: t.text }]}>{history}</Text>
+        ) : (
+          <View style={s.note}>
+            <InfoIcon color={t.textMuted} />
+            <Text style={[type.meta, { color: t.textMuted, flex: 1 }]}>{tr('work.noHistory')}</Text>
+          </View>
+        )}
+      </Section>
+
+      <Section title={tr('work.sources')} t={t}>
+        {work.sources.length === 0 ? (
+          <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.noSources')}</Text>
+        ) : (
+          work.sources.map((src) => (
+            <Pressable
+              key={src.id}
+              disabled={!src.url}
+              onPress={() => src.url && Linking.openURL(src.url)}
+              accessibilityRole={src.url ? 'link' : 'text'}
+              accessibilityHint={src.url ? tr('work.sourceHint') : undefined}
+              style={({ pressed }) => [s.source, pressed && { backgroundColor: t.background }]}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={[type.itemTitle, { color: t.text, fontSize: 16 }]}>{src.title}</Text>
+                <Text style={[type.meta, { color: t.textMuted }]}>
+                  {[src.publisher, src.year, src.page && `s. ${src.page}`].filter(Boolean).join(' · ')}
+                </Text>
+              </View>
+              {src.url ? <ExternalIcon color={t.primary} /> : null}
+            </Pressable>
+          ))
+        )}
+      </Section>
     </ScrollView>
+  );
+}
+
+function Section({ title, t, children }: { title: string; t: ThemeColors; children: ReactNode }) {
+  return (
+    <View style={{ gap: space.md }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
+        <CengelMark color={t.accent} />
+        <Text style={[type.heading, { color: t.text }]} accessibilityRole="header">
+          {title}
+        </Text>
+      </View>
+      {children}
+    </View>
   );
 }
 
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    body_: { padding: 16, gap: 12, paddingBottom: 48 },
-    center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: t.background },
-    title: { fontSize: 28, fontWeight: '700', color: t.text },
-    meta: { fontSize: 16, color: t.textMuted, marginTop: -6 },
-    h2: { fontSize: 20, fontWeight: '700', color: t.text, marginTop: 12 },
-    body: { fontSize: 17, lineHeight: 25, color: t.text },
-    muted: { fontSize: 15, lineHeight: 22, color: t.textMuted },
-    link: { color: t.primary, textDecorationLine: 'underline' },
-    map: { height: 200, borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: t.border },
-    primaryBtn: { minHeight: 52, borderRadius: 14, backgroundColor: t.primary, alignItems: 'center', justifyContent: 'center' },
-    primaryBtnText: { fontSize: 17, fontWeight: '700', color: t.onPrimary },
-    source: { paddingVertical: 8, gap: 2, borderBottomWidth: 1, borderBottomColor: t.border },
+    body: { padding: space.lg, gap: space.xl, paddingBottom: 56 },
+    center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xl, backgroundColor: t.background },
+    hero: { flexDirection: 'row', gap: space.lg, alignItems: 'flex-start' },
+    heroText: { flex: 1, gap: space.xs },
+    primaryBtn: {
+      flexDirection: 'row',
+      gap: space.sm,
+      minHeight: 56,
+      borderRadius: radius.pill,
+      backgroundColor: t.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    map: { height: 200, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },
+    band: { height: 10, marginHorizontal: -space.lg },
+    note: {
+      flexDirection: 'row',
+      gap: space.md,
+      padding: space.lg,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderStyle: 'dashed',
+      borderColor: t.border,
+      backgroundColor: t.surface,
+    },
+    source: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.md,
+      padding: space.lg,
+      borderRadius: radius.md,
+      borderWidth: 1,
+      borderColor: t.border,
+      backgroundColor: t.surface,
+    },
   });
