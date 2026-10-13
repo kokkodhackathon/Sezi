@@ -1,9 +1,12 @@
 import {
+  buildDetour,
   buildGuidance,
   distanceM,
   findRoute,
   NavSegment,
   routeGeometry,
+  segmentAhead,
+  withLeadIn,
   type GuidanceStep,
   type LngLat,
   type NavNode,
@@ -58,14 +61,28 @@ export interface PlannedRoute {
   passedLandmarks: PilotNode[];
 }
 
-export function planRoute(destSlug: string, profile: UserProfile, from: LngLat = DEFAULT_START): PlannedRoute | null {
+export interface PlanOptions {
+  /** Kapalı segmentler (onaylı bildirim ya da simülasyondaki yol kapatma). */
+  blocked?: ReadonlySet<string>;
+  /** Rotayı tam bu noktadan başlat: noktadan en yakın düğüme bağlantı eklenir (yeniden rota). */
+  leadIn?: boolean;
+}
+
+/** Kapalı segmentler işaretlenmiş graf (yoksa orijinali). */
+function segmentsWith(blocked?: ReadonlySet<string>): NavSegment[] {
+  if (!blocked || blocked.size === 0) return segments;
+  return segments.map((s) => (blocked.has(s.id) ? { ...s, blocked: true } : s));
+}
+
+export function planRoute(destSlug: string, profile: UserProfile, from: LngLat = DEFAULT_START, opts: PlanOptions = {}): PlannedRoute | null {
   const end = landmarkNodeForWork(destSlug);
   if (!end) return null;
   const start = nearestNode(from);
-  const route = findRoute(segments, profile, start.id, end.id);
+  const route = findRoute(segmentsWith(opts.blocked), profile, start.id, end.id);
   if (!route) return null;
-  const geometry = routeGeometry(route, nodes, segMap);
-  const steps = buildGuidance(route, nodes, [], profile, geometry);
+  let geometry = routeGeometry(route, nodes, segMap);
+  let steps = buildGuidance(route, nodes, [], profile, geometry, segMap);
+  if (opts.leadIn) ({ geometry, steps } = withLeadIn(geometry, steps, from));
   return {
     route,
     geometry,
@@ -75,6 +92,18 @@ export function planRoute(destSlug: string, profile: UserProfile, from: LngLat =
     stairSegments: route.segmentIds.filter((id) => (segMap.get(id)?.steps ?? 0) > 0).length,
     passedLandmarks: route.nodeIds.slice(1, -1).map((id) => nodes.get(id)!).filter((n) => n.lynchType === 'landmark'),
   };
+}
+
+const nodeLocations = new Map([...nodes.values()].map((n) => [n.id, n.location]));
+
+/** Yanlış dönüş senaryosu: önümüzdeki ilk kavşakta rotadan ayrılan yürüyüş çizgisi. */
+export function detourFrom(plan: PlannedRoute, alongM: number, blocked?: ReadonlySet<string>) {
+  return buildDetour(plan.route, plan.geometry, segmentsWith(blocked), nodeLocations, alongM);
+}
+
+/** Yol kapatma senaryosu: kullanıcının önündeki ilk rota segmenti. */
+export function blockableAhead(plan: PlannedRoute, alongM: number) {
+  return segmentAhead(plan.route, plan.geometry, alongM);
 }
 
 /** Profile göre yürüme hızı (m/sn); süre tahmini ve simülasyon için. */

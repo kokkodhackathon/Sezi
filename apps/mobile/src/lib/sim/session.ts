@@ -1,32 +1,53 @@
 import { bearingDeg, dueStep, initialTrack, pointAlong, stereoPan, trackFix, type GuidanceStep, type LngLat, type LocationFix, type TrackState, type UserProfile } from '@sezi/shared';
+import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 
-import { planRoute, walkingSpeed, type PlannedRoute } from '../nav';
-import { hapticForTurn, playLandmarkCue } from './cues';
+import { blockableAhead, detourFrom, planRoute, walkingSpeed, type PlannedRoute } from '../nav';
+import { hapticAlert, hapticForTurn, playLandmarkCue } from './cues';
 import { say, silence } from './speech';
-import { createWalker, stepWalker, type Walker } from './walker';
+import { createWalker, stepWalker, walkerOnLine, type Walker } from './walker';
 
 /**
  * Tek rehberlik oturumu. Rota ekranı ve tam ekran rehberlik aynı oturumu izler:
  * ekran değişince ilerleme kaybolmaz. Konum, sanal yürüyüşçünün ürettiği GPS benzeri
  * ölçümlerden gelir ve gerçek GPS ile aynı takip hattından (`trackFix`, `dueStep`) geçer.
+ *
+ * Senaryolar (jüri paneli): yol kapatma, yanlış dönüş, kalabalık. Rotadan sapma her durumda
+ * aynı tepkiyi verir: uyarı, bulunulan yerden yeniden rota.
  */
+export type AlertKind = 'offroute' | 'blocked' | 'crowd_on' | 'crowd_off' | 'no_route';
+
+export interface NavAlert {
+  id: number;
+  kind: AlertKind;
+  text: string;
+}
+
 export interface NavState {
   running: boolean;
   finished: boolean;
   /** Rota üzerindeki ilerleme (m). */
   distance: number;
-  /** Rotaya eşlenmiş konum (haritada gösterilen). */
+  /** Rotaya eşlenmiş konum; rotadan çıkıldıysa gerçek konum (haritada gösterilen). */
   position: LngLat;
   heading: number;
-  /** Son ham konum ölçümü (rotadan sapma görselleştirmesi için). */
+  /** Son ham konum ölçümü. */
   fix: LocationFix | null;
   track: TrackState;
   /** Son duyurulan adım (yoksa -1). */
   stepIndex: number;
-  /** Her yeni ipucunda artar: görsel uyarı (işitme engelli) bunu izler. */
+  /** Her yeni ipucunda artar: görsel uyarı (işitme engelli, kalabalık) bunu izler. */
   cueCount: number;
   speed: number;
+  /** Kalabalık/gürültü: sesli ipuçları kapanır, titreşim ve ekran ışığı devralır. */
+  noisy: boolean;
+  /** Kapalı segmentler. */
+  blocked: string[];
+  reroutes: number;
+  /** Son uyarı (ekranda şerit olarak gösterilir). */
+  alert: NavAlert | null;
+  /** Yürüyüşçü rotadan ayrılan bir sokakta (yanlış dönüş senaryosu). */
+  detouring: boolean;
 }
 
 interface Session {
@@ -39,15 +60,53 @@ interface Session {
 
 const TICK_MS = 200;
 
+const TEXT = {
+  tr: {
+    intro: (name: string, m: number) => `Hedef: ${name}. Yaklaşık ${m} metre.`,
+    offroute: (m: number) => `Rotadan çıktınız. Bulunduğunuz yerden yeni rota: ${m} metre.`,
+    blocked: (m: number) => `İleride yol kapalı. Sizi başka yoldan götürüyorum: ${m} metre.`,
+    noRoute: 'Kapalı yolun çevresinden geçen bir rota bulunamadı. Lütfen bekleyin ya da yardım isteyin.',
+    crowdOn: 'Ortam gürültülü. Bundan sonra titreşim ve ekran ışığıyla yönlendiriyorum.',
+    crowdOff: 'Ortam sakinleşti. Sesli yönlendirme yeniden açık.',
+  },
+  en: {
+    intro: (name: string, m: number) => `Destination: ${name}. About ${m} metres.`,
+    offroute: (m: number) => `You have left the route. New route from here: ${m} metres.`,
+    blocked: (m: number) => `The way ahead is closed. Taking you another way: ${m} metres.`,
+    noRoute: 'No route around the closed street was found. Please wait or ask for help.',
+    crowdOn: 'It is noisy here. From now on I will guide you with vibration and screen light.',
+    crowdOff: 'It is quieter now. Spoken guidance is back on.',
+  },
+};
+
 const initialState = (plan: PlannedRoute | null, speed = 1): NavState => {
   const start = plan?.geometry.line[0] ?? ([0, 0] as LngLat);
-  return { running: false, finished: false, distance: 0, position: start, heading: 0, fix: null, track: initialTrack, stepIndex: -1, cueCount: 0, speed };
+  return {
+    running: false,
+    finished: false,
+    distance: 0,
+    position: start,
+    heading: 0,
+    fix: null,
+    track: initialTrack,
+    stepIndex: -1,
+    cueCount: 0,
+    speed,
+    noisy: false,
+    blocked: [],
+    reroutes: 0,
+    alert: null,
+    detouring: false,
+  };
 };
 
 let session: Session = { key: '', slug: '', profile: null, plan: null, state: initialState(null) };
 let walker: Walker | null = null;
+/** Yürüyüşçünün gerçek (gürültüsüz) konumu: yeniden rota buradan başlar. */
+let truth: LngLat | null = null;
 let timer: ReturnType<typeof setInterval> | null = null;
 let consumers = 0;
+let alertId = 0;
 const listeners = new Set<() => void>();
 const options = { speechRate: 0.95, onArrive: (_slug: string) => {} };
 
@@ -57,6 +116,7 @@ function emit(state: Partial<NavState>) {
 }
 
 const keyOf = (slug: string, profile: UserProfile) => `${slug}|${JSON.stringify(profile)}`;
+const totalOf = (plan: PlannedRoute) => plan.geometry.nodeAtM.at(-1)!;
 
 function stopTimer() {
   if (timer) clearInterval(timer);
@@ -70,22 +130,66 @@ function open(slug: string, profile: UserProfile) {
   silence();
   const plan = planRoute(slug, profile);
   walker = plan ? createWalker(plan.geometry.line) : null;
+  truth = plan?.geometry.line[0] ?? null;
   session = { key, slug, profile, plan, state: initialState(plan, session.state.speed) };
   listeners.forEach((l) => l());
+}
+
+/** Sesli ipucu bu oturumda kullanılabilir mi (duymayan kullanıcı ya da kalabalıkta hayır). */
+function canSpeak() {
+  const { profile, state } = session;
+  return !!profile && profile.hearing !== 'deaf' && profile.senses.audio && !state.noisy;
+}
+
+function speak(text: string, interrupt = false) {
+  const { profile } = session;
+  if (profile && canSpeak()) say(text, { lang: profile.lang, rate: options.speechRate, interrupt });
 }
 
 function announce(step: GuidanceStep, index: number, position: LngLat, heading: number) {
   const { plan, profile } = session;
   if (!plan || !profile) return;
   const arrived = index === plan.steps.length - 1;
-  // Duymayan kullanıcı: hiçbir bilgi yalnızca sesle verilmez; görsel uyarı (cueCount) ve titreşim kullanılır.
-  if (profile.hearing === 'deaf') {
-    if (profile.senses.haptic) void hapticForTurn(step.turn, arrived);
+  // Duymayan kullanıcı ya da kalabalık: bilgi yalnızca sesle verilmez; görsel uyarı (cueCount) ve titreşim kullanılır.
+  if (profile.senses.haptic || !canSpeak()) {
+    void hapticForTurn(step.turn, arrived).then(() => {
+      if (step.hazard) return Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+    });
+  }
+  if (!canSpeak()) return;
+  if (step.landmark) playLandmarkCue(stereoPan(heading, bearingDeg(position, step.landmark.location)));
+  speak(step.text);
+}
+
+function raise(kind: AlertKind, text: string, cueCount: number): Partial<NavState> {
+  void hapticAlert();
+  speak(text, true);
+  return { alert: { id: ++alertId, kind, text }, cueCount: cueCount + 1 };
+}
+
+/** Bulunulan yerden yeniden rota. Bulunamazsa mevcut rota korunur. */
+function reroute(kind: 'offroute' | 'blocked', blocked: string[]) {
+  const { slug, profile, state } = session;
+  if (!profile || !walker || !truth) return;
+  const lang = profile.lang;
+  const next = planRoute(slug, profile, truth, { blocked: new Set(blocked), leadIn: true });
+  if (!next) {
+    emit({ blocked, ...raise('no_route', TEXT[lang].noRoute, state.cueCount) });
     return;
   }
-  if (profile.senses.audio && step.landmark) playLandmarkCue(stereoPan(heading, bearingDeg(position, step.landmark.location)));
-  if (profile.senses.haptic) void hapticForTurn(step.turn, arrived);
-  if (profile.senses.audio) say(step.text, { lang: profile.lang, rate: options.speechRate });
+  walker = walkerOnLine(walker, next.geometry.line);
+  session = { ...session, plan: next };
+  const m = Math.round(totalOf(next));
+  emit({
+    blocked,
+    distance: 0,
+    track: initialTrack,
+    stepIndex: -1,
+    reroutes: state.reroutes + 1,
+    detouring: false,
+    position: next.geometry.line[0]!,
+    ...raise(kind, kind === 'offroute' ? TEXT[lang].offroute(m) : TEXT[lang].blocked(m), state.cueCount),
+  });
 }
 
 function tick() {
@@ -94,11 +198,19 @@ function tick() {
   const mps = walkingSpeed(profile) * state.speed;
   const step = stepWalker(walker, (mps * TICK_MS) / 1000, Date.now());
   walker = step.walker;
-  const total = plan.geometry.nodeAtM.at(-1)!;
+  truth = step.truth;
+  const total = totalOf(plan);
   const track = trackFix(state.track, plan.geometry.line, step.fix);
-  // Yürüyüşçü çizginin sonuna ulaştıysa GPS sapması varışı geciktirmesin.
-  const distance = step.done ? total : track.alongM;
-  const position = pointAlong(plan.geometry.line, distance);
+
+  // Rotadan çıkıldı (ya da sapma sokağının sonuna gelindi): uyarı ve yeniden rota.
+  if (track.offRoute || (state.detouring && step.done)) {
+    reroute('offroute', state.blocked);
+    return;
+  }
+
+  // Yürüyüşçü rota çizgisinin sonuna ulaştıysa GPS sapması varışı geciktirmesin.
+  const distance = step.done && !state.detouring ? total : track.alongM;
+  const position = track.crossM > 10 ? step.truth : pointAlong(plan.geometry.line, distance);
   const heading = step.fix.heading ?? state.heading;
 
   const index = dueStep(
@@ -123,11 +235,20 @@ function tick() {
 
 export const navSession = {
   play() {
-    const { plan, state } = session;
-    if (!plan) return;
+    const { plan, profile, state } = session;
+    if (!plan || !profile) return;
     if (state.finished) {
-      walker = createWalker(plan.geometry.line);
-      emit({ ...initialState(plan, state.speed) });
+      // Baştan: ilk rota (kapatmalar temizlenir).
+      const fresh = planRoute(session.slug, profile);
+      if (!fresh) return;
+      session = { ...session, plan: fresh };
+      walker = createWalker(fresh.geometry.line);
+      truth = fresh.geometry.line[0]!;
+      emit({ ...initialState(fresh, state.speed), noisy: state.noisy });
+    }
+    if (session.state.distance === 0 && session.state.stepIndex < 0) {
+      const p = session.plan!;
+      speak(TEXT[profile.lang].intro(p.end.name?.[profile.lang] ?? p.end.name?.tr ?? '', Math.round(totalOf(p))));
     }
     stopTimer();
     timer = setInterval(tick, TICK_MS);
@@ -141,20 +262,57 @@ export const navSession = {
   reset() {
     stopTimer();
     silence();
-    walker = session.plan ? createWalker(session.plan.geometry.line) : null;
-    emit(initialState(session.plan, session.state.speed));
+    const { profile } = session;
+    const fresh = profile ? planRoute(session.slug, profile) : null;
+    session = { ...session, plan: fresh };
+    walker = fresh ? createWalker(fresh.geometry.line) : null;
+    truth = fresh?.geometry.line[0] ?? null;
+    emit(initialState(fresh, session.state.speed));
   },
   repeat() {
-    const { plan, state } = session;
-    if (!plan || state.stepIndex < 0) return;
+    const { plan, state, profile } = session;
+    if (!plan || !profile || state.stepIndex < 0) return;
     const step = plan.steps[state.stepIndex]!;
-    const { profile } = session;
-    if (profile && profile.hearing !== 'deaf' && profile.senses.audio) say(step.text, { lang: profile.lang, rate: options.speechRate, interrupt: true });
-    else if (profile?.senses.haptic) void hapticForTurn(step.turn, state.stepIndex === plan.steps.length - 1);
+    if (canSpeak()) say(step.text, { lang: profile.lang, rate: options.speechRate, interrupt: true });
+    else if (profile.senses.haptic || state.noisy) void hapticForTurn(step.turn, state.stepIndex === plan.steps.length - 1);
     emit({ cueCount: state.cueCount + 1 });
   },
   setSpeed(speed: number) {
     emit({ speed });
+  },
+  /** Senaryo: önümüzdeki yol kapandı (onaylı erişilebilirlik bildirimi gibi). */
+  blockAhead() {
+    const { plan, state } = session;
+    if (!plan || state.finished) return false;
+    const ahead = blockableAhead(plan, state.distance);
+    if (!ahead) return false;
+    reroute('blocked', [...state.blocked, ahead.segmentId]);
+    return true;
+  },
+  /** Senaryo: kullanıcı önündeki kavşakta dönmeyi kaçırıp düz devam eder. */
+  wrongTurn() {
+    const { plan, state } = session;
+    if (!plan || !walker || state.finished || state.detouring) return false;
+    const detour = detourFrom(plan, state.distance, new Set(state.blocked));
+    if (!detour) return false;
+    walker = walkerOnLine(walker, detour.line);
+    emit({ detouring: true });
+    if (!state.running) navSession.play();
+    return true;
+  },
+  /** Senaryo: kalabalık/gürültü açılır ya da kapanır. */
+  toggleCrowd() {
+    const { profile, state } = session;
+    if (!profile) return;
+    const noisy = !state.noisy;
+    const text = noisy ? TEXT[profile.lang].crowdOn : TEXT[profile.lang].crowdOff;
+    // Geçiş mesajı her iki durumda da okunur (gürültüde de denenir), ardından mod değişir.
+    if (profile.hearing !== 'deaf' && profile.senses.audio) say(text, { lang: profile.lang, rate: options.speechRate, interrupt: true });
+    void hapticAlert();
+    emit({ noisy, alert: { id: ++alertId, kind: noisy ? 'crowd_on' : 'crowd_off', text }, cueCount: state.cueCount + 1 });
+  },
+  dismissAlert() {
+    emit({ alert: null });
   },
 };
 
@@ -194,6 +352,6 @@ export function useNavSession(slug: string, profile: UserProfile | null, opts: {
   const ready = current.key === key;
   const plan = ready ? current.plan : fallback;
   const state = ready ? current.state : initialState(plan, current.state.speed);
-  const total = plan ? plan.geometry.nodeAtM.at(-1)! : 0;
+  const total = plan ? totalOf(plan) : 0;
   return { plan, state, total, ...navSession };
 }

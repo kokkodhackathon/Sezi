@@ -1,6 +1,6 @@
-import { bearingDeg, distanceM, relativeBearing } from "./geo";
+import { bearingDeg, distanceM, pointAlong, relativeBearing } from "./geo";
 import type { Route, RouteGeometry } from "./routing";
-import type { CueType, Instruction, LngLat, NavNode, UserProfile } from "./schemas";
+import type { CueType, Instruction, LngLat, NavNode, NavSegment, UserProfile } from "./schemas";
 
 /** Çizgi boyunca baştan en az `d` metre ilerideki ilk nokta (kısa geometri parçalarının yön gürültüsünü bastırır). */
 function pointAway(line: LngLat[], d: number): LngLat {
@@ -41,6 +41,11 @@ const TURN_TEXT: Record<"tr" | "en", Record<Turn, string>> = {
   },
 };
 
+/** Adımın türü: dönüş, yol üstü teyit, varış. */
+export type StepKind = "turn" | "confirm" | "arrive";
+/** Önümüzdeki segmentte dikkat gerektiren durum. */
+export type Hazard = "stairs" | "cobble" | "traffic";
+
 export interface GuidanceStep {
   nodeId: string;
   text: string;
@@ -52,6 +57,9 @@ export interface GuidanceStep {
   atM: number;
   /** Bu adımda yaklaşılan landmark (ses ipucu ve ekran için). */
   landmark?: { name: string; location: LngLat };
+  kind?: StepKind;
+  /** Önümüzdeki segmentte dikkat gerektiren durum (ekranda simge, titreşimde uyarı). */
+  hazard?: Hazard;
 }
 
 /** Profile göre ipucu tipi tercih sırası. */
@@ -80,13 +88,66 @@ function pickInstruction(
   })[0];
 }
 
-/** Rotadaki her ara node ve varış için yönlendirme adımlarını üretir. */
+const HAZARD_TEXT: Record<"tr" | "en", Record<Hazard, string>> = {
+  tr: {
+    stairs: "Ardından merdiven var.",
+    cobble: "Zemin arnavut kaldırımına dönüyor.",
+    traffic: "Trafiği yoğun bir caddeye çıkacaksınız, dikkatli olun.",
+  },
+  en: {
+    stairs: "Stairs follow.",
+    cobble: "The surface turns to cobblestone.",
+    traffic: "You will reach a busy street, take care.",
+  },
+};
+
+/** Gürültü değeri bu eşiği aşan segment ana cadde sayılır (OSM yol sınıfından tahmin). */
+const TRAFFIC_NOISE = 0.6;
+/** İki talimat arası bu mesafeyi aşarsa yol üstünde teyit verilir ("doğru yoldasınız"). */
+const CONFIRM_GAP_M = 90;
+/** Dönüş düğümüne bu kadar yakın landmark talimatta yer işareti olarak anılır. */
+const NEAR_LANDMARK_M = 35;
+
+function hazardOf(seg: NavSegment | undefined, prev: NavSegment | undefined, profile: UserProfile): Hazard | undefined {
+  if (!seg) return undefined;
+  if (seg.steps > 0 && profile.mobility !== "wheelchair") return "stairs";
+  if (seg.noise >= TRAFFIC_NOISE && (prev?.noise ?? 0) < TRAFFIC_NOISE) return "traffic";
+  if (seg.surface === "cobble" && prev?.surface !== "cobble") return "cobble";
+  return undefined;
+}
+
+/** Konuma en yakın landmark (rota üstünde olması gerekmez), en fazla `maxM` uzaklıkta. */
+function nearestLandmark(nodes: Map<string, NavNode>, p: LngLat, maxM: number, lang: "tr" | "en", exclude?: string) {
+  let best: { node: NavNode; name: string; d: number } | undefined;
+  for (const n of nodes.values()) {
+    if (n.lynchType !== "landmark" || n.id === exclude) continue;
+    const name = n.name?.[lang] ?? n.name?.tr;
+    if (!name) continue;
+    const d = distanceM(p, n.location);
+    if (d <= maxM && (!best || d < best.d)) best = { node: n, name, d };
+  }
+  return best;
+}
+
+/** Göreli açıyı (+ sağ) yan bilgisine çevirir. */
+export function sideText(rel: number, lang: "tr" | "en"): string {
+  const a = Math.abs(rel);
+  if (lang === "tr") return a < 30 ? "önünüzde" : a > 150 ? "arkanızda" : rel > 0 ? "sağınızda" : "solunuzda";
+  return a < 30 ? "ahead of you" : a > 150 ? "behind you" : rel > 0 ? "on your right" : "on your left";
+}
+
+/**
+ * Rotadaki her ara node ve varış için yönlendirme adımlarını üretir.
+ * `segments` verilirse Lynch dili zenginleşir: önümüzdeki merdiven, zemin ve cadde uyarıları,
+ * dönüşte yakındaki yer işareti, uzun düzlüklerde "doğru yoldasınız" teyidi.
+ */
 export function buildGuidance(
   route: Route,
   nodes: Map<string, NavNode>,
   instructions: Instruction[],
   profile: UserProfile,
   geometry?: RouteGeometry,
+  segments?: Map<string, NavSegment>,
 ): GuidanceStep[] {
   const byNode = new Map<string, Instruction[]>();
   for (const i of instructions) {
@@ -101,6 +162,7 @@ export function buildGuidance(
     for (let i = 1; i <= k; i++) d += distanceM(nodes.get(route.nodeIds[i - 1]!)!.location, nodes.get(route.nodeIds[i]!)!.location);
     return d;
   };
+  const segAt = (k: number) => (segments ? segments.get(route.segmentIds[k] ?? "") : undefined);
   const steps: GuidanceStep[] = [];
   const ids = route.nodeIds;
 
@@ -128,35 +190,88 @@ export function buildGuidance(
     const atM = geometry?.nodeAtM[k] ?? cumulative(k);
     const lmName = node.lynchType === "landmark" ? (node.name?.[lang] ?? node.name?.tr) : undefined;
     const landmark = lmName ? { name: lmName, location: node.location } : undefined;
+    const kind: StepKind = nextId ? "turn" : "arrive";
+    const hazard = nextId ? hazardOf(segAt(k), segAt(k - 1), profile) : undefined;
 
     const authored = pickInstruction(byNode.get(id) ?? [], prevId, profile);
     if (authored) {
-      steps.push({
-        nodeId: id,
-        text: authored.text[lang] ?? authored.text.tr,
-        cueType: authored.cueType,
-        turn,
-        authored: true,
-        atM,
-        landmark,
-      });
+      steps.push({ nodeId: id, text: authored.text[lang] ?? authored.text.tr, cueType: authored.cueType, turn, authored: true, atM, landmark, kind, hazard });
       continue;
     }
 
-    // Düz geçilen, isimsiz ara node'larda konuşma: bilişsel yükü azaltır.
-    if (nextId && turn === "straight" && node.lynchType === "node") continue;
+    // Düz geçilen, isimsiz ara node'larda konuşma (uyarı yoksa): bilişsel yükü azaltır.
+    if (nextId && turn === "straight" && node.lynchType === "node" && !hazard) continue;
 
     const name = node.name?.[lang] ?? node.name?.tr;
+    // Dönüş düğümü landmark değilse yakındaki yer işareti anılır (Lynch: yön, mekândan okunur).
+    const near = segments && !name && nextId && turn !== "straight" ? nearestLandmark(nodes, node.location, NEAR_LANDMARK_M, lang, ids[0]) : undefined;
     let text: string;
     if (!nextId) {
       text = lang === "tr" ? `Vardınız${name ? `: ${name}` : ""}.` : `You have arrived${name ? `: ${name}` : ""}.`;
     } else if (name) {
       text = lang === "tr" ? `${name} hizasında ${TURN_TEXT.tr[turn]}.` : `At ${name}, ${TURN_TEXT.en[turn]}.`;
+    } else if (near) {
+      text = lang === "tr" ? `${near.name} yakınında ${TURN_TEXT.tr[turn]}.` : `Near ${near.name}, ${TURN_TEXT.en[turn]}.`;
     } else {
       const t = TURN_TEXT[lang][turn];
       text = t.charAt(0).toUpperCase() + t.slice(1) + ".";
     }
-    steps.push({ nodeId: id, text, cueType: "generic", turn, authored: false, atM, landmark });
+    if (hazard) text += ` ${HAZARD_TEXT[lang][hazard]}`;
+    steps.push({
+      nodeId: id,
+      text,
+      cueType: "generic",
+      turn,
+      authored: false,
+      atM,
+      landmark: landmark ?? (near ? { name: near.name, location: near.node.location } : undefined),
+      kind,
+      hazard,
+    });
   }
-  return steps;
+
+  if (!segments || !geometry) return steps;
+  return withConfirmations(steps, route, nodes, geometry, lang);
+}
+
+/** Uzun düzlüklerin ortasına "doğru yoldasınız" teyidi ekler; yakında landmark varsa hangi yanda kaldığını söyler. */
+function withConfirmations(steps: GuidanceStep[], route: Route, nodes: Map<string, NavNode>, geometry: RouteGeometry, lang: "tr" | "en"): GuidanceStep[] {
+  const out: GuidanceStep[] = [];
+  let prevAt = 0;
+  for (const step of steps) {
+    const gap = step.atM - prevAt;
+    // Her 90 m'de bir teyit: uzun düzlükte kullanıcı yolda olduğundan emin olsun.
+    const count = Math.ceil(gap / CONFIRM_GAP_M) - 1;
+    for (let c = 1; c <= count; c++) {
+      const mid = prevAt + (gap * c) / (count + 1);
+      // Teyit, ortaya en yakın rota düğümüne bağlanır.
+      let k = 0;
+      for (let i = 0; i < geometry.nodeAtM.length; i++) if (Math.abs(geometry.nodeAtM[i]! - mid) < Math.abs(geometry.nodeAtM[k]! - mid)) k = i;
+      const p = pointAlong(geometry.line, mid);
+      const heading = bearingDeg(p, pointAlong(geometry.line, mid + 8));
+      const lm = nearestLandmark(nodes, p, 45, lang, route.nodeIds[0]);
+      const left = Math.round(step.atM - mid);
+      const side = lm ? sideText(relativeBearing(heading, bearingDeg(p, lm.node.location)), lang) : "";
+      const text = lm
+        ? lang === "tr"
+          ? `Doğru yoldasınız. ${lm.name} ${side}.`
+          : `You are on track. ${lm.name} is ${side}.`
+        : lang === "tr"
+          ? `Doğru yoldasınız; yaklaşık ${left} metre düz devam edin.`
+          : `You are on track; continue straight for about ${left} metres.`;
+      out.push({
+        nodeId: route.nodeIds[k]!,
+        text,
+        cueType: "generic",
+        turn: "straight",
+        authored: false,
+        atM: mid,
+        landmark: lm ? { name: lm.name, location: lm.node.location } : undefined,
+        kind: "confirm",
+      });
+    }
+    out.push(step);
+    prevAt = step.atM;
+  }
+  return out;
 }
