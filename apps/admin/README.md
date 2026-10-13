@@ -1,32 +1,20 @@
-# React + TypeScript + Vite
+# Sezi admin paneli
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+**Durum:** Vite + React + TypeScript şablonu; uygulama henüz yazılmadı. Kapsam ve kabul ölçütleri: [ROADMAP.md](../../ROADMAP.md) görev #2, #3, #9.
 
-Currently, two official plugins are available:
+## Planlanan özellikler
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. **Giriş:** Supabase magic link. Yalnızca `app_metadata.role = 'admin'` olan kullanıcı yazabilir; RLS bunu zaten zorluyor.
+2. **Eserler:**
+   - Liste: il, ilçe, tür, durum, `needs_review` ve konum kesinliği filtreleri.
+   - Düzenleme: TR/EN alanlar, kaynak bağlama, `draft → verified`.
+3. **Konum:** Harita üzerinde iğne (MapLibre GL JS). `approximate` / `unknown` konumu `exact` yapar.
+4. **Medya:** Fotoğraf yükleme (Storage, WebP ≤1600 px), TR/EN alt metin, telif bilgisi.
+5. **Moderasyon:** Erişilebilirlik bildirimleri; onaylanınca ilgili segment güncellenir.
 
-## React Compiler
+## Çalıştırma
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+cp ../../.env.example .env   # VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY
+pnpm dev                     # http://localhost:5173
 ```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.

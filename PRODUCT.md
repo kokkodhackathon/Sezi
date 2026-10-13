@@ -7,7 +7,7 @@
 android
 
 ## Users
-Vakıf eserlerini (cami, medrese, sebil, han, hamam, türbe…) yerinde gezen herkes: yerli ziyaretçi, turist, öğrenci. Görme kısıtlı (az gören, görme engelli) ve hareket kısıtlı (baston, tekerlekli sandalye) bireyler ürünün kenarında değil merkezinde. Tipik sahne: tarihi yarımadada, kalabalık ve tabela karmaşası içinde, çoğu zaman tek elle ya da ekrana bakmadan kullanım.
+Vakıf eserlerini (cami, medrese, sebil, han, hamam, türbe…) yerinde gezen herkes: yerli ziyaretçi, turist, öğrenci. Görme kısıtlı (az gören, görme engelli) ve hareket kısıtlı (baston, tekerlekli sandalye) bireyler ürünün kenarında değil merkezinde. Tipik sahne: Bursa Hanlar Bölgesi gibi tarihî çarşılarda, kalabalık ve tabela karmaşası içinde, çoğu zaman tek elle ya da ekrana bakmadan kullanım.
 
 ## Product Purpose
 Sezi, vakıf mirasını koordinatlara indirgeyen 2D navigasyon yerine, Kevin Lynch'in bilişsel haritalama yaklaşımıyla (landmark / node / path / district) çok duyulu yönlendirme yapan bir keşif asistanıdır. Kullanıcı eseri bulmakla kalmaz; külliyenin parçalarını bir bütün olarak deneyimler ve kaynaklı, doğrulanmış bilgiye ulaşır. Başarı: kısıtı olan bir kullanıcının Bursa'nın Ulu Cami ve Hanlar Bölgesi'nde rehbersiz, güvenle yön bulup eserleri öğrenebilmesi.
@@ -24,7 +24,7 @@ Sezi, vakıf mirasını koordinatlara indirgeyen 2D navigasyon yerine, Kevin Lyn
 
 ## Capabilities and Constraints
 - Expo (React Native, New Architecture), Android development build; iOS ikincil.
-- Ekranlar: algısal profil onboarding'i, Keşfet (harita + liste + tür filtresi), eser detayı (sesli dinleme, kaynaklar), Profil; sırada rota, canlı rehberlik ve simülasyon modu.
+- Ekranlar: algısal profil onboarding'i, Keşfet (il seçici, harita, tür ve ilçe filtresi), il sayfası, eser detayı (envanter atfı, sesli dinleme), turlar, rota, canlı rehberlik, simülasyon modu, Sezi'ye Sor, sergiler, Profil. Ayrıntı: ARCHITECTURE.md.
 - Harita: MapLibre + OpenFreeMap. `Marker` bileşeni çöküyor; noktalar GeoJSON katmanıyla çizilir.
 - Dil: Türkçe ve İngilizce.
 - Doğrulanmamış içerik gerçek bilgi gibi gösterilemez; her tarihî bilgi kaynak gösterir.

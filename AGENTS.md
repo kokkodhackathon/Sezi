@@ -1,0 +1,109 @@
+# AGENTS.md — Sezi'de çalışan her oturum ve ajan için
+
+Bu dosyayı işe başlamadan önce okuyun. Ayrıntılar: [ARCHITECTURE.md](ARCHITECTURE.md) (sistem), [ROADMAP.md](ROADMAP.md) (ne yapılacak, kim yapıyor), [ENVANTER.md](ENVANTER.md) (veri kaynağı ve telif), [PRODUCT.md](PRODUCT.md) (ürün ilkeleri).
+
+## Proje bir bakışta
+
+- **Sezi:** vakıf eserlerine Kevin Lynch'in bilişsel haritalama yaklaşımıyla (landmark / node / path / district) yön tarif eden, çok duyulu ve erişilebilir keşif uygulaması.
+- **Bağlam:** 42 Türkiye x Vakıf Katılım KÖK&KOD Hackathon, takım LAHMACUN. Final ve canlı demo 7–8 Kasım 2026.
+- **Ekip:** Ediz (backend), Eda (frontend), İnci (tasarım), Zehra (veri).
+- **Kapsam:** Hatay, Konya ve Bursa. Veri, Vakıf Katılım'ın vakıf eserleri envanter kitaplarından geliyor.
+- **Pilot alan:** Bursa, Ulu Cami ve Hanlar Bölgesi. Sesli rehberlik ve rota yalnızca burada var.
+- **Dil:** Arayüz TR + EN. Kod tanımlayıcıları İngilizce; yorumlar, belgeler ve commit mesajları Türkçe.
+
+## Komutlar
+
+```bash
+pnpm install
+pnpm test                         # packages/shared (Vitest): rota, rehberlik, tema kontrastı, pilot grafiği
+pnpm typecheck                    # tüm paketler
+cd apps/mobile && npx expo start --dev-client   # Metro (dev build telefonda/emülatörde kurulu olmalı)
+cd apps/mobile && npx expo run:android          # native modül eklendiyse yeniden build (~9 dk)
+```
+
+**İş bitti demeden önce:**
+1. `pnpm typecheck` ve `pnpm test` temiz geçmeli.
+2. Ekran değiştiyse cihazda bakılmalı. Bakılamadıysa bunu açıkça yazın.
+
+## Değiştirilemez kurallar
+
+1. **Commit'e yapay zekâ imzası eklenmez.** `Co-Authored-By`, "Generated with …" gibi satırlar yasak. Commit'i ekip üyesinin kimliği atar.
+2. **`docs/`, `data/raw/`, `data/out/` ve `.env*` asla commit'lenmez** (gitignore'da). `docs/` yarışma belgeleri ve moodboard içindir, yalnızca yerel referanstır.
+3. **Kaynaksız bilgi uydurulmaz.**
+   - Tarihçe, mimari, tarih, kitabe gibi metinler ancak kaynağıyla girer.
+   - Doğrulanmamış içerik `draft` kalır. Anonim kullanıcı yalnızca `verified` içeriği görür (RLS).
+4. **Telif.** Envanter kitapları "Tüm hakları saklıdır" ibaresi taşıyor.
+   - Kitaplardan yalnızca olgular alınır: ad, il, ilçe, tür, cilt/sayfa.
+   - Metinler ve fotoğraflar resmî paylaşım gelene kadar eklenmez. Ayrıntı: ENVANTER.md §5.
+5. **Erişilebilirlik çekirdektir, sonradan eklenmez.**
+   - Her etkileşimli öğede `accessibilityRole` ve etiket olur. Dokunma alanı en az 48 dp.
+   - Renk tek başına anlam taşımaz. Reduce motion'a uyulur.
+   - **Her ses ipucunun görsel ve haptik karşılığı olur** (işitme profili `deaf` / `hard`).
+6. **Yeni il veya eser için kod yazılmaz.** Veri eklenir: `cities` satırı, pipeline girdisi, admin paneli.
+
+## Mobil uygulama kuralları (apps/mobile)
+
+- **Ekranlar:**
+  - Ekranlar `src/app/` altında (Expo Router). Yeni stack ekranı `src/app/_layout.tsx` içinde `<Stack.Screen>` olarak kaydedilir.
+  - Typed routes, Metro çalışırken `.expo/types/router.d.ts` dosyasına üretilir. Yeni rota için tip hatası alırsanız Metro'yu bir kez başlatın.
+- **Metinler:** `src/lib/messages-app.ts` dosyasına **TR ve EN birlikte** eklenir; EN tipi tüm anahtarları zorunlu kılar. Çekirdek anahtarlar `src/lib/i18n.ts` içinde. Kullanım: `const { t: tr, lang } = useT()`.
+- **Tema:**
+  - Renkler yalnızca `useSeziTheme()` token'larından alınır (kaynak: `packages/shared/src/theme.ts`, kontrastı testlerle korunur).
+  - Eser türü renkleri `design/work-glyph.tsx` içinde. Sabit renk kodu yazmayın.
+- **Tipografi:** `design/type.ts` (`type.*`, `space`, `radius`). Büyük harf için `upper(text, lang)` kullanın (Türkçe i/İ).
+- **UI parçaları:**
+  - `components/ui.tsx`: Button, Card, ListRow, Badge, Note, Chip, Segmented, ToggleRow, EmptyState, Field, SectionTitle, Eyebrow.
+  - Yeni ekran bunlarla kurulur. Motifler `design/motif.tsx`, ikonlar `design/icons.tsx` içinde.
+- **Harita:**
+  - Her zaman `components/deferred-map.tsx` (`DeferredMap`) kullanın; gecikmeli açılış Fabric çökmesini önler.
+  - Noktalar `GeoJSONSource` + `Layer` ile çizilir. **MapLibre `Marker` kullanmayın**, RN 0.86'da çöküyor.
+- **Veri:** `src/lib/works.ts` (TanStack Query + `works_view`).
+  - `lng/lat` null olabilir: önce `hasLocation(w)` ile kontrol edin.
+  - Konum kesinliği (`location_precision`) arayüzde gösterilir.
+- **Rota ve rehberlik:**
+  - Pilot grafiği `assets/pilot/bursa-hanlar-nav.json` dosyasında, uygulamaya gömülü olduğu için internetsiz çalışır.
+  - Rota `src/lib/nav.ts`, turlar `src/lib/tours.ts`, simülasyon `src/lib/simulation.ts` içinde. Motorlar `packages/shared` içinde.
+- **Kullanıcı durumu:** Profil (`lib/profile.tsx`: görme, hareket, işitme, duyular, dil) ve ayarlar (`lib/settings.tsx`) cihazda `expo-sqlite/kv-store` ile tutulur.
+
+## Veritabanı (Supabase Cloud)
+
+- **Proje:** `sezi-eu`, ref `jejsvycpzulpleftkssj` (Frankfurt, free tier).
+  - `supabase/.temp/project-ref` silinmiş eski projeyi gösteriyor; CLI komutlarında ref'i açıkça verin.
+  - PostGIS ve pgvector `extensions` şemasında; fonksiyonları `extensions.st_*` diye çağırın.
+- **Şema değişikliği:**
+  1. `supabase/migrations/<YYYYMMDDHHMMSS>_ad.sql` dosyası ekleyin.
+  2. Uygulayın: Supabase MCP `apply_migration`, ya da `npx supabase db push`.
+  3. Sonra güvenlik uyarılarını kontrol edin (MCP `get_advisors`); hedef 0 uyarı.
+  4. Her yeni tabloda RLS açık olur: anonim kullanıcı `verified` okur, admin yazar.
+- **Büyük seed:** MCP'ye sığmaz. Şöyle uygulanır:
+  ```bash
+  npx supabase@latest db query --linked --project-ref jejsvycpzulpleftkssj -f supabase/seed_inventory.sql
+  ```
+- **Admin rolü:** JWT'de `app_metadata.role = 'admin'` (README'de SQL'i var).
+- **Okuma arayüzü:** `works_view` (security_invoker): il, tür, kaynaklar (`kind`, `volume`, `page`, `section`) ve sergiler tek satırda gelir.
+
+## Veri pipeline'ı (data/)
+
+- Python her zaman izole modda çalışır: `python -I data/<script>.py`. İndirilen dosyalar `data/raw/` altında kalır.
+- **PDF:** Windows'ta `pdftotext -enc UTF-8` şart, yoksa Türkçe karakterler bozulur. Bursa PDF'inde "İ" harfi "%" olarak geliyor (`fix_glyphs` bunu düzeltiyor).
+- **Nominatim:** saniyede en fazla 1 istek ve `User-Agent` başlığı gerekli. Önbellek `data/raw/geo_cache.json`.
+- **Overpass:** `overpass.kumi.systems` aynası daha az yoğun. Ana sunucu `User-Agent` olmadan 406 döndürür.
+- **Elle doğrulanmış konumlar** `data/geo_overrides.json` dosyasına OSM kimliğiyle yazılır. Otomatik eşleşmeden önce gelir.
+- Akışın tamamı: [data/README.md](data/README.md).
+
+## Windows / Android ortam notları
+
+- **Repo yolu ASCII olmalı** (`C:\Projeler\sezi`); Türkçe karakterli yolda Gradle kırılır.
+- **İki cihaz bağlıysa** `ANDROID_SERIAL` verin: emülatör `emulator-5554`, test telefonu Xiaomi `BYWKBEQOZD8XB6NB`.
+- **Metro bağlantısı:** `adb reverse tcp:8081 tcp:8081`, sonra uygulamayı şu derin bağlantıyla açın:
+  `exp+sezi://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081`
+- **Git Bash'te `adb shell` yolları** bozulur: `MSYS_NO_PATHCONV=1` verin.
+- **Emülatör depolaması dolu** (%93). Kurulumdan önce `adb uninstall com.lahmacun.sezi` çalıştırın.
+- **Hazır APK:** `apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk` (13 Ekim, react-native-svg dahil).
+- **Native modül eklenirse** (`npx expo install …`) yeniden `expo run:android` gerekir. Eski build'de "Can't find ViewManager" hatası alırsınız.
+
+## Görev alırken
+
+1. [ROADMAP.md](ROADMAP.md) içindeki **Backlog** tablosundan görevi seçin; kabul ölçütleri orada.
+2. Bitince görevin durumunu ROADMAP.md'de güncelleyin.
+3. Mimariyi değiştirdiyseniz ARCHITECTURE.md'yi de güncelleyin.

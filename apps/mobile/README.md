@@ -1,56 +1,43 @@
-# Welcome to your Expo app 👋
+# Sezi mobil (Expo)
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo SDK 57, React Native 0.86 (New Architecture / Fabric), Expo Router. Android development build ile çalışır; Expo Go yetmez, çünkü native modüller var: MapLibre, react-native-audio-api, react-native-svg.
 
-## Get started
+Kurallar ve tuzaklar: [AGENTS.md](../../AGENTS.md). Ekran listesi ve veri akışı: [ARCHITECTURE.md](../../ARCHITECTURE.md).
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+## Çalıştırma
 
 ```bash
-npm run reset-project
+cp ../../.env.example .env          # EXPO_PUBLIC_SUPABASE_URL / _KEY (gerçek değerler: Supabase → Settings → API)
+npx expo run:android                # ilk kurulum veya native modül değişikliği (~9 dk)
+npx expo start --dev-client         # sonraki JS değişiklikleri
+npx tsc --noEmit                    # typecheck
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Emülatör ya da telefon Metro'ya bağlanamazsa:
 
-### Other setup steps
+```bash
+adb reverse tcp:8081 tcp:8081
+adb shell am start -a android.intent.action.VIEW -d "exp+sezi://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081"
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Klasörler
 
-## Learn more
+```
+src/app/          ekranlar (Expo Router); stack kayıtları _layout.tsx'te
+src/components/   ui.tsx (temel bileşenler), deferred-map, cue-flash, exhibition-card…
+src/design/       type.ts (tipografi, upper()), motif.tsx, icons.tsx, work-glyph.tsx
+src/lib/          works (veri), nav/tours/simulation (rota), profile/settings (cihaz durumu), i18n + messages-app (TR/EN)
+assets/pilot/     gömülü navigasyon grafiği (data/build_nav_graph.py üretir)
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+## Gerçek telefonda test listesi
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Kulaklık takılı olsun.
 
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+1. **Lab:** "Sol" ve "Sağ" tonu doğru kulaktan geliyor; pusula yönü değişiyor; titreşimler hissediliyor.
+2. **Turlar → "Ulu Cami ve Hanlar Bölgesi" → ilk durağa yol tarifi → simülasyon:**
+   - Talimatlar okunuyor.
+   - Sağa dönüşte çift, sola dönüşte tek titreşim.
+   - Yer işareti tonu doğru yönden geliyor.
+3. **Profil → düzenle → işitme "Duymuyorum":** Simülasyonda ses yok; ekran kenarı parlıyor ve titreşim var. Eser detayında anlatım metni görünüyor.
+4. **Keşfet:** İl değiştirince harita ve liste değişiyor. Konumsuz eserde "Konum doğrulanıyor" etiketi var.

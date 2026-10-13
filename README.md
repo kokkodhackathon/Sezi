@@ -1,16 +1,27 @@
 # Sezi
 
-Vakıf eserlerine Kevin Lynch'in bilişsel haritalama yaklaşımıyla (landmark / node) yönlendiren, çok duyulu ve erişilebilir keşif asistanı. Takım LAHMACUN, 42 Türkiye x Vakıf Katılım KÖK&KOD Hackathon. Plan: [PLAN.md](PLAN.md).
+Vakıf eserlerine Kevin Lynch'in bilişsel haritalama yaklaşımıyla (landmark / node / path / district) yön tarif eden, çok duyulu ve erişilebilir keşif uygulaması. Kapsam: Hatay, Konya ve Bursa'daki vakıf eserleri envanteri. Pilot alan: Bursa Ulu Cami ve Hanlar Bölgesi. Takım LAHMACUN, 42 Türkiye x Vakıf Katılım KÖK&KOD Hackathon.
+
+## Belgeler
+
+| Dosya | İçerik |
+|---|---|
+| [AGENTS.md](AGENTS.md) | Geliştirici ve yapay zekâ ajanları için kurallar, komutlar, tuzaklar. **Önce bunu okuyun** |
+| [ROADMAP.md](ROADMAP.md) | Kilometre taşları, sahipli backlog, kabul ölçütleri, açık kararlar |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | Bileşenler, veri modeli, rota motoru, ekranlar, kararlar |
+| [PRODUCT.md](PRODUCT.md) | Kullanıcılar, ilkeler, marka |
+| [ENVANTER.md](ENVANTER.md) | Vakıf Katılım bilgi notu, envanter kitapları, veri politikası (telif) |
+| [data/README.md](data/README.md) | Veri pipeline'ı ve nav grafiği üretimi |
 
 ## Yapı
 
 ```
-apps/mobile      Expo (SDK 57) + Expo Router
-apps/admin       Vite + React admin paneli
-packages/shared  zod şemaları, rota motoru (profil ağırlıklı Dijkstra), yönlendirme motoru, geo
-supabase/        migrations + seed (Supabase Cloud)
+apps/mobile      Expo (SDK 57) + Expo Router: kullanıcı uygulaması
+apps/admin       Vite + React admin paneli (henüz şablon)
+packages/shared  zod şemaları, rota motoru (profil ağırlıklı Dijkstra), Lynch yönlendirme motoru, geo, tema
+supabase/        migrations + seed (Supabase Cloud, sezi-eu)
 data/            ham veri → model dönüşüm pipeline'ı (Python)
-docs/            yarışma dokümanları
+docs/            yarışma belgeleri ve moodboard (yalnızca yerel, git'e girmez)
 ```
 
 ## Kurulum
@@ -34,7 +45,7 @@ Mobil uygulama native modüller (harita, mekânsal ses) eklendikten sonra Expo G
    npx supabase login
    npx supabase link --project-ref <project-ref>
    ```
-2. Migration'ları uygulayın. `sezi-eu` projesinde (ref `jejsvycpzulpleftkssj`, Frankfurt) init ve seed zaten uygulandı. Yalnızca yeni bir projede `--include-seed` kullanın, aksi halde seed kayıtları çift eklenir:
+2. Migration'ları uygulayın. `sezi-eu` projesinde (ref `jejsvycpzulpleftkssj`, Frankfurt) tüm migration'lar ve envanter seed'i uygulandı. Yeni bir projede envanter verisi için `supabase/seed_inventory.sql` dosyasını ayrıca çalıştırın (bkz. data/README.md):
    ```bash
    npx supabase db push
    ```
@@ -48,7 +59,7 @@ Free tier sınırları ve önlemler:
 - **7 gün işlem olmazsa proje duraklar.** `.github/workflows/supabase-keepalive.yml` her gün bir okuma yapar. Repo secrets'a `SUPABASE_URL` ve `SUPABASE_ANON_KEY` eklenmeli.
 - **Storage 1 GB, veritabanı 500 MB.** Ses kayıtları AAC/Opus ile 64–96 kbps'e sıkıştırılır, görseller en fazla 1600 px ve WebP olur.
 - **Yedekleme yok.** `npx supabase db dump` ile haftalık dump alınır.
-- **Demo internetten bağımsız.** Pilot verisi uygulama paketine gömülü olduğu için olası bir kesinti demoyu durdurmaz.
+- **Demo internetten bağımsız olmalı.** Pilot navigasyon grafiği uygulamaya gömülü. Eser listesinin çevrimdışı önbelleği henüz yok (ROADMAP #4).
 
 Erişim kuralları (RLS):
 - Anonim kullanıcı yalnızca `verified` içeriği okur.
@@ -69,8 +80,7 @@ Erişim kuralları (RLS):
 
 ## Gerçek telefonda test
 
-1. Telefonda Geliştirici seçenekleri → USB hata ayıklama açık; USB ile bağla (`adb devices` listede görmeli).
-2. `cd apps/mobile && npx expo run:android` (dev build kurulur, Metro başlar).
-3. Kulaklık tak. Kontrol listesi:
-   - Lab sekmesi: "Sol"/"Sağ" tonu doğru kulaktan geliyor mu, pusula yönü değişiyor mu, titreşimler hissediliyor mu.
-   - Bir eser → "Yol tarifi al" → 1× simülasyon: talimatlar okunuyor mu, sağa dönüşte çift / sola tek titreşim, yer işareti tonu doğru yönden mi.
+1. Telefonda Geliştirici seçenekleri → USB hata ayıklama açık olsun; Xiaomi'de "USB üzerinden yükle" de açılmalı.
+2. Telefonu USB ile bağlayın; `adb devices` listede göstermeli.
+3. `cd apps/mobile && npx expo run:android` çalıştırın.
+4. Kontrol listesi: [apps/mobile/README.md](apps/mobile/README.md#gerçek-telefonda-test-listesi).
