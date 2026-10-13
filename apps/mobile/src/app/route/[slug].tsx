@@ -10,12 +10,15 @@ import { colorForType, WorkGlyph } from '@/design/work-glyph';
 import { DeferredMap } from '@/components/deferred-map';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
-import { boundsOf, walkingSpeed } from '@/lib/nav';
+import { boundsOf, segmentLines, walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { useNavSession } from '@/lib/sim/session';
 import { useSettings } from '@/lib/settings';
 import { Button } from '@/components/ui';
 import { CueFlash } from '@/components/cue-flash';
+import { NavAlertBanner } from '@/components/nav-alert';
+import { ScenarioPanel } from '@/components/scenario-panel';
+import { SoundCaptions } from '@/components/sound-captions';
 
 const SPEEDS = [1, 3, 8];
 
@@ -102,12 +105,18 @@ export default function RouteScreen() {
                 paint={{ 'circle-radius': 8, 'circle-color': ['get', 'color'] as never, 'circle-stroke-width': 2, 'circle-stroke-color': t.surface }}
               />
             </GeoJSONSource>
+            <GeoJSONSource id="blocked" data={segmentLines(sim.state.blocked)}>
+              <Layer id="blocked-line" type="line" layout={{ 'line-cap': 'butt' }} paint={{ 'line-color': t.danger, 'line-width': 7, 'line-dasharray': [1, 0.6] as never }} />
+            </GeoJSONSource>
             <GeoJSONSource id="walker" data={{ type: 'Point', coordinates: sim.state.position }}>
               <Layer id="walker-halo" type="circle" paint={{ 'circle-radius': 16, 'circle-color': t.accent, 'circle-opacity': 0.22 }} />
               <Layer id="walker-dot" type="circle" paint={{ 'circle-radius': 8, 'circle-color': t.accent, 'circle-stroke-width': 3, 'circle-stroke-color': t.surface }} />
             </GeoJSONSource>
           </DeferredMap>
         </View>
+
+        <NavAlertBanner alert={sim.state.alert} onDismiss={sim.dismissAlert} />
+        {sim.state.noisy ? <Text style={[type.meta, { color: t.primary }]}>{tr('sim.noisyBadge')}</Text> : null}
 
         {/* Canlı talimat kartı: ekran okuyucu her yeni talimatı duyurur. */}
         <View style={s.nowCard} accessibilityLiveRegion="polite" accessible>
@@ -126,6 +135,8 @@ export default function RouteScreen() {
             ) : null}
           </View>
         </View>
+
+        {started ? <SoundCaptions sounds={sim.state.sounds} muted={profile.hearing === 'deaf' || !profile.senses.audio || sim.state.noisy} /> : null}
 
         <View style={s.progressTrack} accessibilityElementsHidden importantForAccessibility="no">
           <View style={[s.progressFill, { width: `${Math.min(100, (distance / sim.total) * 100)}%` }]} />
@@ -178,6 +189,15 @@ export default function RouteScreen() {
           ))}
         </View>
 
+        <Button
+          variant="outline"
+          label={tr('sim.compare')}
+          hint={tr('sim.compareHint')}
+          onPress={() => router.push({ pathname: '/compare/[slug]', params: { slug } })}
+        />
+
+        <ScenarioPanel state={sim.state} onBlock={sim.blockAhead} onWrongTurn={sim.wrongTurn} onCrowd={sim.toggleCrowd} />
+
         <View style={s.note}>
           <InfoIcon color={t.textMuted} />
           <Text style={[type.meta, { color: t.textMuted, flex: 1 }]}>{tr('route.simNote')}</Text>
@@ -208,7 +228,7 @@ export default function RouteScreen() {
 
         <Text style={[type.meta, { color: t.textMuted }]}>{tr('route.dataNote')}</Text>
       </ScrollView>
-      <CueFlash count={sim.state.cueCount} color={t.accent} enabled={profile.hearing !== 'full'} />
+      <CueFlash count={sim.state.cueCount} color={t.accent} enabled={profile.hearing !== 'full' || sim.state.noisy} />
     </View>
   );
 }

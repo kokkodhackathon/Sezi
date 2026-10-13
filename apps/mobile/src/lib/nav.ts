@@ -150,4 +150,30 @@ export function nearestSegmentId(p: LngLat): string {
   return best;
 }
 
+/** Rotanın erişilebilirlik özeti: profil karşılaştırmasında gösterilir. */
+export function routeStats(plan: PlannedRoute) {
+  let busyM = 0;
+  let cobbleM = 0;
+  for (const id of plan.route.segmentIds) {
+    const seg = segMap.get(id);
+    if (!seg) continue;
+    if (seg.noise >= 0.6) busyM += seg.lengthM;
+    if (seg.surface === 'cobble') cobbleM += seg.lengthM;
+  }
+  return { lengthM: plan.route.lengthM, stairs: plan.stairSegments, busyM: Math.round(busyM), cobbleM: Math.round(cobbleM) };
+}
+
+/** Segmentlerin çizgileri (haritada kapalı yolları göstermek için). */
+export function segmentLines(ids: readonly string[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: ids.flatMap((id) => {
+      const seg = segMap.get(id);
+      if (!seg) return [];
+      const coordinates = seg.geometry ?? [nodes.get(seg.from)!.location, nodes.get(seg.to)!.location];
+      return [{ type: 'Feature' as const, properties: {}, geometry: { type: 'LineString' as const, coordinates } }];
+    }),
+  };
+}
+
 export const DEFAULT_START_POINT = DEFAULT_START;

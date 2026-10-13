@@ -1,9 +1,10 @@
-import { bearingDeg, dueStep, initialTrack, pointAlong, stereoPan, trackFix, type GuidanceStep, type LngLat, type LocationFix, type TrackState, type UserProfile } from '@sezi/shared';
+import { bearingDeg, dueStep, initialTrack, pointAlong, soundKindFor, soundscapeMix, stereoPan, trackFix, type GuidanceStep, type LngLat, type LocationFix, type SoundSource, type SoundVoice, type TrackState, type UserProfile } from '@sezi/shared';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 
-import { blockableAhead, detourFrom, planRoute, walkingSpeed, type PlannedRoute } from '../nav';
+import { blockableAhead, detourFrom, pilotLandmarks, planRoute, walkingSpeed, type PlannedRoute } from '../nav';
 import { hapticAlert, hapticForTurn, playLandmarkCue } from './cues';
+import { stopSoundscape, updateSoundscape } from './soundscape-engine';
 import { say, silence } from './speech';
 import { createWalker, stepWalker, walkerOnLine, type Walker } from './walker';
 
@@ -48,6 +49,8 @@ export interface NavState {
   alert: NavAlert | null;
   /** Yürüyüşçü rotadan ayrılan bir sokakta (yanlış dönüş senaryosu). */
   detouring: boolean;
+  /** Şu an duyulan yer işareti sesleri (ses altyazısı için; duymayan kullanıcıda da hesaplanır). */
+  sounds: SoundVoice[];
 }
 
 interface Session {
@@ -97,8 +100,12 @@ const initialState = (plan: PlannedRoute | null, speed = 1): NavState => {
     reroutes: 0,
     alert: null,
     detouring: false,
+    sounds: [],
   };
 };
+
+/** Ses manzarasının kaynakları: pilot alandaki tüm yer işaretleri. */
+let soundSources: SoundSource[] = [];
 
 let session: Session = { key: '', slug: '', profile: null, plan: null, state: initialState(null) };
 let walker: Walker | null = null;
@@ -131,6 +138,13 @@ function open(slug: string, profile: UserProfile) {
   const plan = planRoute(slug, profile);
   walker = plan ? createWalker(plan.geometry.line) : null;
   truth = plan?.geometry.line[0] ?? null;
+  soundSources = pilotLandmarks.map((n) => ({
+    id: n.id,
+    name: n.name?.[profile.lang] ?? n.name?.tr ?? '',
+    kind: soundKindFor(n.workType),
+    location: n.location,
+  }));
+  stopSoundscape();
   session = { key, slug, profile, plan, state: initialState(plan, session.state.speed) };
   listeners.forEach((l) => l());
 }
@@ -220,6 +234,11 @@ function tick() {
     total,
     mps,
   );
+  // Ses manzarası: kullanıcının gerçek konumu ve yönüne göre; duyamayan kullanıcıda yalnızca altyazı.
+  const sounds = soundscapeMix(step.truth, heading, soundSources);
+  if (canSpeak()) updateSoundscape(sounds);
+  else stopSoundscape();
+
   let cueCount = state.cueCount;
   if (index > state.stepIndex) {
     announce(plan.steps[index]!, index, position, heading);
@@ -228,9 +247,10 @@ function tick() {
   const finished = index === plan.steps.length - 1;
   if (finished) {
     stopTimer();
+    stopSoundscape();
     options.onArrive(session.slug);
   }
-  emit({ running: !finished, finished, distance, position, heading, fix: step.fix, track: { ...track, alongM: distance }, stepIndex: index, cueCount });
+  emit({ running: !finished, finished, distance, position, heading, fix: step.fix, track: { ...track, alongM: distance }, stepIndex: index, cueCount, sounds });
 }
 
 export const navSession = {
@@ -257,11 +277,13 @@ export const navSession = {
   pause() {
     stopTimer();
     silence();
+    stopSoundscape();
     emit({ running: false });
   },
   reset() {
     stopTimer();
     silence();
+    stopSoundscape();
     const { profile } = session;
     const fresh = profile ? planRoute(session.slug, profile) : null;
     session = { ...session, plan: fresh };
@@ -309,6 +331,7 @@ export const navSession = {
     // Geçiş mesajı her iki durumda da okunur (gürültüde de denenir), ardından mod değişir.
     if (profile.hearing !== 'deaf' && profile.senses.audio) say(text, { lang: profile.lang, rate: options.speechRate, interrupt: true });
     void hapticAlert();
+    if (noisy) stopSoundscape();
     emit({ noisy, alert: { id: ++alertId, kind: noisy ? 'crowd_on' : 'crowd_off', text }, cueCount: state.cueCount + 1 });
   },
   dismissAlert() {

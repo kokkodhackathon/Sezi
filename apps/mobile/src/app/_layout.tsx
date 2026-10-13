@@ -68,6 +68,7 @@ function AppStack() {
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="work/[slug]" options={{ title: '', headerBackTitle: tr('onb.back') }} />
           <Stack.Screen name="route/[slug]" options={{ title: '', headerBackTitle: tr('onb.back') }} />
+          <Stack.Screen name="compare/[slug]" options={{ title: tr('compare.title') }} />
           <Stack.Screen name="guide/[slug]" options={{ headerShown: false, presentation: 'fullScreenModal', animation: reducedMotion ? 'none' : 'fade' }} />
           <Stack.Screen name="complex/[slug]" options={{ title: '' }} />
           <Stack.Screen name="tour/[id]" options={{ title: '' }} />

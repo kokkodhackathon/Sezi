@@ -3,6 +3,8 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CueFlash } from '@/components/cue-flash';
+import { NavAlertBanner } from '@/components/nav-alert';
+import { SoundCaptions } from '@/components/sound-captions';
 import { Button, EmptyState, Segmented } from '@/components/ui';
 import { CloseIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
 import { radius, type } from '@/design/type';
@@ -39,10 +41,14 @@ export default function Guide() {
       <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={tr('guide.exit')} style={s.close}><CloseIcon color={t.text} /></Pressable>
     </View>
     <ScrollView contentContainerStyle={s.stage}>
+      <NavAlertBanner alert={sim.state.alert} onDismiss={sim.dismissAlert} />
+      {sim.state.noisy ? <Text style={[type.meta, { color: t.primary }]}>{tr('sim.noisyBadge')}</Text> : null}
       <View style={s.arrow}><TurnIcon turn={current?.turn ?? 'straight'} arrived={finished} color={t.primary} size={88} /></View>
       <Text style={[type.display, s.instruction, { color: t.text }]} accessibilityRole="header" accessibilityLiveRegion="assertive">{headline}</Text>
       <Text style={[type.lead, { color: t.primary }]}>{tr('guide.distanceLeft', { m: left })}</Text>
       {upcoming && running && !finished ? <Text style={[type.body, { color: t.textMuted }]}>{tr('route.next')}: {upcoming.text}</Text> : null}
+      {/* Duyamayan kullanıcı ve kalabalıkta ses manzarasının yazılı karşılığı. */}
+      {profile.hearing !== 'full' || sim.state.noisy ? <SoundCaptions sounds={sim.state.sounds} muted={profile.hearing === 'deaf' || sim.state.noisy} /> : null}
       <Text style={[type.meta, { color: t.textMuted }]}>{tr('design.simulationBody')}</Text>
     </ScrollView>
     <View style={s.footer}>
@@ -52,7 +58,7 @@ export default function Guide() {
       <Pressable onPress={() => setShowSpeed(!showSpeed)} accessibilityRole="button" accessibilityLabel={tr('design.speed')} accessibilityState={{ expanded: showSpeed }} style={s.speedLink}><Text style={[type.meta, { color: t.primary }]}>{tr('design.speed')} · {speed}×</Text></Pressable>
       {showSpeed ? <Segmented label={tr('design.speed')} value={speed} onChange={sim.setSpeed} options={[1, 3, 8].map((value) => ({ value, label: `${value}×` }))} /> : null}
     </View>
-    <CueFlash count={sim.state.cueCount} color={t.primary} enabled={profile.hearing !== 'full'} />
+    <CueFlash count={sim.state.cueCount} color={t.primary} enabled={profile.hearing !== 'full' || sim.state.noisy} />
   </SafeAreaView>;
 }
 
