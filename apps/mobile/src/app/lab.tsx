@@ -12,7 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { AudioContext, type OscillatorNode, type StereoPannerNode } from 'react-native-audio-api';
 
-const SULEYMANIYE: LngLat = [28.9639, 41.0162];
+const ULU_CAMI: LngLat = [29.0618995, 40.1838059];
 
 export default function Lab() {
   const t = themes[useColorScheme() === 'dark' ? 'dark' : 'light'];
@@ -42,8 +42,8 @@ export default function Lab() {
     };
   }, []);
 
-  // Pusula modu: ses, kullanıcıdan Süleymaniye'ye olan yöne panlanır.
-  const target = bearingDeg(position ?? [28.9600, 41.0140], SULEYMANIYE);
+  // Pusula modu: ses, kullanıcıdan Bursa Ulu Cami'ye olan yöne panlanır.
+  const target = bearingDeg(position ?? [29.0620479, 40.1834979], ULU_CAMI);
   const compassPan = heading === null ? 0 : stereoPan(heading, target);
   useEffect(() => {
     if (audio.current) audio.current.panner.pan.value = compassPan;
@@ -83,9 +83,9 @@ export default function Lab() {
     <ScrollView style={{ backgroundColor: t.background }} contentContainerStyle={styles.body}>
       <View style={styles.map}>
         <DeferredMap>
-          <Camera initialViewState={{ center: SULEYMANIYE, zoom: 16 }} />
+          <Camera initialViewState={{ center: ULU_CAMI, zoom: 16 }} />
           {/* Marker (ViewAnnotation) RN 0.86 Fabric ile çöküyor; noktalar GeoJSON katmanıyla çizilir. */}
-          <GeoJSONSource id="works" data={{ type: 'Point', coordinates: SULEYMANIYE }}>
+          <GeoJSONSource id="works" data={{ type: 'Point', coordinates: ULU_CAMI }}>
             <Layer
               id="works-circle"
               type="circle"

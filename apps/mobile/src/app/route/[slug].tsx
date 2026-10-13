@@ -16,6 +16,7 @@ import { useProfile } from '@/lib/profile';
 import { useGuidanceSimulation } from '@/lib/simulation';
 import { useSettings } from '@/lib/settings';
 import { Button } from '@/components/ui';
+import { CueFlash } from '@/components/cue-flash';
 
 const SPEEDS = [1, 3, 8];
 
@@ -208,6 +209,7 @@ export default function RouteScreen() {
 
         <Text style={[type.meta, { color: t.textMuted }]}>{tr('route.dataNote')}</Text>
       </ScrollView>
+      <CueFlash count={sim.state.cueCount} color={t.accent} enabled={profile.hearing !== 'full'} />
     </View>
   );
 }

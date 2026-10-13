@@ -5,7 +5,8 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 const KEY = 'sezi.profile.v1';
 
 /** Görme profiline göre önerilen duyu kanalları; kullanıcı onboarding'de değiştirebilir. */
-export function defaultSenses(vision: UserProfile['vision']): UserProfile['senses'] {
+export function defaultSenses(vision: UserProfile['vision'], hearing: UserProfile['hearing'] = 'full'): UserProfile['senses'] {
+  if (hearing === 'deaf') return { audio: false, haptic: true, visual: vision !== 'blind' };
   if (vision === 'blind') return { audio: true, haptic: true, visual: false };
   if (vision === 'low') return { audio: true, haptic: true, visual: true };
   return { audio: true, haptic: false, visual: true };

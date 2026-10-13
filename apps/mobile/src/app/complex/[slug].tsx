@@ -14,7 +14,7 @@ import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
 import { boundsOf } from '@/lib/nav';
 import { useSettings } from '@/lib/settings';
-import { loc, useWorks } from '@/lib/works';
+import { hasLocation, loc, useWorks } from '@/lib/works';
 
 const circleColor = ['match', ['get', 'type'], ...Object.entries(typeColor).flat(), '#3A1A10'];
 
@@ -40,11 +40,12 @@ export default function ComplexScreen() {
   const groups = new globalThis.Map<string, typeof parts>();
   for (const w of parts) groups.set(w.type_slug, [...(groups.get(w.type_slug) ?? []), w]);
 
+  const mapped = parts.filter(hasLocation);
   const geojson: GeoJSON.FeatureCollection = {
     type: 'FeatureCollection',
-    features: parts.map((w) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [w.lng, w.lat] }, properties: { type: w.type_slug } })),
+    features: mapped.map((w) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [w.lng, w.lat] }, properties: { type: w.type_slug } })),
   };
-  const bounds = parts.length ? boundsOf(parts.map((w) => [w.lng, w.lat])) : undefined;
+  const bounds = mapped.length ? boundsOf(mapped.map((w) => [w.lng, w.lat])) : undefined;
   const visitedCount = parts.filter((w) => visited.includes(w.slug)).length;
 
   return (
@@ -77,7 +78,7 @@ export default function ComplexScreen() {
 
       <Button
         label={tr('complex.tour')}
-        onPress={() => router.push({ pathname: '/tour/[id]', params: { id: 'kulliye' } })}
+        onPress={() => router.push({ pathname: '/tour/[id]', params: { id: 'tum' } })}
         icon={(c) => <TurnIcon turn="slight_right" color={c} size={22} />}
       />
 

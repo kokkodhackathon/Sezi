@@ -23,7 +23,7 @@ export default function Search() {
     const n = normalize(q).trim();
     if (!n) return [];
     return (works ?? []).filter((w) =>
-      normalize([w.name.tr, w.name.en, w.type_name.tr, w.type_name.en, w.complex_name?.tr].filter(Boolean).join(' ')).includes(n),
+      normalize([w.name.tr, w.name.en, w.type_name.tr, w.type_name.en, w.complex_name?.tr, w.district, w.city_name.tr].filter(Boolean).join(' ')).includes(n),
     );
   }, [q, works]);
 

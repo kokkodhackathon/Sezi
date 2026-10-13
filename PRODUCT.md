@@ -10,14 +10,16 @@ android
 Vakıf eserlerini (cami, medrese, sebil, han, hamam, türbe…) yerinde gezen herkes: yerli ziyaretçi, turist, öğrenci. Görme kısıtlı (az gören, görme engelli) ve hareket kısıtlı (baston, tekerlekli sandalye) bireyler ürünün kenarında değil merkezinde. Tipik sahne: tarihi yarımadada, kalabalık ve tabela karmaşası içinde, çoğu zaman tek elle ya da ekrana bakmadan kullanım.
 
 ## Product Purpose
-Sezi, vakıf mirasını koordinatlara indirgeyen 2D navigasyon yerine, Kevin Lynch'in bilişsel haritalama yaklaşımıyla (landmark / node / path / district) çok duyulu yönlendirme yapan bir keşif asistanıdır. Kullanıcı eseri bulmakla kalmaz; külliyenin parçalarını bir bütün olarak deneyimler ve kaynaklı, doğrulanmış bilgiye ulaşır. Başarı: kısıtı olan bir kullanıcının Süleymaniye Külliyesi'nde rehbersiz, güvenle yön bulup eserleri öğrenebilmesi.
+Sezi, vakıf mirasını koordinatlara indirgeyen 2D navigasyon yerine, Kevin Lynch'in bilişsel haritalama yaklaşımıyla (landmark / node / path / district) çok duyulu yönlendirme yapan bir keşif asistanıdır. Kullanıcı eseri bulmakla kalmaz; külliyenin parçalarını bir bütün olarak deneyimler ve kaynaklı, doğrulanmış bilgiye ulaşır. Başarı: kısıtı olan bir kullanıcının Bursa'nın Ulu Cami ve Hanlar Bölgesi'nde rehbersiz, güvenle yön bulup eserleri öğrenebilmesi.
 
 ## Positioning
 "100 m sonra sağa dönün" yerine "Sebilin su sesini duyunca meydanın sağına yönelin": yön tarifi yer işaretlerine, ortam seslerine (kulaklıkta yönüne göre panlanmış), titreşime ve dokuya dayanır. Rota kullanıcının algısal ve fiziksel profiline göre hesaplanır (tekerlekli sandalye basamaklı yoldan hiç geçmez, görme engelli gürültülü sokaktan kaçınır).
 
 ## Operating Context
 - KÖK&KOD Hackathon (42 Türkiye x Vakıf Katılım). Final 7–8 Kasım 2026, Bilişim Vadisi İstanbul GO; jüri Bilişim Vadisi, Vakıf Katılım, bağımsız üyeler ve Vakıflar Genel Müdürlüğü'nden oluşur. Canlı demo zorunlu; demo simülasyon moduyla ve internetsiz çalışmalı.
-- Pilot alan: Süleymaniye Külliyesi; genel keşif katmanı 60–80 eserlik veri setiyle büyüyecek.
+- İller: Hatay, Konya, Bursa (Vakıf Katılım envanter kitapları). Yeni iller veriyle eklenir, kod değişmez.
+- Pilot alan: Bursa, Ulu Cami ve Hanlar Bölgesi.
+- Erişilebilirlik profili: görme, hareket ve işitme. Duymayan kullanıcı için her ses ipucunun görsel ve haptik karşılığı vardır.
 - İçerik ekibin admin panelinden girilir ve onaylanır; topluluk erişilebilirlik bildirimleri moderasyondan geçer.
 
 ## Capabilities and Constraints
@@ -34,7 +36,7 @@ Sezi, vakıf mirasını koordinatlara indirgeyen 2D navigasyon yerine, Kevin Lyn
 - Yazı tipi, logo ve ikon için bağlayıcı karar yok; seçim tasarım sürecine bırakıldı.
 
 ## Evidence on Hand
-- Pilot veri: Wikidata'dan Süleymaniye çevresi 85 eser (19 doğrulanmış külliye yapısı), ad/tür/konum ve kaynak bağlantısı.
+- Veri: envanter kitaplarının içindekiler sayfalarından olgusal alanlar (ad, il/ilçe, tür, cilt/sayfa). Tarihçe ve fotoğraflar resmî paylaşımla gelecek; o zamana kadar uygulama kitaptaki sayfayı gösterir.
 - Tarihçe metinleri, fotoğraflar ve ses kayıtları henüz yok; uydurulmamalı. Resmî veri seti henüz gelmedi.
 
 ## Product Principles

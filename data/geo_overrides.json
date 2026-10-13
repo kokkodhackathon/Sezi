@@ -1,0 +1,10 @@
+{
+  "_note": "Elle doğrulanmış konumlar (pilot alan). Kaynak: OpenStreetMap (ODbL) nesne kimlikleri; Nominatim ile 13 Ekim 2026'da alındı. lng/lat null = otomatik eşleşme yanlıştı, konum kaldırılır.",
+  "bursa-ulucami": { "lng": 29.0618995, "lat": 40.1838059, "osm": "way/26434413", "type": "cami" },
+  "bursa-orhan-bey-camii": { "lng": 29.0641131, "lat": 40.1839745, "osm": "way/255187109" },
+  "bursa-emir-hani": { "lng": 29.0621231, "lat": 40.1845137, "osm": "relation/3392362" },
+  "bursa-fidan-hani": { "lng": 29.0644562, "lat": 40.1851433, "osm": "relation/2368801" },
+  "bursa-geyve-hani": { "lng": 29.0628453, "lat": 40.1851634, "osm": "relation/3417195" },
+  "bursa-yildirim-bayezid-bedesteni": { "lng": 29.0621242, "lat": 40.1851497, "osm": "way/1063228547" },
+  "bursa-orhan-gazi-camii-gurle": { "lng": null, "lat": null }
+}

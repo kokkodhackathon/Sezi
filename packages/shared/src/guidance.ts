@@ -56,6 +56,8 @@ export interface GuidanceStep {
 
 /** Profile göre ipucu tipi tercih sırası. */
 function cuePreference(p: UserProfile): CueType[] {
+  // Duymayan kullanıcıya ses ipucu verilmez; görsel ve dokunsal ipuçları öne geçer.
+  if (p.hearing === "deaf") return p.vision === "blind" ? ["tactile", "generic"] : ["visual", "tactile", "generic"];
   if (p.vision === "blind") return ["sound", "tactile", "generic", "visual"];
   if (p.vision === "low") return ["sound", "visual", "tactile", "generic"];
   return ["visual", "sound", "tactile", "generic"];
@@ -66,10 +68,10 @@ function pickInstruction(
   prevNodeId: string | undefined,
   profile: UserProfile,
 ): Instruction | undefined {
-  const verified = candidates.filter(
-    (i) => i.status === "verified" && (!i.approachFrom || i.approachFrom === prevNodeId),
-  );
   const order = cuePreference(profile);
+  const verified = candidates.filter(
+    (i) => i.status === "verified" && (!i.approachFrom || i.approachFrom === prevNodeId) && order.includes(i.cueType),
+  );
   return verified.sort((a, b) => {
     // Yöne özel talimat genel olandan önce gelir.
     const dir = Number(!!b.approachFrom) - Number(!!a.approachFrom);

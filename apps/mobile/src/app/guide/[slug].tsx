@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CueFlash } from '@/components/cue-flash';
 import { PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
 import { KilimBand } from '@/design/motif';
 import { radius, space, type, upper } from '@/design/type';
@@ -106,6 +107,7 @@ export default function Guide() {
           ))}
         </View>
       </View>
+      <CueFlash count={sim.state.cueCount} color={C.warm} enabled={profile.hearing !== 'full'} />
     </SafeAreaView>
   );
 }

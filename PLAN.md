@@ -5,7 +5,8 @@
 - **Takım LAHMACUN:** Zehra (veri analitiği), İnci (tasarım), Ediz (backend), Eda (frontend).
 - **Ürün: Sezi.** Vakıf eserlerine Kevin Lynch'in bilişsel haritalama yaklaşımıyla (landmark / node / path / edge / district) yönlendiren, çok duyulu ve erişilebilir bir keşif asistanı. Yönlendirmeler "100 m sonra sağa dön" yerine şöyle: "Sebilin su sesini duyunca meydanın sağına yönelin." Sesler mekânsal (stereo), yanında haptik titreşim ve sesli betimleme var.
 - **Hedef kullanıcı:** Herkes. Erişilebilirlik ürünün çekirdeğinde: kullanıcı görme ve hareket profilini seçer, rota ve rehberlik buna göre şekillenir.
-- **Pilot alan:** Süleymaniye Külliyesi. Cami, medreseler, sebil, hamam, imaret, türbeler derin modellenir. Veri setindeki 60–80 eser keşif katmanında yer alır.
+- **İller (bilgi notu, 13 Ekim):** Hatay, Konya ve Bursa. Kaynak: Vakıf Katılım'ın vakıf eserleri envanter kitapları (Hatay 2022, Konya 2024, Bursa 2025). Mimari yeni illere açık; `cities` tablosuna satır eklemek yeter. Ayrıntı: `ENVANTER.md`.
+- **Pilot alan:** Bursa, Ulu Cami ve Hanlar Bölgesi. Ulu Cami, Koza Han, Emir Han, Bedesten ve çevresi sesli rehberlikle derin modellenir. Üç ilin envanter kayıtları keşif katmanında yer alır.
 
 ## Şartnamenin zorunlu tuttukları (jüri kontrol listesi)
 1. Çalışan mobil MVP ve uçtan uca canlı demo. Mockup kabul edilmiyor.
@@ -34,7 +35,7 @@
 1. **Algısal profil (onboarding):** Görme (tam / az gören / görme engelli), hareket (yok / baston / tekerlekli sandalye), duyu tercihi (ses / haptik / görsel yoğunluk), dil. Ekran okuyucuyla baştan sona kullanılabilir olacak.
 2. **Keşfet:** Harita ve liste görünümü. Bölge, şehir, tür ve külliye filtresi.
 3. **Eser detayı:** Tarihçe, alt metinli görseller, kaynak listesi, TTS ile sesli anlatım, erişilebilirlik skoru ve "külliyenin parçaları" ilişki ağı.
-4. **Külliye rotası:** Pilot Lynch grafiğinde profile göre ağırlıklandırılmış Dijkstra. Hesaba katılanlar: basamak, eğim, zemin, genişlik, gürültü, landmark görünürlüğü. Algoritma `packages/shared` içinde, bu sayede internetsiz de çalışıyor.
+4. **Pilot alan rotası:** Pilot Lynch grafiğinde profile göre ağırlıklandırılmış Dijkstra. Hesaba katılanlar: basamak, eğim, zemin, genişlik, gürültü, landmark görünürlüğü. Algoritma `packages/shared` içinde, bu sayede internetsiz de çalışıyor.
 5. **Canlı algısal rehberlik:** Konum (GPS ya da simülasyon) en yakın kenara eşlenir ve sıradaki node'un talimatı tetiklenir.
    - Landmark sesi kulaklıkta yönüne göre panlanır (pusula ile).
    - Haptik desenler: sol, sağ, varış ve dikkat için ayrı.
@@ -94,7 +95,7 @@ docs/            yarışma dokümanları
 ## Zaman çizelgesi ve roller
 | Hafta | Ediz (backend) | Eda (frontend) | İnci (tasarım) | Zehra (veri) |
 |---|---|---|---|---|
-| 1 (12–18 Ekim) | Supabase projesi + `db push`, RLS, monorepo | Expo iskeleti, navigasyon, i18n, tema token'ları | Marka (Sezi), renk ve motif sistemi, ana ekranlar | Süleymaniye saha gezisi #1 (node ve landmark çıkarma, ses kaydı). Geçici veri (Wikidata/OSM) |
+| 1 (12–18 Ekim) | Supabase projesi + `db push`, RLS, monorepo | Expo iskeleti, navigasyon, i18n, tema token'ları | Marka (Sezi), renk ve motif sistemi, ana ekranlar | Bursa Hanlar Bölgesi saha gezisi #1 (node ve landmark çıkarma, ses kaydı). Geçici veri (Wikidata/OSM) |
 | 2 (19–25 Ekim) | Admin API'leri, storage, rota motoru (shared) | Keşfet, eser detayı, onboarding | Rehberlik ekranı, admin UI, erişilebilirlik modları | Lynch grafiği verisi, segment ölçümleri, pipeline v1 |
 | 3 (26 Ekim – 1 Kasım) | RAG edge function, bildirim ve moderasyon, yedekleme | Canlı rehberlik (ses, haptik, TTS), simülasyon modu | Admin paneli (Eda ile), motif detayları | Gerçek veri setini yükleme ve doğrulama, talimat metinleri (TR/EN) |
 | 4 (2–6 Kasım) | **Freeze**, testler, offline paket | VoiceOver ve TalkBack ile denetim, hata düzeltme | Sunum ve demo videosu | Demo senaryosu, sahada video çekimi |
@@ -104,7 +105,7 @@ Veri seti geç gelirse bloke olmayız. Şema hazır olur, sadece pipeline'ın gi
 ## Doğrulama
 1. `pnpm test` → rota motoru profil ağırlıklarına göre doğru yolu seçiyor. Örnek: tekerlekli sandalye profili basamaklı segmentten geçmiyor.
 2. Uçtan uca test: admin panelden eser ekle → `verified` yap → mobilde görün → kaynak listesi açılsın.
-3. Simülasyon: Süleymaniye rotasında, uçak modu açıkken, talimatlar, ses panlaması ve haptik doğru node'larda tetiklensin.
+3. Simülasyon: Bursa Hanlar Bölgesi rotasında, uçak modu açıkken, talimatlar, ses panlaması ve haptik doğru node'larda tetiklensin.
 4. RAG: kaynakta olmayan bir soruya "bilmiyorum" desin. Kaynakta olan soruya alıntıyla cevap versin.
 5. Bildirim: kullanıcı merdiven bildirir → admin onaylar → rota yeniden hesaplanınca o segmentten kaçınsın.
 6. Erişilebilirlik: VoiceOver ve TalkBack ile onboarding, keşif ve rota akışı baştan sona tamamlanabilsin.
@@ -120,7 +121,9 @@ Veri seti geç gelirse bloke olmayız. Şema hazır olur, sadece pipeline'ın gi
 - [x] Rota motoru (profil ağırlıklı) + Lynch yönlendirme motoru, 17 test
 - [x] Mobil: onboarding (algısal profil), Profil, Keşfet (harita + liste + tür filtresi), eser detayı (sesli dinle, kaynaklar), TR/EN
 - [x] Görsel dil: Atkinson Hyperlegible + Fraunces, kilim motifleri, eser türü glifleri, yüksek kontrast modu
-- [x] Pilot veri: Wikidata'dan 85 eser (19 doğrulanmış), OSM'den Süleymaniye yaya grafiği
+- [x] Pilot veri: Wikidata'dan 85 eser (19 doğrulanmış), OSM'den Süleymaniye yaya grafiği (13 Ekim'de Bursa'ya taşındı)
+- [x] Bilgi notu uyarlaması: Hatay/Konya/Bursa envanter kitaplarının içindekiler sayfalarından 686 kayıt (ad, ilçe, tür, cilt/sayfa), Wikidata + Nominatim ile konum; çok şehirli Keşfet, il sayfası, sergiler, eser detayında kitap atfı
+- [x] İşitme profili: duymayan kullanıcıya her ses ipucunun görsel (ekran kenarı parlaması) ve haptik karşılığı, anlatım metni
 - [x] Rota ekranı + simülasyon modu (TTS, titreşim, yönlü ses ipucu)
 
 **Sırada**

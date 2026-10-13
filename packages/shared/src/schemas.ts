@@ -113,6 +113,8 @@ export type Instruction = z.infer<typeof Instruction>;
 export const UserProfile = z.object({
   vision: z.enum(["full", "low", "blind"]),
   mobility: z.enum(["none", "cane", "wheelchair"]),
+  /** İşitme: duymayan kullanıcıda ses ipuçları görsel + titreşim karşılığına çevrilir. Eski profiller için varsayılan "full". */
+  hearing: z.enum(["full", "hard", "deaf"]).default("full"),
   senses: z.object({
     audio: z.boolean(),
     haptic: z.boolean(),

@@ -5,20 +5,19 @@ import { buildGuidance, findRoute, NavSegment, routeGeometry, type NavNode, type
 
 // data/build_nav_graph.py çıktısı (OSM + doğrulanmış eserler).
 const raw = JSON.parse(
-  readFileSync(resolve(__dirname, "../../../apps/mobile/assets/pilot/suleymaniye-nav.json"), "utf8"),
+  readFileSync(resolve(__dirname, "../../../apps/mobile/assets/pilot/bursa-hanlar-nav.json"), "utf8"),
 ) as { nodes: NavNode[]; segments: unknown[] };
 
 const nodes = new Map(raw.nodes.map((n) => [n.id, n]));
 const segments = raw.segments.map((s) => NavSegment.parse(s));
 const segMap = new Map(segments.map((s) => [s.id, s]));
-const landmark = (name: string) => raw.nodes.find((n) => n.name?.tr === name)!;
 
-const walker: UserProfile = { vision: "full", mobility: "none", senses: { audio: true, haptic: true, visual: true }, lang: "tr" };
+const walker: UserProfile = { vision: "full", mobility: "none", hearing: "full", senses: { audio: true, haptic: true, visual: true }, lang: "tr" };
 const wheelchair: UserProfile = { ...walker, mobility: "wheelchair" };
 
-describe("Süleymaniye pilot grafiği", () => {
-  it("tüm külliye eserleri landmark olarak bağlı", () => {
-    expect(raw.nodes.filter((n) => n.lynchType === "landmark").length).toBeGreaterThanOrEqual(15);
+describe("Bursa Ulu Cami ve Hanlar pilot grafiği", () => {
+  it("bölgenin eserleri landmark olarak bağlı", () => {
+    expect(raw.nodes.filter((n) => n.lynchType === "landmark").length).toBeGreaterThanOrEqual(5);
   });
 
   it("her landmark çifti arasında yürüyüş rotası var", () => {
@@ -41,8 +40,9 @@ describe("Süleymaniye pilot grafiği", () => {
   });
 
   it("rota geometrisi ve yönlendirme adımları tutarlı", () => {
-    const from = landmark("Süleymaniye Camii");
-    const to = landmark("Mimar Sinan Türbesi") ?? landmark("Süleymaniye Tabhanesi");
+    const lms = raw.nodes.filter((n) => n.lynchType === "landmark");
+    const from = lms.find((n) => n.name?.tr.startsWith("Ulu Cami")) ?? lms[0]!;
+    const to = lms.find((n) => n.name?.tr.startsWith("Koza Han")) ?? lms.at(-1)!;
     const route = findRoute(segments, walker, from.id, to.id)!;
     const geo = routeGeometry(route, nodes, segMap);
     expect(geo.nodeAtM).toHaveLength(route.nodeIds.length);

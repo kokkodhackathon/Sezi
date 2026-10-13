@@ -20,6 +20,8 @@ export interface SimState {
   heading: number;
   /** Son duyurulan adım (yoksa -1). */
   stepIndex: number;
+  /** Her yeni talimatta artar: görsel uyarı (işitme engelli) bunu izler. */
+  cueCount: number;
 }
 
 async function hapticForTurn(turn: Turn, arrived: boolean) {
@@ -73,7 +75,7 @@ export function useGuidanceSimulation(
   optsRef.current = opts;
   const total = plan ? plan.geometry.nodeAtM.at(-1)! : 0;
   const start = plan?.geometry.line[0] ?? ([0, 0] as LngLat);
-  const [state, setState] = useState<SimState>({ running: false, finished: false, distance: 0, position: start, heading: 0, stepIndex: -1 });
+  const [state, setState] = useState<SimState>({ running: false, finished: false, distance: 0, position: start, heading: 0, stepIndex: -1, cueCount: 0 });
   const ref = useRef(state);
   ref.current = state;
 
@@ -81,6 +83,12 @@ export function useGuidanceSimulation(
     (step: GuidanceStep, index: number, pos: LngLat, heading: number) => {
       if (!plan) return;
       const arrived = index === plan.steps.length - 1;
+      // Duymayan kullanıcı: hiçbir bilgi yalnızca sesle verilmez; görsel uyarı (cueCount) ve titreşim kullanılır.
+      const canHear = profile.hearing !== 'deaf';
+      if (!canHear) {
+        if (profile.senses.haptic) void hapticForTurn(step.turn, arrived);
+        return;
+      }
       if (profile.senses.audio && step.landmark) playLandmarkCue(stereoPan(heading, bearingDeg(pos, step.landmark.location)));
       if (profile.senses.haptic) void hapticForTurn(step.turn, arrived);
       if (profile.senses.audio) {
@@ -114,25 +122,27 @@ export function useGuidanceSimulation(
       }
       const finished = distance >= total && stepIndex === plan.steps.length - 1;
       if (finished && !prev.finished) optsRef.current.onArrive?.();
-      setState({ running: !finished, finished, distance, position, heading, stepIndex });
+      const cueCount = prev.cueCount + (stepIndex - prev.stepIndex);
+      setState({ running: !finished, finished, distance, position, heading, stepIndex, cueCount });
     }, TICK_MS);
     return () => clearInterval(id);
   }, [state.running, plan, profile, speedFactor, total, announce]);
 
   useEffect(() => () => void Speech.stop(), []);
 
-  const play = () => setState((s) => (s.finished ? { ...s, running: true, finished: false, distance: 0, position: start, stepIndex: -1 } : { ...s, running: true }));
+  const play = () => setState((s) => (s.finished ? { ...s, running: true, finished: false, distance: 0, position: start, stepIndex: -1, cueCount: 0 } : { ...s, running: true }));
   const pause = () => {
     Speech.stop();
     setState((s) => ({ ...s, running: false }));
   };
   const reset = () => {
     Speech.stop();
-    setState({ running: false, finished: false, distance: 0, position: start, heading: 0, stepIndex: -1 });
+    setState({ running: false, finished: false, distance: 0, position: start, heading: 0, stepIndex: -1, cueCount: 0 });
   };
   const repeat = () => {
     const s = ref.current;
     if (plan && s.stepIndex >= 0) announce(plan.steps[s.stepIndex]!, s.stepIndex, s.position, s.heading);
+    if (s.stepIndex >= 0) setState((x) => ({ ...x, cueCount: x.cueCount + 1 }));
   };
 
   return { state, total, play, pause, reset, repeat };

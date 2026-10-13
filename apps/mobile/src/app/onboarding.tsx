@@ -9,8 +9,8 @@ import { radius, space, type, upper } from '@/design/type';
 import { translate, type Lang, type MessageKey } from '@/lib/i18n';
 import { defaultSenses, useProfile } from '@/lib/profile';
 
-type Step = 'welcome' | 'lang' | 'vision' | 'mobility' | 'senses' | 'summary';
-const STEPS: Step[] = ['welcome', 'lang', 'vision', 'mobility', 'senses', 'summary'];
+type Step = 'welcome' | 'lang' | 'vision' | 'hearing' | 'mobility' | 'senses' | 'summary';
+const STEPS: Step[] = ['welcome', 'lang', 'vision', 'hearing', 'mobility', 'senses', 'summary'];
 
 export default function Onboarding() {
   const { profile, saveProfile } = useProfile();
@@ -20,6 +20,7 @@ export default function Onboarding() {
   const [step, setStep] = useState<Step>(editing ? 'lang' : 'welcome');
   const [lang, setLang] = useState<Lang>(profile?.lang ?? 'tr');
   const [vision, setVision] = useState<UserProfile['vision']>(profile?.vision ?? 'full');
+  const [hearing, setHearing] = useState<UserProfile['hearing']>(profile?.hearing ?? 'full');
   const [mobility, setMobility] = useState<UserProfile['mobility']>(profile?.mobility ?? 'none');
   const [senses, setSenses] = useState<UserProfile['senses']>(profile?.senses ?? defaultSenses('full'));
 
@@ -43,14 +44,18 @@ export default function Onboarding() {
 
   const pickVision = (v: UserProfile['vision']) => {
     setVision(v);
-    if (!editing || v !== profile?.vision) setSenses(defaultSenses(v));
+    if (!editing || v !== profile?.vision) setSenses(defaultSenses(v, hearing));
+  };
+  const pickHearing = (h: UserProfile['hearing']) => {
+    setHearing(h);
+    if (!editing || h !== profile?.hearing) setSenses(defaultSenses(vision, h));
   };
 
   const canContinue = step !== 'senses' || senses.audio || senses.haptic || senses.visual;
 
   const next = () => {
     if (step === 'summary') {
-      saveProfile({ lang, vision, mobility, senses });
+      saveProfile({ lang, vision, hearing, mobility, senses });
       if (editing && router.canGoBack()) router.back();
       else router.replace('/');
       return;
@@ -116,6 +121,22 @@ export default function Onboarding() {
           </Question>
         )}
 
+        {step === 'hearing' && (
+          <Question title={tr('onb.hearing.title')} hint={tr('onb.hearing.hint')} titleRef={titleRef} s={s}>
+            {(['full', 'hard', 'deaf'] as const).map((h) => (
+              <Option
+                key={h}
+                label={tr(`onb.hearing.${h}`)}
+                description={tr(`onb.hearing.${h}.d`)}
+                selected={hearing === h}
+                onPress={() => pickHearing(h)}
+                t={t}
+                s={s}
+              />
+            ))}
+          </Question>
+        )}
+
         {step === 'mobility' && (
           <Question title={tr('onb.mobility.title')} hint={tr('onb.mobility.hint')} titleRef={titleRef} s={s}>
             {(['none', 'cane', 'wheelchair'] as const).map((m) => (
@@ -164,6 +185,8 @@ export default function Onboarding() {
                 `onb.summary.${mobility}`,
                 vision === 'blind' && 'onb.summary.blind',
                 vision === 'low' && 'onb.summary.low',
+                hearing === 'deaf' && 'onb.summary.deaf',
+                hearing === 'hard' && 'onb.summary.hard',
                 senses.audio && 'onb.summary.audio',
                 senses.haptic && 'onb.summary.haptic',
               ].filter(Boolean) as MessageKey[]

@@ -66,6 +66,8 @@ function AppStack() {
           <Stack.Screen name="guide/[slug]" options={{ headerShown: false, presentation: 'fullScreenModal', animation: 'fade' }} />
           <Stack.Screen name="complex/[slug]" options={{ title: '' }} />
           <Stack.Screen name="tour/[id]" options={{ title: '' }} />
+          <Stack.Screen name="city/[slug]" options={{ title: '' }} />
+          <Stack.Screen name="exhibitions" options={{ title: tr('exh.title') }} />
           <Stack.Screen name="search" options={{ title: tr('search.title'), animation: 'fade_from_bottom' }} />
           <Stack.Screen name="report/new" options={{ title: tr('report.title'), presentation: 'modal' }} />
           <Stack.Screen name="reports" options={{ title: tr('reports.title') }} />

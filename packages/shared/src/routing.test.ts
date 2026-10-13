@@ -13,6 +13,7 @@ import {
 const base: UserProfile = {
   vision: "full",
   mobility: "none",
+  hearing: "full",
   senses: { audio: true, haptic: true, visual: true },
   lang: "tr",
 };
@@ -91,5 +92,23 @@ describe("geo", () => {
   it("pointAlong polyline sonunu aşmaz", () => {
     const line: [number, number][] = [[28.964, 41.016], [28.965, 41.016]];
     expect(pointAlong(line, 1e6)).toEqual(line[1]);
+  });
+});
+
+describe("işitme profili", () => {
+  it("duymayan kullanıcıya ses ipuçlu talimat verilmez, görsel talimat seçilir", () => {
+    const route = findRoute(segments, wheelchair, "A", "D")!;
+    const instructions: Instruction[] = [
+      { id: "1", nodeId: "C", text: { tr: "Su sesini duyunca sağa yönelin." }, cueType: "sound", status: "verified" },
+      { id: "2", nodeId: "C", text: { tr: "Sebili görünce sağa dönün." }, cueType: "visual", status: "verified" },
+    ];
+    const deaf: UserProfile = { ...wheelchair, hearing: "deaf" };
+    expect(buildGuidance(route, nodes, instructions, deaf)[0]).toMatchObject({ cueType: "visual", authored: true });
+  });
+
+  it("yalnızca ses ipucu varsa duymayan kullanıcı genel yönlendirme alır", () => {
+    const route = findRoute(segments, wheelchair, "A", "D")!;
+    const only: Instruction[] = [{ id: "1", nodeId: "C", text: { tr: "Su sesini duyunca sağa yönelin." }, cueType: "sound", status: "verified" }];
+    expect(buildGuidance(route, nodes, only, { ...wheelchair, hearing: "deaf" })[0]).toMatchObject({ authored: false });
   });
 });

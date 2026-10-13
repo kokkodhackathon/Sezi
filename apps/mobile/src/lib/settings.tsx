@@ -9,6 +9,8 @@ const Settings = z.object({
   themeMode: z.enum(['system', 'light', 'dark']).default('system'),
   /** expo-speech hızı: 0.7 yavaş – 1.2 hızlı. */
   speechRate: z.number().min(0.5).max(1.5).default(0.95),
+  /** Keşfet ekranında seçili envanter ili. */
+  city: z.string().default('bursa'),
 });
 export type Settings = z.infer<typeof Settings>;
 

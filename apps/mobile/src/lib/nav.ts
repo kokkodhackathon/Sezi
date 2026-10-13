@@ -13,7 +13,7 @@ import {
 } from '@sezi/shared';
 
 // Pilot grafiği uygulamaya gömülü: rota hesabı ve rehberlik internetsiz çalışır.
-import raw from '../../assets/pilot/suleymaniye-nav.json';
+import raw from '../../assets/pilot/bursa-hanlar-nav.json';
 
 type PilotNode = NavNode & { workSlug?: string; workType?: string };
 
@@ -21,8 +21,8 @@ const nodes = new Map<string, PilotNode>((raw.nodes as PilotNode[]).map((n) => [
 const segments = (raw.segments as unknown[]).map((s) => NavSegment.parse(s));
 const segMap = new Map(segments.map((s) => [s.id, s]));
 
-/** Simülasyon başlangıcı: külliyenin güneyindeki üniversite kapısı önü (Süleymaniye Caddesi). */
-const DEFAULT_START: LngLat = [28.964014, 41.015038];
+/** Simülasyon başlangıcı: Atatürk Caddesi'ndeki T1 Ulucami tramvay durağı (bölgeye en yaygın varış noktası). */
+const DEFAULT_START: LngLat = [29.0620479, 40.1834979];
 
 export function nearestNode(p: LngLat): PilotNode {
   let best: PilotNode | undefined;

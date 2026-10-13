@@ -1,10 +1,12 @@
 """OSM yaya ağından pilot navigasyon grafiği (Lynch grafiği) üretir.
 
 Girdi:
-  data/raw/osm_suleymaniye.json   Overpass çıktısı (README'deki sorgu)
-  Supabase works_view             doğrulanmış eserler (landmark olarak bağlanır)
+  data/raw/osm_<alan>.json        Overpass çıktısı (merkez çevresindeki yaya ağı)
+  Supabase works_view             doğrulanmış eserler (konumu kesin olanlar landmark olur)
 Çıktı:
-  apps/mobile/assets/pilot/suleymaniye-nav.json   uygulamaya gömülü, internetsiz çalışır
+  apps/mobile/assets/pilot/<alan>-nav.json   uygulamaya gömülü, internetsiz çalışır
+
+Yeni pilot alan eklemek: AREAS sözlüğüne merkez/yarıçap/şehir girip Overpass çıktısını data/raw'a koymak yeter.
 
 Kaynak ve tahminler (saha ölçümüyle güncellenecek):
   - steps:  OSM highway=steps (step_count yoksa 1 = "basamak var")
@@ -12,7 +14,7 @@ Kaynak ve tahminler (saha ölçümüyle güncellenecek):
   - noise:  OSM yol sınıfından tahmin (ana cadde gürültülü, yaya yolu sessiz)
   - landmarkVisibility: bir landmark'a 40 m'den yakın segmentler 0.5, diğerleri 0
 
-Kullanım:  python -I data/build_nav_graph.py
+Kullanım:  python -I data/build_nav_graph.py [alan]   (varsayılan: bursa-hanlar)
 """
 
 import json
@@ -24,11 +26,19 @@ from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-OSM_FILE = ROOT / "data/raw/osm_suleymaniye.json"
-OUT_FILE = ROOT / "apps/mobile/assets/pilot/suleymaniye-nav.json"
 ENV_FILE = ROOT / "apps/mobile/.env"
-COMPLEX_SLUG = "suleymaniye"
 LANDMARK_SNAP_M = 60
+
+# Pilot alanlar: merkez (lng, lat), yarıçap (m) ve eserlerin geldiği il.
+AREAS = {
+    "bursa-hanlar": {
+        "name": {"tr": "Ulu Cami ve Hanlar Bölgesi", "en": "Grand Mosque and Inns District"},
+        "city": "bursa",
+        "center": (29.06135, 40.18415),
+        "radius": 450,
+        "osm": "data/raw/osm_bursa_hanlar.json",
+    },
+}
 
 SURFACE = {
     "asphalt": "asphalt",
@@ -64,12 +74,16 @@ def read_env():
     return env
 
 
-def fetch_landmarks():
+def fetch_landmarks(area):
     env = read_env()
-    url = env["EXPO_PUBLIC_SUPABASE_URL"] + f"/rest/v1/works_view?select=slug,name,type_slug,lng,lat&complex_slug=eq.{COMPLEX_SLUG}"
+    url = env["EXPO_PUBLIC_SUPABASE_URL"] + (
+        "/rest/v1/works_view?select=slug,name,type_slug,lng,lat"
+        f"&city_slug=eq.{area['city']}&location_precision=eq.exact&lng=not.is.null"
+    )
     req = urllib.request.Request(url, headers={"apikey": env["EXPO_PUBLIC_SUPABASE_KEY"]})
     with urllib.request.urlopen(req, timeout=30) as r:
-        return json.load(r)
+        rows = json.load(r)
+    return [w for w in rows if haversine(area["center"], (w["lng"], w["lat"])) <= area["radius"]]
 
 
 def parse_width_cm(tags):
@@ -82,8 +96,10 @@ def parse_width_cm(tags):
         return None
 
 
-def build():
-    osm = json.loads(OSM_FILE.read_text(encoding="utf-8"))
+def build(area_slug):
+    area = AREAS[area_slug]
+    out_file = ROOT / f"apps/mobile/assets/pilot/{area_slug}-nav.json"
+    osm = json.loads((ROOT / area["osm"]).read_text(encoding="utf-8"))
     coords = {e["id"]: (e["lon"], e["lat"]) for e in osm["elements"] if e["type"] == "node"}
     ways = [e for e in osm["elements"] if e["type"] == "way"]
 
@@ -97,14 +113,16 @@ def build():
         key_nodes.add(w["nodes"][0])
         key_nodes.add(w["nodes"][-1])
 
-    landmarks = fetch_landmarks()
+    landmarks = fetch_landmarks(area)
     walkable = list(usage.keys())
     snapped = {}  # osm node -> landmark
     for lm in landmarks:
         p = (lm["lng"], lm["lat"])
-        best = min(walkable, key=lambda n: haversine(p, coords[n]))
+        # Aynı noktadaki iki eser (ör. Koza Hanı ve mescidi) ayrı düğümlere bağlanır.
+        free = [n for n in walkable if n not in snapped]
+        best = min(free, key=lambda n: haversine(p, coords[n]))
         d = haversine(p, coords[best])
-        if d <= LANDMARK_SNAP_M and best not in snapped:
+        if d <= LANDMARK_SNAP_M:
             snapped[best] = lm
             key_nodes.add(best)
         else:
@@ -184,16 +202,18 @@ def build():
         nodes.append(node)
 
     out = {
-        "complex": COMPLEX_SLUG,
+        "area": area_slug,
+        "name": area["name"],
+        "center": list(area["center"]),
         "source": "OpenStreetMap katkıcıları (ODbL); landmark: Sezi works_view",
         "nodes": nodes,
         "segments": segments,
     }
-    OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    OUT_FILE.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    out_file.parent.mkdir(parents=True, exist_ok=True)
+    out_file.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     n_lm = sum(1 for n in nodes if n["lynchType"] == "landmark")
-    print(f"{len(nodes)} düğüm, {len(segments)} segment, {n_lm} landmark -> {OUT_FILE.relative_to(ROOT)}", file=sys.stderr)
+    print(f"{len(nodes)} düğüm, {len(segments)} segment, {n_lm} landmark -> {out_file.relative_to(ROOT)}", file=sys.stderr)
 
 
 if __name__ == "__main__":
-    build()
+    build(sys.argv[1] if len(sys.argv) > 1 else "bursa-hanlar")

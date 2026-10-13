@@ -36,6 +36,7 @@ export default function Profile() {
 
   const rows: [string, string, string?][] = [
     [tr('profile.vision'), tr(`onb.vision.${profile.vision}`), tr(`onb.vision.${profile.vision}.d`)],
+    [tr('profile.hearing'), tr(`onb.hearing.${profile.hearing}`), tr(`onb.hearing.${profile.hearing}.d`)],
     [tr('profile.mobility'), tr(`onb.mobility.${profile.mobility}`), tr(`onb.mobility.${profile.mobility}.d`)],
     [tr('profile.senses'), senses],
     [tr('profile.lang'), profile.lang === 'tr' ? 'Türkçe' : 'English'],
@@ -82,6 +83,7 @@ export default function Profile() {
           />
           <ListRow title={tr('profile.signIn')} subtitle={tr('profile.signInSub')} onPress={() => router.push('/sign-in')} />
           <ListRow title={tr('profile.settings')} onPress={() => router.push('/settings')} />
+          <ListRow title={tr('exh.title')} onPress={() => router.push('/exhibitions')} />
           <ListRow title={tr('profile.about')} onPress={() => router.push('/about')} />
         </Card>
       </ScrollView>

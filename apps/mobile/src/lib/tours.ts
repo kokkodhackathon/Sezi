@@ -13,10 +13,10 @@ export interface TourDef {
 }
 
 export const TOURS: TourDef[] = [
-  { id: 'kulliye', types: null },
-  { id: 'medreseler', types: ['medrese'] },
-  { id: 'su', types: ['cesme', 'sebil'] },
-  { id: 'turbeler', types: ['turbe', 'cami'] },
+  { id: 'tum', types: null },
+  { id: 'hanlar', types: ['han', 'bedesten', 'carsi'] },
+  { id: 'camiler', types: ['cami', 'mescit', 'turbe'] },
+  { id: 'su', types: ['cesme', 'sebil', 'hamam'] },
 ];
 
 export interface TourStop {
