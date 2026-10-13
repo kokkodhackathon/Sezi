@@ -8,10 +8,9 @@ import { CloseIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
 import { radius, type } from '@/design/type';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
-import { planRoute } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
-import { useGuidanceSimulation } from '@/lib/simulation';
+import { useNavSession } from '@/lib/sim/session';
 
 export default function Guide() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -19,10 +18,11 @@ export default function Guide() {
   const { t: tr, lang } = useT();
   const { profile } = useProfile();
   const { settings, markVisited } = useSettings();
-  const plan = useMemo(() => profile ? planRoute(slug, profile) : null, [slug, profile]);
-  const [speed, setSpeed] = useState(1);
   const [showSpeed, setShowSpeed] = useState(false);
-  const sim = useGuidanceSimulation(plan, profile!, speed, { speechRate: settings.speechRate, onArrive: () => markVisited(slug) });
+  // Rota ekranıyla aynı oturum: tam ekrana geçince ilerleme sürer.
+  const sim = useNavSession(slug, profile, { speechRate: settings.speechRate, onArrive: markVisited });
+  const { plan } = sim;
+  const { speed } = sim.state;
   const s = useMemo(() => styles(t), [t]);
   if (!profile || !plan) return <SafeAreaView style={s.screen}><EmptyState title={tr('route.none')} action={<Button label={tr('guide.exit')} onPress={() => router.back()} />} /></SafeAreaView>;
   const { stepIndex, running, finished, distance } = sim.state;
@@ -36,7 +36,7 @@ export default function Guide() {
   return <SafeAreaView style={s.screen}>
     <View style={s.top}>
       <View style={{ flex: 1, gap: 4 }}><Text style={[type.meta, { color: t.primary }]}>{tr('design.simulation')}</Text><Text style={[type.itemTitle, { color: t.text }]}>{endName}</Text></View>
-      <Pressable onPress={() => { sim.pause(); router.back(); }} accessibilityRole="button" accessibilityLabel={tr('guide.exit')} style={s.close}><CloseIcon color={t.text} /></Pressable>
+      <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={tr('guide.exit')} style={s.close}><CloseIcon color={t.text} /></Pressable>
     </View>
     <ScrollView contentContainerStyle={s.stage}>
       <View style={s.arrow}><TurnIcon turn={current?.turn ?? 'straight'} arrived={finished} color={t.primary} size={88} /></View>
@@ -50,7 +50,7 @@ export default function Guide() {
       <Button label={playLabel} onPress={running ? sim.pause : sim.play} icon={(c) => running ? <StopIcon color={c} /> : <PlayIcon color={c} />} />
       <Button variant="outline" label={tr('design.repeat')} onPress={sim.repeat} disabled={stepIndex < 0} />
       <Pressable onPress={() => setShowSpeed(!showSpeed)} accessibilityRole="button" accessibilityLabel={tr('design.speed')} accessibilityState={{ expanded: showSpeed }} style={s.speedLink}><Text style={[type.meta, { color: t.primary }]}>{tr('design.speed')} · {speed}×</Text></Pressable>
-      {showSpeed ? <Segmented label={tr('design.speed')} value={speed} onChange={setSpeed} options={[1, 3, 8].map((value) => ({ value, label: `${value}×` }))} /> : null}
+      {showSpeed ? <Segmented label={tr('design.speed')} value={speed} onChange={sim.setSpeed} options={[1, 3, 8].map((value) => ({ value, label: `${value}×` }))} /> : null}
     </View>
     <CueFlash count={sim.state.cueCount} color={t.primary} enabled={profile.hearing !== 'full'} />
   </SafeAreaView>;

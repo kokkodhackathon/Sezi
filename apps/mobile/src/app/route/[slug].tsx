@@ -1,7 +1,7 @@
 import { Camera, GeoJSONSource, Layer } from '@maplibre/maplibre-react-native';
 import { distanceM, type LngLat, type ThemeColors } from '@sezi/shared';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { InfoIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
@@ -10,9 +10,9 @@ import { colorForType, WorkGlyph } from '@/design/work-glyph';
 import { DeferredMap } from '@/components/deferred-map';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
-import { boundsOf, planRoute, walkingSpeed } from '@/lib/nav';
+import { boundsOf, walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
-import { useGuidanceSimulation } from '@/lib/simulation';
+import { useNavSession } from '@/lib/sim/session';
 import { useSettings } from '@/lib/settings';
 import { Button } from '@/components/ui';
 import { CueFlash } from '@/components/cue-flash';
@@ -25,10 +25,10 @@ export default function RouteScreen() {
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
   const { profile } = useProfile();
-  const plan = useMemo(() => (profile ? planRoute(slug, profile) : null), [slug, profile]);
-  const [speed, setSpeed] = useState(1);
   const { settings, markVisited } = useSettings();
-  const sim = useGuidanceSimulation(plan, profile!, speed, { speechRate: settings.speechRate, onArrive: () => markVisited(slug) });
+  const sim = useNavSession(slug, profile, { speechRate: settings.speechRate, onArrive: markVisited });
+  const { plan } = sim;
+  const { speed } = sim.state;
 
   if (!profile || !plan) {
     return (
@@ -160,10 +160,7 @@ export default function RouteScreen() {
           variant="outline"
           label={tr('guide.fullscreen')}
           hint={tr('guide.fullscreenHint')}
-          onPress={() => {
-            sim.pause();
-            router.push({ pathname: '/guide/[slug]', params: { slug } });
-          }}
+          onPress={() => router.push({ pathname: '/guide/[slug]', params: { slug } })}
         />
 
         <View style={s.speedRow} accessibilityRole="radiogroup" accessibilityLabel={tr('route.speed')}>
@@ -171,7 +168,7 @@ export default function RouteScreen() {
           {SPEEDS.map((v) => (
             <Pressable
               key={v}
-              onPress={() => setSpeed(v)}
+              onPress={() => sim.setSpeed(v)}
               accessibilityRole="radio"
               accessibilityLabel={`${v}×`}
               accessibilityState={{ checked: speed === v }}
