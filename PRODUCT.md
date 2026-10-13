@@ -1,7 +1,5 @@
 # Product
 
-<!-- impeccable:product-schema 1 -->
-
 ## Platform
 
 android
@@ -32,8 +30,8 @@ Sezi, vakıf mirasını koordinatlara indirgeyen 2D navigasyon yerine, Kevin Lyn
 ## Brand Commitments
 - Ad: **Sezi**.
 - Renkler: moodboard paleti (docs/Moodboard.png): turkuaz, kırmızı/pas, kahve, krem kağıt zemin. Token'lar `packages/shared/src/theme.ts` içinde.
-- Modern, göz yormayan Türk motifleri (kilim, çengel, köşe meander, nazar); süs değil iz olarak, düşük yoğunlukta.
-- Yazı tipi, logo ve ikon için bağlayıcı karar yok; seçim tasarım sürecine bırakıldı.
+- Sade arayüz ve birkaç belirgin kültürel detay: karşılama ekranında küçük geometrik çengel; işlem, liste ve rehberlik ekranlarında dekoratif şerit yok.
+- Arayüz ve yön talimatları Atkinson Hyperlegible Next; eser/tur başlıkları ve marka adı Fraunces. Uygulanmış görsel kurallar: [DESIGN.md](DESIGN.md). Logo ve uygulama ikonu henüz kesinleşmedi.
 
 ## Evidence on Hand
 - Veri: envanter kitaplarının içindekiler sayfalarından olgusal alanlar (ad, il/ilçe, tür, cilt/sayfa). Tarihçe ve fotoğraflar resmî paylaşımla gelecek; o zamana kadar uygulama kitaptaki sayfayı gösterir.

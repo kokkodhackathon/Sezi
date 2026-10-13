@@ -10,6 +10,7 @@ Vakıf eserlerine Kevin Lynch'in bilişsel haritalama yaklaşımıyla (landmark 
 | [ROADMAP.md](ROADMAP.md) | Kilometre taşları, sahipli backlog, kabul ölçütleri, açık kararlar |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Bileşenler, veri modeli, rota motoru, ekranlar, kararlar |
 | [PRODUCT.md](PRODUCT.md) | Kullanıcılar, ilkeler, marka |
+| [DESIGN.md](DESIGN.md) | Uygulanmış mobil tasarım dili, tema rolleri, tipografi ve ortak bileşenler |
 | [ENVANTER.md](ENVANTER.md) | Vakıf Katılım bilgi notu, envanter kitapları, veri politikası (telif) |
 | [data/README.md](data/README.md) | Veri pipeline'ı ve nav grafiği üretimi |
 

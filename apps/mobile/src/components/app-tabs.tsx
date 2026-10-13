@@ -16,8 +16,8 @@ export default function AppTabs() {
       labelVisibilityMode="labeled"
       iconColor={{ default: t.textMuted, selected: t.primary }}
       labelStyle={{
-        default: { color: t.textMuted, fontFamily: font.bodySemi, fontSize: 13 },
-        selected: { color: t.primary, fontFamily: font.bodyBold, fontSize: 13 },
+        default: { color: t.textMuted, fontFamily: font.bodySemi, fontSize: 12 },
+        selected: { color: t.primary, fontFamily: font.bodyBold, fontSize: 12 },
       }}>
       <NativeTabs.Trigger name="index">
         <NativeTabs.Trigger.Label>{tr('tabs.explore')}</NativeTabs.Trigger.Label>

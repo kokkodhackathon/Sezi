@@ -6,7 +6,6 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 
 import { Button, Card, Eyebrow, ListRow, SectionTitle } from '@/components/ui';
 import { TurnIcon } from '@/design/icons';
-import { Medallion } from '@/design/motif';
 import { radius, space, type } from '@/design/type';
 import { colorForType, typeColor, WorkGlyph } from '@/design/work-glyph';
 import { DeferredMap } from '@/components/deferred-map';
@@ -52,7 +51,6 @@ export default function ComplexScreen() {
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
       <Stack.Screen options={{ title: '' }} />
       <View style={s.hero}>
-        <Medallion primary={t.primary} accent={t.accent} ink={t.text} size={88} />
         <View style={{ flex: 1, gap: space.xs }}>
           <Eyebrow text={tr('complex.eyebrow')} />
           <Text style={[type.title, { color: t.text }]} accessibilityRole="header">
@@ -110,7 +108,7 @@ export default function ComplexScreen() {
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    body: { padding: space.lg, gap: space.xl, paddingBottom: 56 },
+    body: { padding: space.xl, gap: space.xl, paddingBottom: 56 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.background },
     hero: { flexDirection: 'row', gap: space.lg, alignItems: 'center' },
     map: { height: 240, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },

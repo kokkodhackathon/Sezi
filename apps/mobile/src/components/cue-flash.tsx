@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AccessibilityInfo, Animated, StyleSheet } from 'react-native';
 
 /**
@@ -7,8 +7,8 @@ import { AccessibilityInfo, Animated, StyleSheet } from 'react-native';
  * çerçeve 1,5 saniye sabit kalır.
  */
 export function CueFlash({ count, color, enabled }: { count: number; color: string; enabled: boolean }) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const [opacity] = useState(() => new Animated.Value(0));
+  const [reduceMotion, setReduceMotion] = useState(true);
 
   useEffect(() => {
     AccessibilityInfo.isReduceMotionEnabled().then(setReduceMotion);
@@ -32,6 +32,7 @@ export function CueFlash({ count, color, enabled }: { count: number; color: stri
           Animated.timing(opacity, { toValue: 0, duration: 700, useNativeDriver: true }),
         ]);
     anim.start();
+    return () => anim.stop();
   }, [count, enabled, reduceMotion, opacity]);
 
   if (!enabled) return null;

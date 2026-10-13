@@ -89,5 +89,5 @@ export default function SettingsScreen() {
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    body: { padding: space.lg, gap: space.xl, paddingBottom: 56 },
+    body: { padding: space.xl, gap: space.xl, paddingBottom: 56 },
   });

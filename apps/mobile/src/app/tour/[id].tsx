@@ -3,9 +3,8 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Badge, Button, EmptyState, Eyebrow, SectionTitle } from '@/components/ui';
+import { Badge, Button, EmptyState, SectionTitle } from '@/components/ui';
 import { ChevronIcon, TurnIcon } from '@/design/icons';
-import { KilimBand } from '@/design/motif';
 import { radius, space, type } from '@/design/type';
 import { WorkGlyph } from '@/design/work-glyph';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
@@ -40,8 +39,7 @@ export default function TourDetail() {
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
       <Stack.Screen options={{ title: '' }} />
       <View style={{ gap: space.xs }}>
-        <Eyebrow text={tr('tours.eyebrow')} />
-        <Text style={[type.display, { color: t.text }]} accessibilityRole="header">
+        <Text style={[type.editorial, { color: t.text }]} accessibilityRole="header">
           {title}
         </Text>
         <Text style={[type.body, { color: t.textMuted }]}>{tr(`tours.${id}.body` as MessageKey)}</Text>
@@ -59,11 +57,7 @@ export default function TourDetail() {
         icon={(c) => <TurnIcon turn="slight_right" color={c} size={22} />}
       />
 
-      {t.motifOpacity > 0 ? (
-        <View style={{ height: 10, marginHorizontal: -space.lg }}>
-          <KilimBand color={t.accent} accent={t.primary} height={10} opacity={0.6} />
-        </View>
-      ) : null}
+
 
       <SectionTitle title={tr('tours.stopsTitle')} />
       <View>
@@ -105,23 +99,23 @@ export default function TourDetail() {
 
 function Stat({ value, label, t }: { value: string; label: string; t: ThemeColors }) {
   return (
-    <View style={[statStyle.box, { backgroundColor: t.surface, borderColor: t.border }]} accessible accessibilityLabel={`${value} ${label}`}>
+    <View style={[statStyle.box, { borderColor: t.border }]} accessible accessibilityLabel={`${value} ${label}`}>
       <Text style={[type.title, { color: t.text, fontSize: 24, lineHeight: 30 }]}>{value}</Text>
-      <Text style={[type.meta, { color: t.textMuted }]} numberOfLines={2}>
+      <Text style={[type.meta, { color: t.textMuted }]} >
         {label}
       </Text>
     </View>
   );
 }
 
-const statStyle = StyleSheet.create({ box: { flex: 1, padding: space.md, borderRadius: radius.md, borderWidth: 1, gap: 2 } });
+const statStyle = StyleSheet.create({ box: { flexGrow: 1, flexBasis: 100, paddingVertical: space.md, gap: 4 } });
 
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    body: { padding: space.lg, gap: space.lg, paddingBottom: 56 },
+    body: { padding: space.xl, gap: space.xl, paddingBottom: 56 },
     center: { flex: 1, padding: space.xl, justifyContent: 'center', backgroundColor: t.background },
-    stats: { flexDirection: 'row', gap: space.sm },
+    stats: { flexWrap: 'wrap', flexDirection: 'row', gap: space.sm },
     stopRow: { flexDirection: 'row', gap: space.md },
     rail: { width: 36, alignItems: 'center' },
     dot: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },

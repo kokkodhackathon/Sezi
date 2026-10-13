@@ -40,6 +40,7 @@ cd apps/mobile && npx expo run:android          # native modül eklendiyse yenid
    - Renk tek başına anlam taşımaz. Reduce motion'a uyulur.
    - **Her ses ipucunun görsel ve haptik karşılığı olur** (işitme profili `deaf` / `hard`).
 6. **Yeni il veya eser için kod yazılmaz.** Veri eklenir: `cities` satırı, pipeline girdisi, admin paneli.
+7. **`impeccable` skill'i ve `.impeccable/` klasörü kullanılmaz** (kullanıcı kararı). Tasarım kuralları [DESIGN.md](DESIGN.md) dosyasında.
 
 ## Mobil uygulama kuralları (apps/mobile)
 

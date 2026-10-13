@@ -5,7 +5,6 @@ import { useMemo } from 'react';
 import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Card, ListRow, SectionTitle } from '@/components/ui';
-import { KilimBand, Medallion } from '@/design/motif';
 import { space, type } from '@/design/type';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { ExternalIcon } from '@/design/icons';
@@ -23,17 +22,12 @@ export default function About() {
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
       <View style={s.hero}>
-        <Medallion primary={t.primary} accent={t.accent} ink={t.text} size={96} />
         <Text style={[type.hero, { color: t.text }]} accessibilityRole="header">
           Sezi
         </Text>
         <Text style={[type.meta, { color: t.textMuted }]}>{tr('about.version', { v: Constants.expoConfig?.version ?? '1.0.0' })}</Text>
       </View>
-      {t.motifOpacity > 0 ? (
-        <View style={{ height: 10, marginHorizontal: -space.lg }}>
-          <KilimBand color={t.accent} accent={t.primary} height={10} opacity={0.6} />
-        </View>
-      ) : null}
+
       <Text style={[type.lead, { color: t.text }]}>{tr('about.lead')}</Text>
 
       <SectionTitle title={tr('about.project')} />
@@ -81,6 +75,6 @@ export default function About() {
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    body: { padding: space.lg, gap: space.xl, paddingBottom: 56 },
+    body: { padding: space.xl, gap: space.xl, paddingBottom: 56 },
     hero: { alignItems: 'center', gap: space.sm, paddingTop: space.md },
   });

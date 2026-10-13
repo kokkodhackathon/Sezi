@@ -1,7 +1,7 @@
 import { bearingDeg, pointAlong, stereoPan, type GuidanceStep, type LngLat, type Turn, type UserProfile } from '@sezi/shared';
 import * as Haptics from 'expo-haptics';
 import * as Speech from 'expo-speech';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { AudioContext } from 'react-native-audio-api';
 
 import type { PlannedRoute } from './nav';
@@ -72,12 +72,12 @@ export function useGuidanceSimulation(
   opts: { speechRate?: number; onArrive?: () => void } = {},
 ) {
   const optsRef = useRef(opts);
-  optsRef.current = opts;
   const total = plan ? plan.geometry.nodeAtM.at(-1)! : 0;
   const start = plan?.geometry.line[0] ?? ([0, 0] as LngLat);
   const [state, setState] = useState<SimState>({ running: false, finished: false, distance: 0, position: start, heading: 0, stepIndex: -1, cueCount: 0 });
   const ref = useRef(state);
-  ref.current = state;
+  useLayoutEffect(() => { optsRef.current = opts; }, [opts]);
+  useLayoutEffect(() => { ref.current = state; }, [state]);
 
   const announce = useCallback(
     (step: GuidanceStep, index: number, pos: LngLat, heading: number) => {

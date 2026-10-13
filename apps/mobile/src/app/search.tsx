@@ -92,8 +92,8 @@ const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
     searchBar: { paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.md },
-    input: { minHeight: 56, paddingHorizontal: space.lg, borderRadius: radius.pill, borderWidth: 2, borderColor: t.primary, backgroundColor: t.surface, color: t.text },
-    list: { paddingHorizontal: space.lg, paddingBottom: space.xxl, gap: space.sm },
+    input: { minHeight: 56, paddingHorizontal: space.lg, borderRadius: radius.md, borderWidth: 1, borderColor: t.textMuted, backgroundColor: t.surface, color: t.text },
+    list: { paddingHorizontal: space.xl, paddingBottom: space.xxl, gap: space.sm },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-    row: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg, borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },
+    row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.lg, minHeight: 72, borderBottomWidth: 1, borderColor: t.border, backgroundColor: t.background },
   });

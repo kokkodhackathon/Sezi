@@ -1,16 +1,14 @@
 /**
  * Sezi arayüz bileşenleri. Tüm ekranlar bunlardan kurulur: tek dokunma alanı ölçüsü (≥ 48 dp),
- * tek köşe dili (hap düğme, 20 dp kart), tek tipografi ölçeği.
+ * rolüne göre köşe dili (12 dp düğme, 16 dp kart), tek tipografi ölçeği.
  */
 import type { ThemeColors } from '@sezi/shared';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Switch, Text, TextInput, View, type TextInputProps, type ViewStyle } from 'react-native';
+import { Pressable, StyleSheet, Switch, Text, TextInput, useWindowDimensions, View, type TextInputProps, type ViewStyle } from 'react-native';
 
 import { ChevronIcon } from '@/design/icons';
-import { CengelMark } from '@/design/motif';
-import { radius, space, type, upper } from '@/design/type';
+import { radius, space, type } from '@/design/type';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
-import { useT } from '@/lib/i18n';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 
@@ -40,6 +38,7 @@ export function Button({
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
+      accessibilityLabel={label}
       accessibilityHint={hint}
       accessibilityState={{ disabled: !!disabled }}
       style={({ pressed }) => [
@@ -51,7 +50,7 @@ export function Button({
         style,
       ]}>
       {icon ? icon(v.fg) : null}
-      <Text style={[type.button, { color: v.fg }]}>{label}</Text>
+      <Text style={[type.button, { color: v.fg, flexShrink: 1, textAlign: 'center' }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -80,7 +79,6 @@ export function SectionTitle({ title, action }: { title: string; action?: ReactN
   const t = useSeziTheme();
   return (
     <View style={styles.sectionTitle}>
-      <CengelMark color={t.accent} />
       <Text style={[type.heading, { color: t.text, flex: 1 }]} accessibilityRole="header">
         {title}
       </Text>
@@ -91,8 +89,7 @@ export function SectionTitle({ title, action }: { title: string; action?: ReactN
 
 export function Eyebrow({ text, color }: { text: string; color?: string }) {
   const t = useSeziTheme();
-  const { lang } = useT();
-  return <Text style={[type.eyebrow, { color: color ?? t.primary }]}>{upper(text, lang)}</Text>;
+  return <Text style={[type.meta, { color: color ?? t.textMuted }]}>{text}</Text>;
 }
 
 /** Liste satırı: solda simge, ortada başlık + açıklama, sağda ok ya da özel öğe. */
@@ -184,8 +181,9 @@ export function Segmented<T extends string | number>({
   label: string;
 }) {
   const t = useSeziTheme();
+  const { fontScale } = useWindowDimensions();
   return (
-    <View style={[styles.segmented, { backgroundColor: t.background, borderColor: t.border }]} accessibilityRole="radiogroup" accessibilityLabel={label}>
+    <View style={[styles.segmented, { backgroundColor: t.background, borderColor: t.textMuted, flexDirection: fontScale > 1.5 ? 'column' : 'row' }]} accessibilityRole="radiogroup" accessibilityLabel={label}>
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -193,9 +191,10 @@ export function Segmented<T extends string | number>({
             key={String(o.value)}
             onPress={() => onChange(o.value)}
             accessibilityRole="radio"
+            accessibilityLabel={o.label}
             accessibilityState={{ checked: on }}
             style={[styles.segment, on && { backgroundColor: t.surface, borderColor: t.primary, borderWidth: 2 }]}>
-            <Text style={[type.button, { fontSize: 15, color: on ? t.primary : t.textMuted }]}>{o.label}</Text>
+            <Text style={[type.button, { fontSize: 15, color: on ? t.primary : t.textMuted, textAlign: 'center', flexShrink: 1 }]}>{o.label}</Text>
           </Pressable>
         );
       })}
@@ -210,6 +209,7 @@ export function Chip({ label, selected, onPress, icon }: { label: string; select
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
+      accessibilityLabel={label}
       accessibilityState={{ selected }}
       style={({ pressed }) => [
         styles.chip,
@@ -217,7 +217,7 @@ export function Chip({ label, selected, onPress, icon }: { label: string; select
         pressed && { opacity: 0.85 },
       ]}>
       {icon ? icon(fg) : null}
-      <Text style={[type.button, { color: fg, fontSize: 15 }]}>{label}</Text>
+      <Text style={[type.button, { color: fg, fontSize: 15, flexShrink: 1 }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -227,8 +227,9 @@ export function Badge({ label, tone = 'neutral' }: { label: string; tone?: 'neut
   const t = useSeziTheme();
   const c = { neutral: t.textMuted, primary: t.primary, accent: t.accent, danger: t.danger }[tone];
   return (
-    <View style={[styles.badge, { borderColor: c }]}>
-      <Text style={[type.eyebrow, { color: c, fontSize: 12, letterSpacing: 0.8 }]}>{label}</Text>
+    <View style={[styles.badge, { borderColor: t.border }]}>
+      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: c }} />
+      <Text style={[type.meta, { color: c }]}>{label}</Text>
     </View>
   );
 }
@@ -260,7 +261,7 @@ export function Field({ label, error, help, ...input }: TextInputProps & { label
         style={[
           type.body,
           styles.input,
-          { color: t.text, backgroundColor: t.surface, borderColor: error ? t.danger : t.border },
+          { color: t.text, backgroundColor: t.surface, borderColor: error ? t.danger : t.textMuted },
           input.multiline && { minHeight: 120, textAlignVertical: 'top' },
         ]}
       />
@@ -292,20 +293,21 @@ const styles = StyleSheet.create({
     gap: space.sm,
     minHeight: 56,
     paddingHorizontal: space.xl,
-    borderRadius: radius.pill,
-    borderWidth: 2,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    paddingVertical: space.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   btnCompact: { minHeight: 48, paddingHorizontal: space.lg },
   card: { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
-  sectionTitle: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
+  sectionTitle: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingTop: space.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 64, paddingHorizontal: space.lg, paddingVertical: space.md },
-  segmented: { flexDirection: 'row', padding: 4, borderRadius: radius.pill, borderWidth: 1, gap: 4 },
-  segment: { flex: 1, minHeight: 44, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 44, paddingHorizontal: space.lg, borderRadius: radius.pill, borderWidth: 1 },
-  badge: { alignSelf: 'flex-start', paddingHorizontal: space.sm, paddingVertical: 3, borderRadius: radius.sm, borderWidth: 1.5 },
-  empty: { alignItems: 'center', gap: space.md, padding: space.xl, borderRadius: radius.lg, borderWidth: 1, borderStyle: 'dashed' },
-  input: { minHeight: 52, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.md, borderWidth: 1.5 },
-  note: { flexDirection: 'row', gap: space.md, padding: space.lg, borderRadius: radius.md, borderWidth: 1, borderStyle: 'dashed' },
+  segmented: { flexDirection: 'row', padding: 4, borderRadius: radius.md, borderWidth: 1, gap: 4 },
+  segment: { flex: 1, minWidth: 48, minHeight: 48, paddingVertical: space.sm, paddingHorizontal: space.xs, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 48, minHeight: 48, paddingVertical: space.sm, paddingHorizontal: space.lg, borderRadius: radius.pill, borderWidth: 1 },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: space.sm, paddingVertical: 4, borderRadius: radius.sm, borderWidth: 1 },
+  empty: { alignItems: 'center', gap: space.md, paddingVertical: space.xxl, paddingHorizontal: space.lg },
+  input: { minHeight: 56, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.md, borderWidth: 1 },
+  note: { flexDirection: 'row', gap: space.md, padding: space.lg, borderRadius: radius.md, borderWidth: 1 },
 });

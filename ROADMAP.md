@@ -46,7 +46,7 @@ Son güncelleme: 13 Ekim 2026. Görevi bitiren, durum sütununu günceller.
 | 4 | P0 | Çevrimdışı önbellek: `works_view`, `cities` ve `exhibitions` yanıtlarını cihazda saklamak (TanStack persist + expo-sqlite) | Eda | Uçak modunda Keşfet, eser detayı ve tur açılıyor | ⬜ |
 | 5 | P0 | Resmî veri içe aktarma: tarihçe, mimari, fotoğraflar → `history`, `architecture`, `media` (Storage, WebP ≤1600 px, alt metin TR/EN) | Zehra + Ediz | Pilot alandaki 17 eserin metni ve en az 1 fotoğrafı var; her metin kaynağa bağlı | ⏸ veri bekleniyor |
 | 6 | P0 | Saha gezisi (Bursa Hanlar): basamak, eğim, zemin, genişlik ölçümü; 17 landmark için TR/EN talimat metni; ortam sesi kayıtları | Zehra | `nav-json` segmentleri ölçümle güncel; `instructions` ve `audio_assets` dolu | ⬜ |
-| 7 | P0 | Uygulama ikonu, açılış ekranı, ekran tasarımlarının gözden geçirilmesi | İnci | `app.json` ikon ve splash; tasarım notları uygulanmış | ⬜ |
+| 7 | P0 | Uygulama ikonu, açılış ekranı, ekran tasarımlarının gözden geçirilmesi | İnci | `app.json` ikon ve splash; tasarım notları uygulanmış | ⏳ Sade tasarım dili mobil ekranlara uygulandı; DESIGN.md yazıldı. Android emülatöründe temel akış kontrol edildi; gerçek telefon, ikon/splash ve kapsamlı erişilebilirlik kontrolü bekliyor |
 | 8 | P0 | Demo senaryosu ve provası; yedek video | Hepsi | Uçak modunda baştan sona 5 dakikalık akış | ⬜ |
 | 9 | P1 | Erişilebilirlik bildirimi gönderimi: oturum kalıcı, kuyruktaki bildirim `a11y_reports` tablosuna gider, admin onaylayınca segment `blocked` / ağırlık güncellenir | Ediz | Merdiven bildirimi onaylanınca rota o segmentten kaçınır (test) | ⬜ |
 | 10 | P1 | Gerçek GPS modu: konuma göre başlangıç, canlı takip, pusula ile panlama | Eda | Sahada konum en yakın kenara eşleniyor; sapmada uyarı | ⬜ |

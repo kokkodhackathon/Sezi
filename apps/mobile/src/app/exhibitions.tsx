@@ -12,7 +12,7 @@ export default function Exhibitions() {
   const t = useSeziTheme();
   const { t: tr } = useT();
   const { data, isLoading } = useExhibitions();
-  const s = useMemo(() => StyleSheet.create({ screen: { flex: 1, backgroundColor: t.background }, body: { padding: space.lg, gap: space.lg, paddingBottom: 56 } }), [t]);
+  const s = useMemo(() => StyleSheet.create({ screen: { flex: 1, backgroundColor: t.background }, body: { padding: space.xl, gap: space.lg, paddingBottom: 56 } }), [t]);
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
       <Eyebrow text={tr('exh.eyebrow')} />

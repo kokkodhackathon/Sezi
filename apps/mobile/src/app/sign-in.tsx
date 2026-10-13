@@ -6,7 +6,6 @@ import { z } from 'zod';
 
 import { Button, EmptyState, Field, Note } from '@/components/ui';
 import { InfoIcon } from '@/design/icons';
-import { Medallion } from '@/design/motif';
 import { space, type } from '@/design/type';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
@@ -40,7 +39,6 @@ export default function SignIn() {
     return (
       <View style={s.done}>
         <EmptyState
-          icon={<Medallion primary={t.primary} accent={t.accent} ink={t.text} size={72} />}
           title={tr('signin.sent')}
           body={tr('signin.sentBody', { email: email.trim() })}
           action={<Button label={tr('common.close')} variant="ghost" onPress={() => router.back()} />}
@@ -52,7 +50,6 @@ export default function SignIn() {
   return (
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={s.screen} contentContainerStyle={s.body} keyboardShouldPersistTaps="handled">
-        <Medallion primary={t.primary} accent={t.accent} ink={t.text} size={72} />
         <Text style={[type.lead, { color: t.text }]}>{tr('signin.lead')}</Text>
         <Field
           label={tr('signin.email')}
@@ -77,6 +74,6 @@ export default function SignIn() {
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    body: { padding: space.lg, gap: space.xl, paddingBottom: 56 },
+    body: { padding: space.xl, gap: space.xl, paddingBottom: 56 },
     done: { flex: 1, padding: space.lg, justifyContent: 'center', backgroundColor: t.background },
   });

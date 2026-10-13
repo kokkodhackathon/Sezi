@@ -3,14 +3,13 @@ import type { ThemeColors } from '@sezi/shared';
 import * as Speech from 'expo-speech';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 
 import { DeferredMap } from '@/components/deferred-map';
-import { Badge, Button, Card, ListRow, Note } from '@/components/ui';
+import { Badge, Button, Card, ListRow, Note, SectionTitle, EmptyState } from '@/components/ui';
 import { ExternalIcon, InfoIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
-import { CengelMark, KilimBand } from '@/design/motif';
-import { radius, space, type, upper } from '@/design/type';
-import { colorForType, WorkGlyph, WorkGlyphInline } from '@/design/work-glyph';
+import { radius, type } from '@/design/type';
+import { WorkGlyphInline } from '@/design/work-glyph';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
 import { hasRouteTo, planRoute } from '@/lib/nav';
@@ -34,9 +33,7 @@ export default function WorkDetail() {
   }
   if (error || !work) {
     return (
-      <View style={s.center}>
-        <Text style={[type.body, { color: t.text }]}>{error ? tr('work.error') : tr('work.notFound')}</Text>
-      </View>
+      <View style={s.center}><EmptyState title={error ? tr('work.error') : tr('work.notFound')} /></View>
     );
   }
   return <Detail work={work} t={t} s={s} />;
@@ -80,6 +77,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
       rate: settings.speechRate,
       onDone: () => setSpeaking(false),
       onStopped: () => setSpeaking(false),
+      onError: () => setSpeaking(false),
     });
   };
 
@@ -87,232 +85,82 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
     ? `${name}. ${inv.title}${inv.page ? `, ${tr('inv.refPage', { page: inv.page })}` : ''}. Vakıf Katılım${inv.year ? `, ${inv.year}` : ''}.${inv.url ? ` ${inv.url}` : ''}`
     : null;
 
+
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
       <Stack.Screen options={{ title: '' }} />
-
       <View style={s.hero}>
-        <WorkGlyph slug={work.type_slug} size={72} />
-        <View style={s.heroText}>
-          <Text style={[type.eyebrow, { color: t.primary }]}>{upper(kind, lang)}</Text>
-          <Text style={[type.title, { color: t.text }]} accessibilityRole="header">
-            {name}
-          </Text>
-          <Text style={[type.meta, { color: t.textMuted }]}>{[place, complex].filter(Boolean).join(' · ')}</Text>
-          {address ? <Text style={[type.meta, { color: t.textMuted }]}>{address}</Text> : null}
-          <View style={s.badges}>
-            {isVisited ? <Badge label={tr('work.visited')} tone="primary" /> : null}
-            {work.unesco ? <Badge label={tr('work.unesco')} tone="primary" /> : null}
-            {work.condition !== 'unknown' ? (
-              <Badge
-                label={tr(`work.condition.${work.condition}` as MessageKey)}
-                tone={work.condition === 'destroyed' || work.condition === 'damaged' ? 'danger' : 'neutral'}
-              />
-            ) : null}
-          </View>
+        <View style={s.kind}><WorkGlyphInline slug={work.type_slug} color={t.primary} size={24} /><Text style={[type.meta, { color: t.primary }]}>{kind}</Text></View>
+        <Text style={[type.editorial, { color: t.text }]} accessibilityRole="header">{name}</Text>
+        <Text style={[type.body, { color: t.textMuted }]}>{[place, complex].filter(Boolean).join(' · ')}</Text>
+        {inv ? <Text style={[type.meta, { color: t.textMuted }]}>{tr('design.inventory')} · {inv.volume && inv.page ? tr('inv.refShort', { v: inv.volume, page: inv.page }) : inv.page ? tr('inv.refPage', { page: inv.page }) : inv.title}</Text> : null}
+        <View style={s.badges}>
+          {isVisited ? <Badge label={tr('work.visited')} tone="primary" /> : null}
+          {work.unesco ? <Badge label={tr('work.unesco')} tone="primary" /> : null}
+          {work.condition !== 'unknown' ? <Badge label={tr(`work.condition.${work.condition}` as MessageKey)} tone={work.condition === 'destroyed' || work.condition === 'damaged' ? 'danger' : 'neutral'} /> : null}
         </View>
       </View>
-
       {work.condition_note ? <Note text={loc(work.condition_note, lang)} icon={<InfoIcon color={t.textMuted} />} /> : null}
-
-      <View style={{ gap: space.md }}>
-        {canHear ? (
-          <Pressable
-            onPress={toggleSpeech}
-            accessibilityRole="button"
-            accessibilityState={{ busy: speaking }}
-            style={({ pressed }) => [s.primaryBtn, pressed && { opacity: 0.88 }]}>
-            {speaking ? <StopIcon color={t.onPrimary} /> : <PlayIcon color={t.onPrimary} />}
-            <Text style={[type.button, { color: t.onPrimary }]}>{speaking ? tr('work.stop') : tr('work.listen')}</Text>
-          </Pressable>
-        ) : null}
-        {hasRouteTo(work.slug) ? (
-          <Button
-            variant="outline"
-            label={tr('work.directions')}
-            icon={(c) => <TurnIcon turn="slight_right" color={c} size={22} />}
-            onPress={() => router.push({ pathname: '/route/[slug]', params: { slug: work.slug } })}
-          />
-        ) : null}
-      </View>
-
-      {/* İşitme engelli ve az duyan kullanıcı: sesli anlatımın tam metni her zaman ekranda */}
-      {showTranscript ? (
-        <Card style={{ gap: space.sm }}>
-          <Text style={[type.eyebrow, { color: t.primary }]}>{upper(tr('work.transcript'), lang)}</Text>
-          <Text style={[type.body, { color: t.text }]}>{narration}</Text>
-        </Card>
-      ) : null}
-
-      {hasLocation(work) ? (
-        <View style={{ gap: space.sm }}>
-          <View style={s.map} accessible accessibilityLabel={tr('work.mapLabel', { name })} importantForAccessibility="no-hide-descendants">
-            <DeferredMap dragPan={false} touchZoom={false} touchRotate={false}>
-              <Camera initialViewState={{ center: [work.lng, work.lat], zoom: work.location_precision === 'exact' ? 17 : 15 }} />
-              <GeoJSONSource id="work" data={{ type: 'Point', coordinates: [work.lng, work.lat] }}>
-                {work.location_precision !== 'exact' ? (
-                  <Layer
-                    id="work-area"
-                    type="circle"
-                    paint={{
-                      'circle-radius': 46,
-                      'circle-color': colorForType(work.type_slug),
-                      'circle-opacity': 0.14,
-                      'circle-stroke-width': 2,
-                      'circle-stroke-color': colorForType(work.type_slug),
-                      'circle-stroke-opacity': 0.5,
-                    }}
-                  />
-                ) : null}
-                <Layer id="work-halo" type="circle" paint={{ 'circle-radius': 18, 'circle-color': t.surface, 'circle-opacity': 0.9 }} />
-                <Layer
-                  id="work-circle"
-                  type="circle"
-                  paint={{ 'circle-radius': 11, 'circle-color': colorForType(work.type_slug), 'circle-stroke-width': 3, 'circle-stroke-color': t.surface }}
-                />
-              </GeoJSONSource>
-            </DeferredMap>
-          </View>
-          {work.location_precision !== 'exact' ? <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.locApprox')}</Text> : null}
-        </View>
-      ) : (
-        <Note text={tr('work.locUnknown')} icon={<InfoIcon color={t.textMuted} />} />
-      )}
-
-      {t.motifOpacity > 0 ? (
-        <View style={s.band}>
-          <KilimBand color={t.accent} accent={t.primary} height={10} opacity={0.6} />
-        </View>
-      ) : null}
+      {hasRouteTo(work.slug) ? <Button label={tr('work.directions')} icon={(c) => <TurnIcon turn="slight_right" color={c} />} onPress={() => router.push({ pathname: '/route/[slug]', params: { slug: work.slug } })} /> : null}
 
       <Section title={tr('work.history')} t={t}>
         {period ? <Text style={[type.itemTitle, { color: t.text }]}>{period}</Text> : null}
-        {history ? (
-          <Text style={[type.body, { color: t.text }]}>{history}</Text>
-        ) : (
-          <Note
-            text={inv?.page ? `${tr('work.historyInBook')} (${tr('inv.ref', { book: inv.title, page: inv.page })})` : tr('work.historyInBook')}
-            icon={<InfoIcon color={t.textMuted} />}
-          />
-        )}
+        {canHear ? <Button variant="outline" label={speaking ? tr('work.stop') : tr('work.listen')} onPress={toggleSpeech} icon={(c) => speaking ? <StopIcon color={c} /> : <PlayIcon color={c} />} /> : null}
+        {history ? <Text style={[type.body, { color: t.text }]}>{history}</Text> : <Text style={[type.body, { color: t.textMuted }]}>{tr('work.historyInBook')}</Text>}
         {architecture ? <Text style={[type.body, { color: t.text }]}>{architecture}</Text> : null}
+        {showTranscript ? <View style={{ gap: 8 }}><Text style={[type.heading, { color: t.text }]}>{tr('work.transcript')}</Text><Text style={[type.body, { color: t.text }]}>{narration}</Text></View> : null}
       </Section>
 
-      <Section title={tr('work.gallery')} t={t}>
-        <View style={s.gallery}>
-          {[0, 1, 2].map((i) => (
-            <View
-              key={i}
-              style={[s.galleryTile, { borderColor: t.border, backgroundColor: t.surface }]}
-              importantForAccessibility="no-hide-descendants"
-              accessibilityElementsHidden>
-              <View style={[StyleSheet.absoluteFill, { backgroundColor: colorForType(work.type_slug), opacity: 0.06 + i * 0.04, borderRadius: radius.md }]} />
-              <WorkGlyphInline slug={work.type_slug} color={colorForType(work.type_slug)} size={28} />
-            </View>
-          ))}
-        </View>
-        <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.noGallery')}</Text>
+      <Section title={tr('design.location')} t={t}>
+        {address ? <Text style={[type.body, { color: t.text }]}>{address}</Text> : null}
+        {hasLocation(work) ? <>
+          <View style={s.map} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
+            <DeferredMap dragPan={false} touchZoom={false} touchRotate={false}>
+              <Camera initialViewState={{ center: [work.lng, work.lat], zoom: work.location_precision === 'exact' ? 17 : 15 }} />
+              <GeoJSONSource id="work" data={{ type: 'Point', coordinates: [work.lng, work.lat] }}>
+                {work.location_precision !== 'exact' ? <Layer id="work-area" type="circle" paint={{ 'circle-radius': 46, 'circle-color': t.primary, 'circle-opacity': 0.14, 'circle-stroke-width': 2, 'circle-stroke-color': t.primary }} /> : null}
+                <Layer id="work-halo" type="circle" paint={{ 'circle-radius': 18, 'circle-color': t.surface }} />
+                <Layer id="work-circle" type="circle" paint={{ 'circle-radius': 10, 'circle-color': t.primary, 'circle-stroke-width': 3, 'circle-stroke-color': t.surface }} />
+              </GeoJSONSource>
+            </DeferredMap>
+          </View>
+          {work.location_precision !== 'exact' ? <Note text={tr('work.locApprox')} icon={<InfoIcon color={t.textMuted} />} /> : null}
+        </> : <Note text={tr('work.locUnknown')} icon={<InfoIcon color={t.textMuted} />} />}
       </Section>
 
-      {access ? (
-        <Section title={tr('work.access')} t={t}>
-          <Card padded={false}>
-            <ListRow
-              first
-              title={access.stairSegments === 0 ? tr('work.accessStepFree') : tr('work.accessStairs', { n: access.stairSegments })}
-              subtitle={tr('work.accessRoute', { m: Math.round(access.route.lengthM) })}
-            />
-            <ListRow title={tr('work.report')} hint={tr('work.reportHint')} onPress={() => router.push({ pathname: '/report/new', params: { work: work.slug } })} />
-          </Card>
-        </Section>
-      ) : null}
+      {access ? <Section title={tr('work.access')} t={t}><Card padded={false}>
+        <ListRow first title={access.stairSegments === 0 ? tr('work.accessStepFree') : tr('work.accessStairs', { n: access.stairSegments })} subtitle={tr('work.accessRoute', { m: Math.round(access.route.lengthM) })} />
+        <ListRow title={tr('work.report')} hint={tr('work.reportHint')} onPress={() => router.push({ pathname: '/report/new', params: { work: work.slug } })} />
+      </Card></Section> : null}
 
-      {work.exhibitions.length ? (
-        <Section title={tr('work.exhibitions')} t={t}>
-          <Card padded={false}>
-            {work.exhibitions.map((e, i) => (
-              <ListRow key={e.slug} first={i === 0} title={loc(e.title, lang)} subtitle={loc(e.venue, lang)} onPress={() => router.push('/exhibitions')} />
-            ))}
-          </Card>
-        </Section>
-      ) : null}
+      {work.exhibitions.length ? <Section title={tr('work.exhibitions')} t={t}><Card padded={false}>{work.exhibitions.map((e, i) => <ListRow key={e.slug} first={i === 0} title={loc(e.title, lang)} subtitle={loc(e.venue, lang)} onPress={() => router.push('/exhibitions')} />)}</Card></Section> : null}
 
       <Section title={tr('work.sources')} t={t}>
-        {inv ? (
-          <View style={[s.invCard, { borderColor: t.primary }]}>
-            <Text style={[type.eyebrow, { color: t.primary }]}>{upper(tr('inv.eyebrow'), lang)}</Text>
-            <Text style={[type.itemTitle, { color: t.text }]}>{inv.title}</Text>
-            <Text style={[type.meta, { color: t.textMuted }]}>
-              {[inv.page ? tr('inv.refPage', { page: inv.page }) : null, 'Vakıf Katılım', inv.year ? String(inv.year) : null].filter(Boolean).join(' · ')}
-            </Text>
-            {inv.section ? <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.inventorySection', { section: loc(inv.section, lang) })}</Text> : null}
-            <View style={s.invActions}>
-              {inv.url ? (
-                <Button compact label={tr('inv.openBook')} hint={tr('inv.openBookHint')} icon={(c) => <ExternalIcon color={c} />} onPress={() => Linking.openURL(inv.url!)} />
-              ) : null}
-              {citation ? <Button compact variant="outline" label={tr('inv.cite')} onPress={() => Share.share({ message: citation })} /> : null}
-            </View>
-          </View>
-        ) : null}
-        {otherSources.length === 0 && !inv ? <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.noSources')}</Text> : null}
-        {otherSources.map((src) => (
-          <Pressable
-            key={src.id}
-            disabled={!src.url}
-            onPress={() => src.url && Linking.openURL(src.url)}
-            accessibilityRole={src.url ? 'link' : 'text'}
-            accessibilityHint={src.url ? tr('work.sourceHint') : undefined}
-            style={({ pressed }) => [s.source, pressed && { backgroundColor: t.background }]}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={[type.itemTitle, { color: t.text, fontSize: 16 }]}>{src.title}</Text>
-              <Text style={[type.meta, { color: t.textMuted }]}>
-                {[src.publisher, src.year, src.page && tr('inv.refPage', { page: src.page })].filter(Boolean).join(' · ')}
-              </Text>
-            </View>
-            {src.url ? <ExternalIcon color={t.primary} /> : null}
-          </Pressable>
-        ))}
+        {inv ? <View style={s.inventory}>
+          <Text style={[type.itemTitle, { color: t.text }]}>{inv.title}</Text>
+          <Text style={[type.meta, { color: t.textMuted }]}>{[inv.volume ? tr('city.volume', { v: inv.volume }) : null, inv.page ? tr('inv.refPage', { page: inv.page }) : null, 'Vakıf Katılım', inv.year ? String(inv.year) : null].filter(Boolean).join(' · ')}</Text>
+          {inv.section ? <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.inventorySection', { section: loc(inv.section, lang) })}</Text> : null}
+          {inv.url ? <Button variant="outline" label={tr('inv.openBook')} hint={tr('inv.openBookHint')} icon={(c) => <ExternalIcon color={c} />} onPress={() => Linking.openURL(inv.url!)} /> : null}
+          {citation ? <Button variant="ghost" label={tr('inv.cite')} onPress={() => Share.share({ message: citation })} /> : null}
+        </View> : null}
+        {otherSources.length === 0 && !inv ? <Text style={[type.body, { color: t.textMuted }]}>{tr('work.noSources')}</Text> : null}
+        {otherSources.map((src) => <ListRow key={src.id} title={src.title} subtitle={[src.publisher, src.year, src.page && tr('inv.refPage', { page: src.page })].filter(Boolean).join(' · ')} hint={src.url ? tr('work.sourceHint') : undefined} onPress={src.url ? () => Linking.openURL(src.url!) : undefined} trailing={src.url ? <ExternalIcon color={t.primary} /> : null} />)}
       </Section>
+      <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.noGallery')}</Text>
     </ScrollView>
   );
 }
 
-function Section({ title, t, children }: { title: string; t: ThemeColors; children: ReactNode }) {
-  return (
-    <View style={{ gap: space.md }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm }}>
-        <CengelMark color={t.accent} />
-        <Text style={[type.heading, { color: t.text }]} accessibilityRole="header">
-          {title}
-        </Text>
-      </View>
-      {children}
-    </View>
-  );
+function Section({ title, children }: { title: string; t: ThemeColors; children: ReactNode }) {
+  return <View style={{ gap: 16 }}><SectionTitle title={title} />{children}</View>;
 }
-
-const makeStyles = (t: ThemeColors) =>
-  StyleSheet.create({
-    screen: { flex: 1, backgroundColor: t.background },
-    body: { padding: space.lg, gap: space.xl, paddingBottom: 56 },
-    center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xl, backgroundColor: t.background },
-    hero: { flexDirection: 'row', gap: space.lg, alignItems: 'flex-start' },
-    heroText: { flex: 1, gap: space.xs },
-    badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 2 },
-    primaryBtn: {
-      flexDirection: 'row',
-      gap: space.sm,
-      minHeight: 56,
-      borderRadius: radius.pill,
-      backgroundColor: t.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    map: { height: 200, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },
-    band: { height: 10, marginHorizontal: -space.lg },
-    gallery: { flexDirection: 'row', gap: space.sm },
-    galleryTile: { flex: 1, height: 88, borderRadius: radius.md, borderWidth: 1, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center', opacity: 0.8 },
-    invCard: { gap: space.xs, padding: space.lg, borderRadius: radius.lg, borderWidth: 2, backgroundColor: t.surface },
-    invActions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm, marginTop: space.sm },
-    source: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.lg, borderRadius: radius.md, borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },
-  });
+const makeStyles = (t: ThemeColors) => StyleSheet.create({
+  screen: { flex: 1, backgroundColor: t.background },
+  body: { paddingHorizontal: 24, paddingTop: 8, gap: 28, paddingBottom: 48 },
+  center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24, backgroundColor: t.background },
+  hero: { gap: 12, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: t.border },
+  kind: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  badges: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  map: { height: 220, borderRadius: radius.lg, overflow: 'hidden', backgroundColor: t.surface },
+  inventory: { gap: 12, padding: 20, borderWidth: 1, borderColor: t.border, borderRadius: radius.lg, backgroundColor: t.surface },
+});

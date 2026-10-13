@@ -17,5 +17,7 @@ export function useSeziTheme(): ThemeColors {
 export function useIsDark(): boolean {
   const scheme = useColorScheme();
   const { settings } = useSettings();
+  const { profile } = useProfile();
+  if (profile?.vision === 'low') return false;
   return settings.themeMode === 'dark' || (settings.themeMode === 'system' && scheme === 'dark');
 }

@@ -3,19 +3,24 @@
  * Demo ekranı değildir; özellikler gerçek ekranlara taşındıkça sadeleşecek.
  */
 import { Camera, GeoJSONSource, Layer } from '@maplibre/maplibre-react-native';
+import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { Button } from '@/components/ui';
+import { useT } from '@/lib/i18n';
+import { type } from '@/design/type';
 import { DeferredMap } from '@/components/deferred-map';
-import { bearingDeg, stereoPan, themes, type LngLat } from '@sezi/shared';
+import { bearingDeg, stereoPan, type LngLat } from '@sezi/shared';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
 import * as Speech from 'expo-speech';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AudioContext, type OscillatorNode, type StereoPannerNode } from 'react-native-audio-api';
 
 const ULU_CAMI: LngLat = [29.0618995, 40.1838059];
 
 export default function Lab() {
-  const t = themes[useColorScheme() === 'dark' ? 'dark' : 'light'];
+  const t = useSeziTheme();
+  const { t: tr } = useT();
   const [heading, setHeading] = useState<number | null>(null);
   const [position, setPosition] = useState<LngLat | null>(null);
   const [pan, setPan] = useState(0);
@@ -70,14 +75,6 @@ export default function Lab() {
     audio.current = null;
   };
 
-  const btn = (label: string, onPress: () => void) => (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={({ pressed }) => [styles.btn, { backgroundColor: t.primary, opacity: pressed ? 0.8 : 1 }]}>
-      <Text style={[styles.btnText, { color: t.onPrimary }]}>{label}</Text>
-    </Pressable>
-  );
 
   return (
     <ScrollView style={{ backgroundColor: t.background }} contentContainerStyle={styles.body}>
@@ -89,57 +86,55 @@ export default function Lab() {
             <Layer
               id="works-circle"
               type="circle"
-              paint={{ 'circle-radius': 9, 'circle-color': t.accent, 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' }}
+              paint={{ 'circle-radius': 9, 'circle-color': t.accent, 'circle-stroke-width': 2, 'circle-stroke-color': t.surface }}
             />
           </GeoJSONSource>
         </DeferredMap>
       </View>
 
-      <Text style={[styles.h, { color: t.text }]}>Pusula</Text>
-      <Text style={{ color: t.textMuted }}>
+      <Text style={[styles.h, { color: t.text }]}>{tr("lab.heading")}</Text>
+      <Text style={[type.meta, { color: t.textMuted }]}>
         Yön: {heading?.toFixed(0) ?? '—'}° · Hedef: {target.toFixed(0)}° · Pan: {compassPan.toFixed(2)}
       </Text>
 
-      <Text style={[styles.h, { color: t.text }]}>Mekânsal ses (kulaklıkla)</Text>
+      <Text style={[styles.h, { color: t.text }]}>{tr("lab.audio")}</Text>
       <View style={styles.row}>
-        {btn('Sol', () => startTone(-1))}
-        {btn('Sağ', () => startTone(1))}
-        {btn('Pusulaya göre', () => startTone())}
-        {btn('Durdur', stopTone)}
+        <Button compact label={tr("lab.left")} onPress={() => startTone(-1)} />
+        <Button compact label={tr("lab.right")} onPress={() => startTone(1)} />
+        <Button compact label={tr("lab.compass")} onPress={() => startTone()} />
+        <Button compact variant="outline" label={tr("work.stop")} onPress={stopTone} />
       </View>
 
-      <Text style={[styles.h, { color: t.text }]}>Haptik</Text>
+      <Text style={[styles.h, { color: t.text }]}>{tr("onb.senses.haptic")}</Text>
       <View style={styles.row}>
-        {btn('Sol (1)', () => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy))}
-        {btn('Sağ (2)', async () => {
+        <Button compact label={tr("lab.hapticLeft")} onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy)} />
+        <Button compact label={tr("lab.hapticRight")} onPress={async () => {
           await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
           setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy), 150);
-        })}
-        {btn('Varış', () => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success))}
+        }} />
+        <Button compact label={tr("lab.arrival")} onPress={() => Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success)} />
       </View>
 
-      <Text style={[styles.h, { color: t.text }]}>Sesli yönlendirme</Text>
+      <Text style={[styles.h, { color: t.text }]}>{tr("onb.senses.audio")}</Text>
       <View style={styles.row}>
-        {btn('TR', () => Speech.speak('Sebilin su sesini duyunca meydanın sağına yönelin.', { language: 'tr-TR' }))}
-        {btn('EN', () => Speech.speak('When you hear the fountain, bear right across the square.', { language: 'en-US' }))}
+        <Button compact label="Türkçe" onPress={() => Speech.speak("Sebilin su sesini duyunca meydanın sağına yönelin.", { language: "tr-TR" })} />
+        <Button compact label="English" onPress={() => Speech.speak("When you hear the fountain, bear right across the square.", { language: "en-US" })} />
       </View>
 
-      <Text style={[styles.h, { color: t.text }]}>Log</Text>
+      <Text style={[styles.h, { color: t.text }]}>{tr("lab.log")}</Text>
       {log.map((l, i) => (
-        <Text key={i} style={{ color: t.textMuted }}>
+        <Text key={i} style={[type.meta, { color: t.textMuted }]}>
           {l}
         </Text>
       ))}
-      <Text style={{ color: t.textMuted }}>Son sabit pan: {pan.toFixed(2)}</Text>
+      <Text style={[type.meta, { color: t.textMuted }]}>Son sabit pan: {pan.toFixed(2)}</Text>
     </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  body: { padding: 16, gap: 8, paddingBottom: 48 },
+  body: { padding: 24, gap: 8, paddingBottom: 48 },
   map: { height: 260, borderRadius: 12, overflow: 'hidden' },
-  h: { fontSize: 17, fontWeight: '600', marginTop: 12 },
+  h: { ...type.heading, marginTop: 24 },
   row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  btn: { minHeight: 48, paddingHorizontal: 16, borderRadius: 10, justifyContent: 'center' },
-  btnText: { fontSize: 16, fontWeight: '600' },
 });

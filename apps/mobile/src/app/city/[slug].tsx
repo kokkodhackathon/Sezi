@@ -4,9 +4,8 @@ import { useMemo } from 'react';
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ExhibitionCard } from '@/components/exhibition-card';
-import { Button, Card, Eyebrow, ListRow, Note, SectionTitle } from '@/components/ui';
+import { Button, Card, ListRow, Note, SectionTitle } from '@/components/ui';
 import { ExternalIcon, InfoIcon } from '@/design/icons';
-import { KilimBand, Medallion } from '@/design/motif';
 import { radius, space, type } from '@/design/type';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
@@ -43,9 +42,7 @@ export default function CityScreen() {
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
       <Stack.Screen options={{ title: '' }} />
       <View style={s.hero}>
-        <Medallion primary={t.primary} accent={t.accent} ink={t.text} size={88} />
         <View style={{ flex: 1, gap: space.xs }}>
-          <Eyebrow text={tr('city.eyebrow')} />
           <Text style={[type.display, { color: t.text }]} accessibilityRole="header">
             {loc(city.name, lang)}
           </Text>
@@ -69,11 +66,7 @@ export default function CityScreen() {
         }}
       />
 
-      {t.motifOpacity > 0 ? (
-        <View style={{ height: 10, marginHorizontal: -space.lg }}>
-          <KilimBand color={t.accent} accent={t.primary} height={10} opacity={0.6} />
-        </View>
-      ) : null}
+
 
       {cityBooks.length ? (
         <View style={{ gap: space.md }}>
@@ -124,22 +117,22 @@ export default function CityScreen() {
 
 function Stat({ value, label, t }: { value: string; label: string; t: ThemeColors }) {
   return (
-    <View style={[statStyle.box, { backgroundColor: t.surface, borderColor: t.border }]} accessible accessibilityLabel={`${label}: ${value}`}>
+    <View style={[statStyle.box, { borderColor: t.border }]} accessible accessibilityLabel={`${label}: ${value}`}>
       <Text style={[type.title, { color: t.text, fontSize: 24, lineHeight: 30 }]}>{value}</Text>
       <Text style={[type.meta, { color: t.textMuted }]}>{label}</Text>
     </View>
   );
 }
 
-const statStyle = StyleSheet.create({ box: { flex: 1, padding: space.md, borderRadius: radius.md, borderWidth: 1, gap: 2 } });
+const statStyle = StyleSheet.create({ box: { flexGrow: 1, flexBasis: 100, paddingVertical: space.md, gap: 4 } });
 
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    body: { padding: space.lg, gap: space.xl, paddingBottom: 56 },
+    body: { padding: space.xl, gap: space.xl, paddingBottom: 56 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.background },
     hero: { flexDirection: 'row', gap: space.lg, alignItems: 'center' },
-    stats: { flexDirection: 'row', gap: space.sm },
+    stats: { flexWrap: 'wrap', flexDirection: 'row', gap: space.sm },
     districts: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-    district: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm, paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.pill, borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },
+    district: { flexDirection: 'row', alignItems: 'baseline', gap: space.sm, paddingHorizontal: space.md, paddingVertical: space.sm, borderRadius: radius.md, borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },
   });

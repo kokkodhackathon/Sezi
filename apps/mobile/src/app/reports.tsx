@@ -60,6 +60,6 @@ export default function Reports() {
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    body: { padding: space.lg, gap: space.md, paddingBottom: 56 },
+    body: { padding: space.xl, gap: space.md, paddingBottom: 56 },
     head: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   });

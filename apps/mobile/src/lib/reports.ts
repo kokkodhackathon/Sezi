@@ -9,13 +9,13 @@ const KEY = 'sezi.reports.v1';
  * Erişilebilirlik bildirimleri önce cihazda kuyruğa alınır ("queued").
  * Giriş yapıldığında sunucuya (a11y_reports, RLS: insert_own) gönderilir ve "pending" olur.
  */
-export const LocalReport = A11yReportInput.extend({
+export const LocalReportSchema = A11yReportInput.extend({
   id: z.string(),
   workSlug: z.string(),
   createdAt: z.string(),
   status: z.enum(['queued', 'pending', 'approved', 'rejected']),
 });
-export type LocalReport = z.infer<typeof LocalReport>;
+export type LocalReport = z.infer<typeof LocalReportSchema>;
 
 let cache: LocalReport[] | null = null;
 const listeners = new Set<() => void>();
@@ -23,7 +23,7 @@ const listeners = new Set<() => void>();
 function read(): LocalReport[] {
   if (cache) return cache;
   try {
-    const parsed = z.array(LocalReport).safeParse(JSON.parse(Storage.getItemSync(KEY) ?? '[]'));
+    const parsed = z.array(LocalReportSchema).safeParse(JSON.parse(Storage.getItemSync(KEY) ?? '[]'));
     cache = parsed.success ? parsed.data : [];
   } catch {
     cache = [];

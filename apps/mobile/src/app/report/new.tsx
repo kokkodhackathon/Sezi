@@ -80,6 +80,7 @@ export default function NewReport() {
                     setError(null);
                   }}
                   accessibilityRole="radio"
+                  accessibilityLabel={tr(`report.type.${k}` as MessageKey)}
                   accessibilityState={{ checked: on }}
                   style={[s.option, { borderColor: on ? t.primary : t.border, borderWidth: on ? 2 : 1, backgroundColor: on ? t.background : t.surface }]}>
                   <View style={[s.radio, { borderColor: on ? t.primary : t.textMuted, backgroundColor: on ? t.primary : 'transparent' }]} />
@@ -112,7 +113,7 @@ export default function NewReport() {
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    body: { padding: space.lg, gap: space.xl, paddingBottom: 56 },
+    body: { padding: space.xl, gap: space.xl, paddingBottom: 56 },
     done: { flex: 1, padding: space.lg, justifyContent: 'center', backgroundColor: t.background },
     where: { flexDirection: 'row', alignItems: 'center', gap: space.md },
     grid: { gap: space.sm },

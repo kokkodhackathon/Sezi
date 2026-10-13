@@ -5,8 +5,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { InfoIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
-import { CengelMark } from '@/design/motif';
-import { radius, space, type, upper } from '@/design/type';
+import { radius, space, type } from '@/design/type';
 import { colorForType, WorkGlyph } from '@/design/work-glyph';
 import { DeferredMap } from '@/components/deferred-map';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
@@ -66,10 +65,11 @@ export default function RouteScreen() {
     <View style={s.screen}>
       <Stack.Screen options={{ title: '' }} />
       <ScrollView contentContainerStyle={s.body}>
+        <Text style={[type.meta, { color: t.primary }]}>{tr('design.simulation')}</Text>
         <View style={s.titleRow}>
           {plan.end.workType ? <WorkGlyph slug={plan.end.workType} size={52} /> : null}
           <View style={{ flex: 1, gap: 2 }}>
-            <Text style={[type.eyebrow, { color: t.primary }]}>{upper(tr('route.eyebrow'), lang)}</Text>
+            <Text style={[type.eyebrow, { color: t.primary }]}>{tr('route.eyebrow')}</Text>
             <Text style={[type.title, { color: t.text }]} accessibilityRole="header">
               {endName}
             </Text>
@@ -115,12 +115,12 @@ export default function RouteScreen() {
             <TurnIcon turn={current?.turn ?? 'straight'} arrived={finished} color={t.onPrimary} size={30} />
           </View>
           <View style={{ flex: 1, gap: 4 }}>
-            <Text style={[type.eyebrow, { color: t.onPrimary, opacity: 0.85 }]}>{upper(started ? tr('route.now') : tr('route.from'), lang)}</Text>
+            <Text style={[type.eyebrow, { color: t.onPrimary, opacity: 1 }]}>{started ? tr('route.now') : tr('route.from')}</Text>
             <Text style={[type.lead, { color: t.onPrimary, fontFamily: type.heading.fontFamily }]}>
               {current?.text ?? tr('route.ready')}
             </Text>
             {upcoming && started && !finished ? (
-              <Text style={[type.meta, { color: t.onPrimary, opacity: 0.85 }]}>
+              <Text style={[type.meta, { color: t.onPrimary, opacity: 1 }]}>
                 {tr('route.next')}: {upcoming.text}
               </Text>
             ) : null}
@@ -138,6 +138,7 @@ export default function RouteScreen() {
           <Pressable
             onPress={running ? sim.pause : sim.play}
             accessibilityRole="button"
+            accessibilityLabel={running ? tr('route.pause') : finished ? tr('route.restart') : started ? tr('route.resume') : tr('route.start')}
             style={({ pressed }) => [s.primaryBtn, pressed && { opacity: 0.88 }]}>
             {running ? <StopIcon color={t.onPrimary} /> : <PlayIcon color={t.onPrimary} />}
             <Text style={[type.button, { color: t.onPrimary }]}>
@@ -148,9 +149,10 @@ export default function RouteScreen() {
             onPress={sim.repeat}
             disabled={stepIndex < 0}
             accessibilityRole="button"
+            accessibilityLabel={tr('route.repeat')}
             accessibilityState={{ disabled: stepIndex < 0 }}
-            style={({ pressed }) => [s.secondaryBtn, stepIndex < 0 && { opacity: 0.4 }, pressed && { opacity: 0.85 }]}>
-            <Text style={[type.button, { color: t.text }]}>{tr('route.repeat')}</Text>
+            style={({ pressed }) => [s.secondaryBtn, stepIndex < 0 && { opacity: 0.4 }, pressed && { opacity: 1 }]}>
+            <Text style={[type.button, { color: t.text, textAlign: 'center' }]}>{tr('route.repeat')}</Text>
           </Pressable>
         </View>
 
@@ -165,15 +167,16 @@ export default function RouteScreen() {
         />
 
         <View style={s.speedRow} accessibilityRole="radiogroup" accessibilityLabel={tr('route.speed')}>
-          <Text style={[type.eyebrow, { color: t.textMuted }]}>{upper(tr('route.speed'), lang)}</Text>
+          <Text style={[type.eyebrow, { color: t.textMuted }]}>{tr('route.speed')}</Text>
           {SPEEDS.map((v) => (
             <Pressable
               key={v}
               onPress={() => setSpeed(v)}
               accessibilityRole="radio"
+              accessibilityLabel={`${v}×`}
               accessibilityState={{ checked: speed === v }}
-              style={[s.speedChip, { backgroundColor: speed === v ? t.text : t.surface, borderColor: speed === v ? t.text : t.border }]}>
-              <Text style={[type.button, { fontSize: 15, color: speed === v ? t.background : t.text }]}>{v}×</Text>
+              style={[s.speedChip, { backgroundColor: speed === v ? t.primary : t.surface, borderColor: speed === v ? t.primary : t.textMuted }]}>
+              <Text style={[type.button, { fontSize: 15, color: speed === v ? t.onPrimary : t.text }]}>{v}×</Text>
             </Pressable>
           ))}
         </View>
@@ -185,7 +188,6 @@ export default function RouteScreen() {
 
         <View style={{ gap: space.md }}>
           <View style={s.sectionTitle}>
-            <CengelMark color={t.accent} />
             <Text style={[type.heading, { color: t.text }]} accessibilityRole="header">
               {tr('route.steps')}
             </Text>
@@ -194,7 +196,7 @@ export default function RouteScreen() {
             const done = i < stepIndex;
             const active = i === stepIndex;
             return (
-              <View key={`${step.nodeId}-${i}`} style={[s.step, active && { borderColor: t.primary, borderWidth: 2 }, done && { opacity: 0.55 }]}>
+              <View key={`${step.nodeId}-${i}`} style={[s.step, active && { borderColor: t.primary, borderWidth: 2 }, done && { borderColor: t.border }]}>
                 <View style={[s.stepIcon, { backgroundColor: active ? t.primary : t.background }]}>
                   <TurnIcon turn={step.turn} arrived={i === plan.steps.length - 1} color={active ? t.onPrimary : t.text} size={22} />
                 </View>
@@ -237,12 +239,12 @@ function Fact({ label, t, strong }: { label: string; t: ThemeColors; strong?: bo
   );
 }
 
-const factStyle = { paddingHorizontal: space.md, paddingVertical: 6, borderRadius: radius.pill, borderWidth: 1 } as const;
+const factStyle = { paddingHorizontal: space.md, paddingVertical: 6, borderRadius: radius.md, borderWidth: 1 } as const;
 
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    body: { padding: space.lg, gap: space.lg, paddingBottom: 56 },
+    body: { padding: space.xl, gap: space.lg, paddingBottom: 56 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xl, backgroundColor: t.background },
     titleRow: { flexDirection: 'row', gap: space.md, alignItems: 'center' },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
@@ -251,12 +253,12 @@ const makeStyles = (t: ThemeColors) =>
     nowIcon: { width: 52, height: 52, borderRadius: 26, borderWidth: 2, borderColor: t.onPrimary, alignItems: 'center', justifyContent: 'center' },
     progressTrack: { height: 6, borderRadius: 3, backgroundColor: t.border, overflow: 'hidden' },
     progressFill: { height: 6, backgroundColor: t.accent },
-    controls: { flexDirection: 'row', gap: space.md },
-    primaryBtn: { flex: 2, flexDirection: 'row', gap: space.sm, minHeight: 56, borderRadius: radius.pill, backgroundColor: t.text, alignItems: 'center', justifyContent: 'center' },
-    secondaryBtn: { flex: 1, minHeight: 56, borderRadius: radius.pill, borderWidth: 1.5, borderColor: t.border, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' },
-    speedRow: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-    speedChip: { minWidth: 52, minHeight: 44, borderRadius: radius.pill, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-    note: { flexDirection: 'row', gap: space.md, padding: space.lg, borderRadius: radius.md, borderWidth: 1, borderStyle: 'dashed', borderColor: t.border, backgroundColor: t.surface },
+    controls: { gap: space.md },
+    primaryBtn: { paddingVertical: 16, flexDirection: 'row', gap: space.sm, minHeight: 56, paddingHorizontal: 16, borderRadius: radius.md, backgroundColor: t.primary, alignItems: 'center', justifyContent: 'center' },
+    secondaryBtn: { paddingVertical: 16, minHeight: 56, paddingHorizontal: 16, borderRadius: radius.md, borderWidth: 1.5, borderColor: t.border, backgroundColor: t.surface, alignItems: 'center', justifyContent: 'center' },
+    speedRow: { flexWrap: 'wrap', flexDirection: 'row', alignItems: 'center', gap: space.sm },
+    speedChip: { minWidth: 52, minHeight: 48, borderRadius: radius.md, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+    note: { flexDirection: 'row', gap: space.md, padding: space.lg, borderRadius: radius.md, borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },
     sectionTitle: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
     step: { flexDirection: 'row', gap: space.md, alignItems: 'center', padding: space.md, borderRadius: radius.md, borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },
     stepIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },

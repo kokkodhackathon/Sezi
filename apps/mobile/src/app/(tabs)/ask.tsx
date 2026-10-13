@@ -10,6 +10,7 @@ import { ChevronIcon, InfoIcon, TurnIcon } from '@/design/icons';
 import { radius, space, type } from '@/design/type';
 import { WorkGlyph } from '@/design/work-glyph';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { searchWorks } from '@/lib/ask';
 import { useT } from '@/lib/i18n';
 import { loc, useWorks, type WorkRow } from '@/lib/works';
@@ -17,6 +18,7 @@ import { loc, useWorks, type WorkRow } from '@/lib/works';
 type Message = { id: number; role: 'user' | 'sezi'; text: string; works?: WorkRow[] };
 
 export default function Ask() {
+  const reducedMotion = useReducedMotion();
   const t = useSeziTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
@@ -38,7 +40,7 @@ export default function Ask() {
     };
     setMessages((m) => [...m, { id: nextId.current++, role: 'user', text: q }, answer]);
     setInput('');
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 50);
+    setTimeout(() => listRef.current?.scrollToEnd({ animated: !reducedMotion }), 50);
   };
 
   const suggestions = [tr('ask.suggest1'), tr('ask.suggest2'), tr('ask.suggest3')];
@@ -46,13 +48,13 @@ export default function Ask() {
   const header = (
     <View style={{ gap: space.lg, paddingBottom: space.md }}>
       <ScreenHeader eyebrow={tr('ask.eyebrow')} title={tr('ask.title')} />
-      <Text style={[type.body, { color: t.text }]}>{tr('ask.intro')}</Text>
+      <Text style={[type.body, { color: t.text }]}>{tr('design.askIntro')}</Text>
       <View style={s.suggestions}>
         {suggestions.map((q) => (
           <Chip key={q} label={q} selected={false} onPress={() => ask(q)} />
         ))}
       </View>
-      <Note text={tr('ask.mode')} icon={<InfoIcon color={t.textMuted} />} />
+      <Note text={tr('design.askScope')} icon={<InfoIcon color={t.textMuted} />} />
     </View>
   );
 
@@ -61,6 +63,7 @@ export default function Ask() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <FlatList
           ref={listRef}
+          keyboardShouldPersistTaps="handled"
           data={messages}
           keyExtractor={(m) => String(m.id)}
           ListHeaderComponent={header}
@@ -85,7 +88,7 @@ export default function Ask() {
             accessibilityRole="button"
             accessibilityLabel={tr('ask.send')}
             accessibilityState={{ disabled: !input.trim() }}
-            style={({ pressed }) => [s.sendBtn, !input.trim() && { opacity: 0.4 }, pressed && { opacity: 0.85 }]}>
+            style={({ pressed }) => [s.sendBtn, !input.trim() && { opacity: 0.4 }, pressed && { opacity: 1 }]}>
             <TurnIcon turn="straight" color={t.onPrimary} size={24} />
           </Pressable>
         </View>
@@ -111,7 +114,7 @@ export default function Ask() {
               <WorkGlyph slug={w.type_slug} size={40} />
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[type.itemTitle, { color: t.text, fontSize: 16 }]}>{name}</Text>
-                <Text style={[type.meta, { color: t.textMuted }]} numberOfLines={1}>
+                <Text style={[type.meta, { color: t.textMuted }]} >
                   {loc(w.type_name, lang)} · {tr('ask.sources')}: {w.sources.map((x) => x.publisher ?? x.title).join(', ')}
                 </Text>
               </View>
@@ -141,10 +144,10 @@ const bubble = StyleSheet.create({
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    list: { paddingHorizontal: space.lg, paddingBottom: space.lg, gap: space.lg },
+    list: { paddingHorizontal: space.xl, paddingBottom: space.lg, gap: space.lg },
     suggestions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-    answer: { gap: space.sm, padding: space.lg, borderRadius: radius.lg, borderBottomLeftRadius: 6, borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },
-    result: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.sm, borderRadius: radius.md, borderWidth: 1, borderColor: t.border },
+    answer: { gap: space.sm, paddingVertical: space.lg, borderTopWidth: 1, borderColor: t.border },
+    result: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.md, minHeight: 64, borderBottomWidth: 1, borderColor: t.border },
     composer: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -155,6 +158,6 @@ const makeStyles = (t: ThemeColors) =>
       borderTopColor: t.border,
       backgroundColor: t.background,
     },
-    input: { flex: 1, minHeight: 52, paddingHorizontal: space.lg, borderRadius: radius.pill, borderWidth: 1.5, borderColor: t.border, backgroundColor: t.surface, color: t.text },
-    sendBtn: { width: 52, height: 52, borderRadius: 26, backgroundColor: t.primary, alignItems: 'center', justifyContent: 'center' },
+    input: { flex: 1, minHeight: 56, paddingHorizontal: space.lg, borderRadius: radius.md, borderWidth: 1.5, borderColor: t.border, backgroundColor: t.surface, color: t.text },
+    sendBtn: { width: 56, height: 56, borderRadius: 12, backgroundColor: t.primary, alignItems: 'center', justifyContent: 'center' },
   });

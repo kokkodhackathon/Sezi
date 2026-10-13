@@ -1,5 +1,13 @@
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 
+export function CloseIcon({ color, size = 24 }: { color: string; size?: number }) {
+  return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}><Path d="M6 6l12 12M18 6L6 18" stroke={color} strokeWidth={2} strokeLinecap="round" /></Svg>;
+}
+
+export function FilterIcon({ color, size = 20 }: { color: string; size?: number }) {
+  return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}><Path d="M4 7h6m4 0h6M4 17h10m4 0h2M10 4v6m4 4v6" stroke={color} strokeWidth={2} strokeLinecap="round" /></Svg>;
+}
+
 type IconProps = { color: string; size?: number };
 
 export function PlayIcon({ color, size = 20 }: IconProps) {

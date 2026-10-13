@@ -1,11 +1,13 @@
 import { themes, type ThemeColors, type UserProfile } from '@sezi/shared';
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, findNodeHandle, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { KilimBand, Medallion } from '@/design/motif';
-import { radius, space, type, upper } from '@/design/type';
+import { CengelMark } from '@/design/motif';
+import { useSettings } from '@/lib/settings';
+import { radius, space, type } from '@/design/type';
 import { translate, type Lang, type MessageKey } from '@/lib/i18n';
 import { defaultSenses, useProfile } from '@/lib/profile';
 
@@ -16,6 +18,7 @@ export default function Onboarding() {
   const { profile, saveProfile } = useProfile();
   const editing = profile !== null;
   const scheme = useColorScheme();
+  const { settings } = useSettings();
 
   const [step, setStep] = useState<Step>(editing ? 'lang' : 'welcome');
   const [lang, setLang] = useState<Lang>(profile?.lang ?? 'tr');
@@ -25,7 +28,7 @@ export default function Onboarding() {
   const [senses, setSenses] = useState<UserProfile['senses']>(profile?.senses ?? defaultSenses('full'));
 
   // Önizleme: az gören seçilince yüksek kontrast hemen uygulanır.
-  const t: ThemeColors = vision === 'low' ? themes.highContrast : themes[scheme === 'dark' ? 'dark' : 'light'];
+  const t: ThemeColors = vision === 'low' ? themes.highContrast : themes[settings.themeMode === 'system' ? (scheme === 'dark' ? 'dark' : 'light') : settings.themeMode];
   const s = useMemo(() => makeStyles(t), [t]);
   const tr = (key: MessageKey, vars?: Record<string, string | number>) => translate(lang, key, vars);
 
@@ -66,11 +69,8 @@ export default function Onboarding() {
 
   return (
     <SafeAreaView style={s.screen}>
-      {t.motifOpacity > 0 ? (
-        <View style={{ height: 10 }}>
-          <KilimBand color={t.accent} accent={t.primary} height={10} opacity={0.9} />
-        </View>
-      ) : null}
+      <StatusBar style={t === themes.dark ? 'light' : 'dark'} />
+
       <View style={s.progress} accessibilityLabel={tr('onb.step', { n: index + 1, total: steps.length })}>
         {steps.map((x, i) => (
           <View key={x} style={[s.progressSeg, { backgroundColor: i <= index ? t.primary : t.border }]} />
@@ -79,22 +79,20 @@ export default function Onboarding() {
 
       <ScrollView contentContainerStyle={s.body}>
         <Text style={s.stepLabel} importantForAccessibility="no">
-          {upper(tr('onb.step', { n: index + 1, total: steps.length }), lang)}
+          {tr('onb.step', { n: index + 1, total: steps.length })}
         </Text>
 
         {step === 'welcome' && (
           <View style={s.welcome}>
-            <View style={s.medallion}>
-              <Medallion primary={t.primary} accent={t.accent} ink={t.text} size={176} />
-            </View>
+            <View style={s.medallion}>{t.motifOpacity > 0 ? <CengelMark color={t.accent} size={40} /> : null}</View>
             <Text style={[type.hero, { color: t.text }]} accessibilityElementsHidden importantForAccessibility="no">
               Sezi
             </Text>
             <Text ref={titleRef} style={[type.heading, { color: t.primary }]} accessibilityRole="header">
-              {tr('onb.welcome.title')}
+              {tr('design.welcome')}
             </Text>
-            <Text style={s.lead}>{tr('onb.tagline')}</Text>
-            <Text style={s.hint}>{tr('onb.welcome.body')}</Text>
+
+            <Text style={s.hint}>{tr('design.welcomeBody')}</Text>
           </View>
         )}
 
@@ -203,7 +201,7 @@ export default function Onboarding() {
 
       <View style={s.footer}>
         {index > 0 || editing ? (
-          <Pressable onPress={back} accessibilityRole="button" style={({ pressed }) => [s.secondaryBtn, pressed && s.pressed]}>
+          <Pressable onPress={back} accessibilityRole="button" accessibilityLabel={tr('onb.back')} style={({ pressed }) => [s.secondaryBtn, pressed && s.pressed]}>
             <Text style={s.secondaryBtnText}>{tr('onb.back')}</Text>
           </Pressable>
         ) : null}
@@ -211,6 +209,7 @@ export default function Onboarding() {
           onPress={next}
           disabled={!canContinue}
           accessibilityRole="button"
+          accessibilityLabel={step === 'summary' ? tr('onb.start') : tr('onb.next')}
           accessibilityState={{ disabled: !canContinue }}
           style={({ pressed }) => [s.primaryBtn, !canContinue && s.disabled, pressed && s.pressed]}>
           <Text style={s.primaryBtnText}>{step === 'summary' ? tr('onb.start') : tr('onb.next')}</Text>
@@ -294,14 +293,14 @@ function Option({
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    progress: { flexDirection: 'row', gap: 6, paddingHorizontal: space.xl, paddingTop: space.lg },
+    progress: { flexDirection: 'row', gap: 6, paddingHorizontal: space.xl, paddingTop: space.xl },
     progressSeg: { flex: 1, height: 4, borderRadius: 2 },
     body: { padding: space.xl, gap: space.lg, paddingBottom: space.xxl },
     welcome: { gap: space.md },
     medallion: { alignItems: 'flex-start', marginBottom: space.lg, marginTop: space.sm },
-    stepLabel: { ...type.eyebrow, color: t.primary },
-    title: { ...type.title, color: t.text },
-    lead: { ...type.lead, color: t.text, flex: 1 },
+    stepLabel: { ...type.meta, color: t.primary },
+    title: { ...type.display, color: t.text },
+    lead: { ...type.lead, color: t.text, flexShrink: 1 },
     hint: { ...type.body, color: t.textMuted },
     options: { gap: space.md, marginTop: space.xs },
     option: { flexDirection: 'row', gap: 14, alignItems: 'center', padding: space.lg, borderRadius: radius.lg, backgroundColor: t.surface },
@@ -314,10 +313,10 @@ const makeStyles = (t: ThemeColors) =>
     summaryRow: { flexDirection: 'row', gap: space.md, alignItems: 'flex-start' },
     summaryDot: { width: 10, height: 10, borderRadius: 2, marginTop: 9, transform: [{ rotate: '45deg' }] },
     footer: { flexDirection: 'row', gap: space.md, paddingHorizontal: space.xl, paddingVertical: space.md, borderTopWidth: 1, borderTopColor: t.border, backgroundColor: t.background },
-    primaryBtn: { flex: 2, minHeight: 56, borderRadius: radius.pill, backgroundColor: t.primary, alignItems: 'center', justifyContent: 'center' },
+    primaryBtn: { flex: 2, minHeight: 56, paddingVertical: 12, paddingHorizontal: 8, borderRadius: radius.md, backgroundColor: t.primary, alignItems: 'center', justifyContent: 'center' },
     primaryBtnText: { ...type.button, fontSize: 18, color: t.onPrimary },
-    secondaryBtn: { flex: 1, minHeight: 56, borderRadius: radius.pill, borderWidth: 1.5, borderColor: t.border, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surface },
+    secondaryBtn: { flex: 1, minHeight: 56, paddingVertical: 12, paddingHorizontal: 8, borderRadius: radius.md, borderWidth: 1.5, borderColor: t.border, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surface },
     secondaryBtnText: { ...type.button, fontSize: 18, color: t.text },
     disabled: { opacity: 0.4 },
-    pressed: { opacity: 0.85 },
+    pressed: { opacity: 1 },
   });

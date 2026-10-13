@@ -5,14 +5,14 @@ import { z } from 'zod';
 const KEY = 'sezi.settings.v1';
 const VISITED_KEY = 'sezi.visited.v1';
 
-const Settings = z.object({
+const SettingsSchema = z.object({
   themeMode: z.enum(['system', 'light', 'dark']).default('system'),
   /** expo-speech hızı: 0.7 yavaş – 1.2 hızlı. */
   speechRate: z.number().min(0.5).max(1.5).default(0.95),
   /** Keşfet ekranında seçili envanter ili. */
   city: z.string().default('bursa'),
 });
-export type Settings = z.infer<typeof Settings>;
+export type Settings = z.infer<typeof SettingsSchema>;
 
 function loadJson<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>, fallback: T): T {
   try {
@@ -37,12 +37,12 @@ interface SettingsContextValue {
 const Ctx = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<Settings>(() => loadJson(KEY, Settings, Settings.parse({})));
+  const [settings, setSettings] = useState<Settings>(() => loadJson(KEY, SettingsSchema, SettingsSchema.parse({})));
   const [visited, setVisited] = useState<string[]>(() => loadJson(VISITED_KEY, z.array(z.string()), []));
 
   const update = useCallback((patch: Partial<Settings>) => {
     setSettings((prev) => {
-      const next = Settings.parse({ ...prev, ...patch });
+      const next = SettingsSchema.parse({ ...prev, ...patch });
       Storage.setItemSync(KEY, JSON.stringify(next));
       return next;
     });

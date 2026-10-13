@@ -12,3 +12,6 @@ data/out/
 
 # Yarışma dokümanları ve moodboard: yalnızca yerel referans
 docs/
+
+# impeccable skill çıktısı: projede kullanılmıyor
+.impeccable/
