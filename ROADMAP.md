@@ -79,6 +79,12 @@ Durum işaretleri: ⬜ başlamadı · ⏳ sürüyor · ⏸ bekliyor · ✅ bitti
 
 ## Biten işler (özet)
 
+- **14 Ekim (simülasyon):**
+  - Sanal yürüyüşçü GPS benzeri ölçüm üretir; takip, rotadan sapma ve talimat zamanlaması gerçek GPS ile ortak (`shared/tracking`). Gerçek GPS modu (#10) için kaynak değiştirmek yeterli.
+  - Zengin Lynch dili: merdiven, arnavut kaldırımı ve ana cadde uyarıları; her 90 m'de teyit.
+  - Jüri paneli (yol kapandı, yanlış dönüş, kalabalık), yeniden rota, profil karşılaştırması.
+  - Ses manzarası ve ses altyazısı. Konuşma kuyruğu; rota ve tam ekran ekranları tek oturumu paylaşıyor.
+
 - **12 Ekim:**
   - Monorepo, Supabase şeması ve RLS, rota ve Lynch yönlendirme motoru.
   - Mobil iskelet, görsel dil (Atkinson Hyperlegible, Fraunces, kilim motifleri), simülasyon modu.
