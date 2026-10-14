@@ -14,6 +14,16 @@ import { Reports } from './pages/Reports';
 import { WorkEdit } from './pages/WorkEdit';
 import { Works } from './pages/Works';
 
+// Panel service worker kullanmaz. Aynı adreste (localhost:3000) daha önce çalışan başka bir projenin
+// service worker'ı kalırsa tüm istekleri kendi CSP'siyle engeller: kaldırılır ve sayfa bir kez yenilenir.
+if ('serviceWorker' in navigator) {
+  void navigator.serviceWorker.getRegistrations().then(async (registrations) => {
+    if (registrations.length === 0) return;
+    await Promise.all(registrations.map((r) => r.unregister()));
+    if (navigator.serviceWorker.controller) window.location.reload();
+  });
+}
+
 const queryClient = new QueryClient({ defaultOptions: { queries: { staleTime: 30_000, retry: 1 } } });
 
 const router = createBrowserRouter([
