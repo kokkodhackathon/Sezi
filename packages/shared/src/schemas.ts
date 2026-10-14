@@ -90,6 +90,8 @@ export const NavSegment = z.object({
   blocked: z.boolean().default(false),
   /** from → to yönünde çizgi geometrisi; yoksa iki uç arası düz kabul edilir. */
   geometry: z.array(LngLat).optional(),
+  /** Sokak adı (OSM): Lynch "yol" öğesi, yönlendirmede anılır ("Uzunçarşı boyunca"). */
+  name: z.string().optional(),
 });
 export type NavSegment = z.infer<typeof NavSegment>;
 export type NavSegmentInput = z.input<typeof NavSegment>;

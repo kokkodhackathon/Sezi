@@ -69,11 +69,11 @@ npx supabase@latest db query --linked --project-ref jejsvycpzulpleftkssj -f supa
 
 ## 3. Pilot alan navigasyon grafiği (OSM)
 
-**1. OSM yaya ağını indirin.** Merkez ve yarıçap `build_nav_graph.py › AREAS` sözlüğünde. Bursa Hanlar: 40.18415, 29.06135, 450 m.
+**1. OSM yaya ağını indirin.** Merkez ve yarıçap `build_nav_graph.py › AREAS` sözlüğünde. Bursa Hanlar: 40.18415, 29.06135, 650 m (Heykel ve Tophane dahil; ana caddeler de ağda).
 
 ```bash
-Q='[out:json][timeout:60];(way(around:450,40.18415,29.06135)["highway"~"^(footway|pedestrian|steps|path|living_street|residential|service|unclassified|tertiary|secondary|corridor)$"]["access"!~"^(private|no)$"];);out body;>;out skel qt;'
-curl -s -A "sezi-hackathon/1.0" --data-urlencode "data=$Q" https://overpass.kumi.systems/api/interpreter -o data/raw/osm_bursa_hanlar.json
+Q='[out:json][timeout:60];(way(around:650,40.18415,29.06135)["highway"~"^(footway|pedestrian|steps|path|living_street|residential|service|unclassified|tertiary|secondary|primary|corridor)$"]["access"!~"^(private|no)$"];);out body;>;out skel qt;'
+curl -s -A "sezi-hackathon/1.0" --data-urlencode "data=$Q" https://overpass.kumi.systems/api/interpreter -o data/raw/osm_bursa_hanlar_650.json
 ```
 
 **2. Grafiği üretin.** Landmark'lar `works_view` içinden gelir: ilin `exact` konumlu eserleri, alanın yarıçapı içinde.
@@ -81,6 +81,8 @@ curl -s -A "sezi-hackathon/1.0" --data-urlencode "data=$Q" https://overpass.kumi
 ```bash
 python -I data/build_nav_graph.py bursa-hanlar   # → apps/mobile/assets/pilot/bursa-hanlar-nav.json
 ```
+
+**Lynch noktaları (`data/lynch/<alan>.json`):** grafik yalnızca kavşaklardan oluşmaz. Ekip, insanların **buluştuğu ya da indiği** yerleri (Heykel, tramvay durakları, Koza Parkı, Tophane…) ve eser dışı **yer işaretlerini** (saat kulesi, çarşı, müze binası) bu dosyada seçer. Her noktanın OSM kimliği, rolü (`gathering` / `landmark`), görsel–yapısal–anlamsal belirginlik puanı (1–3), varsa ortam sesi ve gerekçesi vardır. `verified: false` olanlar saha gözlemiyle doğrulanır. Grafik üretici noktaları en yakın yaya düğümüne bağlar; buluşma noktaları uygulamada başlangıç seçenekleri olur.
 
 **3. Doğrulayın:** `pnpm test` (`pilot-graph.test.ts`) her landmark çifti arasında rota olduğunu ve tekerlekli sandalye rotasının basamaksız olduğunu kontrol eder.
 

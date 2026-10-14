@@ -35,8 +35,10 @@ AREAS = {
         "name": {"tr": "Ulu Cami ve Hanlar Bölgesi", "en": "Grand Mosque and Inns District"},
         "city": "bursa",
         "center": (29.06135, 40.18415),
-        "radius": 450,
-        "osm": "data/raw/osm_bursa_hanlar.json",
+        "radius": 650,
+        "osm": "data/raw/osm_bursa_hanlar_650.json",
+        # Ekibin seçtiği Lynch düğümleri (buluşma/varış) ve eser dışı yer işaretleri
+        "lynch": "data/lynch/bursa-hanlar.json",
     },
 }
 
@@ -54,7 +56,7 @@ SURFACE = {
     "compacted": "gravel",
     "marble": "marble",
 }
-NOISE = {"secondary": 0.8, "tertiary": 0.6, "unclassified": 0.4, "residential": 0.3, "service": 0.3, "living_street": 0.2}
+NOISE = {"primary": 0.9, "secondary": 0.8, "tertiary": 0.6, "unclassified": 0.4, "residential": 0.3, "service": 0.3, "living_street": 0.2}
 
 
 def haversine(a, b):
@@ -128,6 +130,20 @@ def build(area_slug):
         else:
             print(f"  bağlanamadı: {lm['slug']} ({d:.0f} m)", file=sys.stderr)
 
+    # Seçilmiş Lynch noktaları: buluşma/varış düğümleri ve eser dışı yer işaretleri (Heykel, Saat Kulesi…).
+    curated = {}  # osm node -> nokta
+    points = json.loads((ROOT / area["lynch"]).read_text(encoding="utf-8"))["points"] if area.get("lynch") else []
+    for pt in points:
+        p = tuple(pt["location"])
+        free = [n for n in walkable if n not in snapped and n not in curated]
+        best = min(free, key=lambda n: haversine(p, coords[n]))
+        d = haversine(p, coords[best])
+        if d <= LANDMARK_SNAP_M:
+            curated[best] = pt
+            key_nodes.add(best)
+        else:
+            print(f"  nokta bağlanamadı: {pt['id']} ({d:.0f} m)", file=sys.stderr)
+
     segments = []
     for w in ways:
         tags = w.get("tags", {})
@@ -160,6 +176,9 @@ def build(area_slug):
                         "geometry": [[round(x, 7), round(y, 7)] for x, y in geom],
                         "osm": {"way": w["id"], "highway": hw, **({"incline": tags["incline"]} if "incline" in tags else {})},
                     }
+                    # Sokak adı: Lynch "yol" öğesi ("Uzunçarşı boyunca").
+                    if tags.get("name"):
+                        seg["name"] = tags["name"]
                     width = parse_width_cm(tags)
                     if width:
                         seg["widthCm"] = width
@@ -188,6 +207,7 @@ def build(area_slug):
     segments = [s for s in segments if s["from"] in best_comp]
 
     landmark_pts = [coords[n] for n in snapped if str(n) in best_comp]
+    landmark_pts += [coords[n] for n, pt in curated.items() if str(n) in best_comp and "landmark" in pt["roles"]]
     for s in segments:
         mid = s["geometry"][len(s["geometry"]) // 2]
         if any(haversine(mid, p) < 40 for p in landmark_pts):
@@ -199,20 +219,33 @@ def build(area_slug):
         lm = snapped.get(int(n))
         if lm:
             node.update({"lynchType": "landmark", "name": lm["name"], "workSlug": lm["slug"], "workType": lm["type_slug"]})
+        pt = curated.get(int(n))
+        if pt:
+            node.update({"lynchType": "landmark" if "landmark" in pt["roles"] else "node", "name": pt["name"], "pointId": pt["id"], "roles": pt["roles"]})
+            if pt.get("sound"):
+                node["sound"] = pt["sound"]
         nodes.append(node)
+
+    # Başlangıç seçenekleri: buluşma/varış noktaları, dosyadaki sırayla ("Neredesiniz?").
+    starts = [
+        {"id": pt["id"], "nodeId": str(n), "name": pt["name"], "location": [round(coords[n][0], 7), round(coords[n][1], 7)]}
+        for n, pt in sorted(curated.items(), key=lambda kv: points.index(kv[1]))
+        if "gathering" in pt["roles"] and str(n) in best_comp
+    ]
 
     out = {
         "area": area_slug,
         "name": area["name"],
         "center": list(area["center"]),
-        "source": "OpenStreetMap katkıcıları (ODbL); landmark: Sezi works_view",
+        "source": "OpenStreetMap katkıcıları (ODbL); landmark: Sezi works_view + data/lynch",
+        "starts": starts,
         "nodes": nodes,
         "segments": segments,
     }
     out_file.parent.mkdir(parents=True, exist_ok=True)
     out_file.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     n_lm = sum(1 for n in nodes if n["lynchType"] == "landmark")
-    print(f"{len(nodes)} düğüm, {len(segments)} segment, {n_lm} landmark -> {out_file.relative_to(ROOT)}", file=sys.stderr)
+    print(f"{len(nodes)} düğüm, {len(segments)} segment, {n_lm} landmark, {len(starts)} başlangıç -> {out_file.relative_to(ROOT)}", file=sys.stderr)
 
 
 if __name__ == "__main__":

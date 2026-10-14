@@ -15,6 +15,8 @@ const SettingsSchema = z.object({
   city: z.string().default('bursa'),
   /** Geliştirici seçenekleri: sanal yürüyüş, jüri senaryoları ve cihaz testleri. */
   devSimulation: z.boolean().default(false),
+  /** Simülasyonda rotanın başlayacağı buluşma/varış noktası (nav.ts › START_POINTS). */
+  simStart: z.string().default('t1-ulucami'),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 

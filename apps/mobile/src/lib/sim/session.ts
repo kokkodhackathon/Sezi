@@ -2,7 +2,7 @@ import { bearingDeg, dueStep, initialTrack, pointAlong, soundKindFor, soundscape
 import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 
-import { blockableAhead, detourFrom, navVersion, pilotLandmarks, planRoute, useNavVersion, walkingSpeed, type PlannedRoute } from '../nav';
+import { blockableAhead, detourFrom, navVersion, pilotLandmarks, planRoute, startLocation, useNavVersion, walkingSpeed, type PlannedRoute } from '../nav';
 import { hapticAlert, hapticForTurn, playLandmarkCue } from './cues';
 import { stopSoundscape, updateSoundscape } from './soundscape-engine';
 import { say, silence } from './speech';
@@ -56,6 +56,8 @@ export interface NavState {
 interface Session {
   key: string;
   slug: string;
+  /** Başlangıç noktası kimliği (buluşma/varış). */
+  start: string;
   profile: UserProfile | null;
   plan: PlannedRoute | null;
   state: NavState;
@@ -107,7 +109,7 @@ const initialState = (plan: PlannedRoute | null, speed = 1): NavState => {
 /** Ses manzarasının kaynakları: pilot alandaki tüm yer işaretleri. */
 let soundSources: SoundSource[] = [];
 
-let session: Session = { key: '', slug: '', profile: null, plan: null, state: initialState(null) };
+let session: Session = { key: '', slug: '', start: '', profile: null, plan: null, state: initialState(null) };
 let walker: Walker | null = null;
 /** Yürüyüşçünün gerçek (gürültüsüz) konumu: yeniden rota buradan başlar. */
 let truth: LngLat | null = null;
@@ -123,7 +125,7 @@ function emit(state: Partial<NavState>) {
 }
 
 // Onaylı bildirim gelince (grafik sürümü değişince) oturum yeni grafikle yeniden açılır.
-const keyOf = (slug: string, profile: UserProfile) => `${slug}|${JSON.stringify(profile)}|${navVersion()}`;
+const keyOf = (slug: string, profile: UserProfile, start: string) => `${slug}|${start}|${JSON.stringify(profile)}|${navVersion()}`;
 const totalOf = (plan: PlannedRoute) => plan.geometry.nodeAtM.at(-1)!;
 
 function stopTimer() {
@@ -131,22 +133,22 @@ function stopTimer() {
   timer = null;
 }
 
-function open(slug: string, profile: UserProfile) {
-  const key = keyOf(slug, profile);
+function open(slug: string, profile: UserProfile, start: string) {
+  const key = keyOf(slug, profile, start);
   if (session.key === key) return;
   stopTimer();
   silence();
-  const plan = planRoute(slug, profile);
+  const plan = planRoute(slug, profile, startLocation(start));
   walker = plan ? createWalker(plan.geometry.line) : null;
   truth = plan?.geometry.line[0] ?? null;
   soundSources = pilotLandmarks.map((n) => ({
     id: n.id,
     name: n.name?.[profile.lang] ?? n.name?.tr ?? '',
-    kind: soundKindFor(n.workType),
+    kind: n.sound ?? soundKindFor(n.workType),
     location: n.location,
   }));
   stopSoundscape();
-  session = { key, slug, profile, plan, state: initialState(plan, session.state.speed) };
+  session = { key, slug, start, profile, plan, state: initialState(plan, session.state.speed) };
   listeners.forEach((l) => l());
 }
 
@@ -260,7 +262,7 @@ export const navSession = {
     if (!plan || !profile) return;
     if (state.finished) {
       // Baştan: ilk rota (kapatmalar temizlenir).
-      const fresh = planRoute(session.slug, profile);
+      const fresh = planRoute(session.slug, profile, startLocation(session.start));
       if (!fresh) return;
       session = { ...session, plan: fresh };
       walker = createWalker(fresh.geometry.line);
@@ -286,7 +288,7 @@ export const navSession = {
     silence();
     stopSoundscape();
     const { profile } = session;
-    const fresh = profile ? planRoute(session.slug, profile) : null;
+    const fresh = profile ? planRoute(session.slug, profile, startLocation(session.start)) : null;
     session = { ...session, plan: fresh };
     walker = fresh ? createWalker(fresh.geometry.line) : null;
     truth = fresh?.geometry.line[0] ?? null;
@@ -350,12 +352,12 @@ const snapshot = () => session;
  * Bir rota için oturumu açar ve izler. Aynı rota ve profille açılmış oturum varsa ona bağlanır.
  * Oturumu izleyen son ekran kapanınca simülasyon duraklar (ilerleme korunur).
  */
-export function useNavSession(slug: string, profile: UserProfile | null, opts: { speechRate: number; onArrive: (slug: string) => void }) {
+export function useNavSession(slug: string, profile: UserProfile | null, opts: { speechRate: number; onArrive: (slug: string) => void; start: string }) {
   const current = useSyncExternalStore(subscribe, snapshot);
   const version = useNavVersion();
-  const key = profile ? keyOf(slug, profile) : '';
+  const key = profile ? keyOf(slug, profile, opts.start) : '';
   // Oturum açılana kadar (ilk çizim) aynı planı yerelde hesapla: ekran boş kalmasın.
-  const fallback = useMemo(() => (profile && current.key !== key ? planRoute(slug, profile) : null), [slug, profile, key, current.key]);
+  const fallback = useMemo(() => (profile && current.key !== key ? planRoute(slug, profile, startLocation(opts.start)) : null), [slug, profile, key, current.key, opts.start]);
 
   useEffect(() => {
     options.speechRate = opts.speechRate;
@@ -363,8 +365,8 @@ export function useNavSession(slug: string, profile: UserProfile | null, opts: {
   }, [opts.speechRate, opts.onArrive]);
 
   useEffect(() => {
-    if (profile) open(slug, profile);
-  }, [slug, profile, version]);
+    if (profile) open(slug, profile, opts.start);
+  }, [slug, profile, version, opts.start]);
 
   useEffect(() => {
     consumers++;

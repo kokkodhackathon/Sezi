@@ -10,7 +10,8 @@ import { radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
-import { formatDistance, useNavVersion, walkingSpeed } from '@/lib/nav';
+import { formatDistance, startLocation, useNavVersion, walkingSpeed } from '@/lib/nav';
+import { useSettings } from '@/lib/settings';
 import { useProfile } from '@/lib/profile';
 import { planTour, TOURS } from '@/lib/tours';
 import { photoUrl, useWorks } from '@/lib/works';
@@ -22,9 +23,13 @@ export default function Tours() {
   const { profile } = useProfile();
   const { data: works } = useWorks('bursa');
   const navVersion = useNavVersion();
-  // navVersion: grafik modül düzeyinde değişir (onaylı bildirim); sürüm değişince plan yeniden hesaplanmalı.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const plans = useMemo(() => (profile ? TOURS.map((d) => planTour(d.id, profile)) : []), [profile, navVersion]);
+  const { settings } = useSettings();
+  const plans = useMemo(
+    () => (profile ? TOURS.map((d) => planTour(d.id, profile, startLocation(settings.simStart))) : []),
+    // navVersion: grafik modül düzeyinde değişir (onaylı bildirim); sürüm değişince plan yeniden hesaplanmalı.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [profile, navVersion, settings.simStart],
+  );
   const bySlug = useMemo(() => new Map((works ?? []).map((w) => [w.slug, w])), [works]);
   // Her tur kapak olarak, önceki turlarda kullanılmamış ilk fotoğrafı alır (aynı kare tekrarlanmasın).
   const covers = useMemo(() => {

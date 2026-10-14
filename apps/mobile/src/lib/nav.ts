@@ -20,7 +20,23 @@ import { useSyncExternalStore } from 'react';
 // Pilot grafiği uygulamaya gömülü: rota hesabı ve rehberlik internetsiz çalışır.
 import raw from '../../assets/pilot/bursa-hanlar-nav.json';
 
-type PilotNode = NavNode & { workSlug?: string; workType?: string };
+type PilotNode = NavNode & {
+  workSlug?: string;
+  workType?: string;
+  /** Ekibin seçtiği Lynch noktası (data/lynch): buluşma/varış ya da eser dışı yer işareti. */
+  pointId?: string;
+  roles?: ('gathering' | 'landmark')[];
+  /** Ortam sesi (ses manzarası): su, çarşı uğultusu… */
+  sound?: 'water' | 'market' | 'chime';
+};
+
+/** Başlangıç seçeneği: insanların buluştuğu ya da toplu taşımadan indiği yer ("Neredesiniz?"). */
+export interface StartPoint {
+  id: string;
+  nodeId: string;
+  name: { tr: string; en?: string };
+  location: LngLat;
+}
 
 const nodes = new Map<string, PilotNode>((raw.nodes as PilotNode[]).map((n) => [n.id, n]));
 const segments = (raw.segments as unknown[]).map((s) => NavSegment.parse(s));
@@ -70,8 +86,16 @@ export function useNavVersion(): number {
 }
 export const navVersion = () => version;
 
-/** Simülasyon başlangıcı: Atatürk Caddesi'ndeki T1 Ulucami tramvay durağı (bölgeye en yaygın varış noktası). */
-const DEFAULT_START: LngLat = [29.0620479, 40.1834979];
+/** Pilot alanın başlangıç seçenekleri (data/lynch'te seçilmiş buluşma/varış noktaları). */
+export const START_POINTS: StartPoint[] = (raw as unknown as { starts?: StartPoint[] }).starts ?? [];
+/** Varsayılan başlangıç: T1 Ulucami tramvay durağı (bölgeye en yaygın varış); yoksa listedeki ilk nokta. */
+export const DEFAULT_START_ID = START_POINTS.some((p) => p.id === 't1-ulucami') ? 't1-ulucami' : (START_POINTS[0]?.id ?? '');
+const DEFAULT_START: LngLat = START_POINTS.find((p) => p.id === DEFAULT_START_ID)?.location ?? [29.0620479, 40.1834979];
+
+/** Kimliği verilen başlangıcın konumu (bilinmeyen kimlikte varsayılan). */
+export function startLocation(id: string | undefined): LngLat {
+  return START_POINTS.find((p) => p.id === id)?.location ?? DEFAULT_START;
+}
 
 export function nearestNode(p: LngLat): PilotNode {
   let best: PilotNode | undefined;
@@ -229,3 +253,4 @@ export function segmentLines(ids: readonly string[]): GeoJSON.FeatureCollection 
 }
 
 export const DEFAULT_START_POINT = DEFAULT_START;
+export type LngLatLike = LngLat;

@@ -52,18 +52,26 @@ describe("zengin Lynch dili", () => {
   });
 
   it("merdivenli segmentten önce uyarı verilir; tekerlekli sandalye rotasında merdiven yok", () => {
-    // Koza Hanı → Haraççıoğlu Medresesi yürüyüş rotası bir merdivenden geçer.
-    const a = landmark("Koza Hanı");
-    const b = landmark("Haraççıoğlu");
-    const r = findRoute(segments, walker, a.id, b.id)!;
-    expect(r.segmentIds.some((id) => segMap.get(id)!.steps > 0)).toBe(true);
-    const st = buildGuidance(r, nodes, [], walker, routeGeometry(r, nodes, segMap), segMap);
-    expect(st.some((s) => s.hazard === "stairs" && /merdiven/.test(s.text))).toBe(true);
-
-    const chair = { ...walker, mobility: "wheelchair" as const };
-    const rc = findRoute(segments, chair, a.id, b.id)!;
-    const sc = buildGuidance(rc, nodes, [], chair, routeGeometry(rc, nodes, segMap), segMap);
-    expect(sc.some((s) => s.hazard === "stairs")).toBe(false);
+    // Grafikten bağımsız: merdivenli bir parçayı ikinci adımda kullanan bir yürüyüş rotası bulunur.
+    let checked = false;
+    for (const stairs of segments.filter((x) => x.steps > 0)) {
+      for (const [entry, exit] of [[stairs.from, stairs.to], [stairs.to, stairs.from]] as const) {
+        const before = segments.find((x) => x.steps === 0 && (x.to === entry || x.from === entry) && x.id !== stairs.id);
+        if (!before) continue;
+        const start = before.to === entry ? before.from : before.to;
+        const r = findRoute(segments, walker, start, exit);
+        if (!r || r.segmentIds.indexOf(stairs.id) < 1) continue;
+        const st = buildGuidance(r, nodes, [], walker, routeGeometry(r, nodes, segMap), segMap);
+        expect(st.some((s) => s.hazard === "stairs" && /merdiven/.test(s.text))).toBe(true);
+        const chair = { ...walker, mobility: "wheelchair" as const };
+        const rc = findRoute(segments, chair, start, exit);
+        if (rc) expect(rc.segmentIds.some((id) => segMap.get(id)!.steps > 0)).toBe(false);
+        checked = true;
+        break;
+      }
+      if (checked) break;
+    }
+    expect(checked).toBe(true);
   });
 
   it("başlangıç landmark'ı yer işareti olarak anılmaz", () => {

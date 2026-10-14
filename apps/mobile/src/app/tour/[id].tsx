@@ -10,7 +10,7 @@ import { colorForType, WorkGlyphInline } from '@/design/work-glyph';
 import { Image } from 'expo-image';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
-import { useNavVersion, walkingSpeed } from '@/lib/nav';
+import { startLocation, useNavVersion, walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
 import { planTour } from '@/lib/tours';
@@ -22,11 +22,14 @@ export default function TourDetail() {
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
   const { profile } = useProfile();
-  const { visited } = useSettings();
+  const { visited, settings } = useSettings();
   const navVersion = useNavVersion();
-  // navVersion: grafik modül düzeyinde değişir (onaylı bildirim); sürüm değişince plan yeniden hesaplanmalı.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const plan = useMemo(() => (profile ? planTour(id, profile) : null), [id, profile, navVersion]);
+  const plan = useMemo(
+    () => (profile ? planTour(id, profile, startLocation(settings.simStart)) : null),
+    // navVersion: grafik modül düzeyinde değişir (onaylı bildirim); sürüm değişince plan yeniden hesaplanmalı.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [id, profile, navVersion, settings.simStart],
+  );
   const { data: works } = useWorks('bursa');
   const bySlug = useMemo(() => new Map((works ?? []).map((w) => [w.slug, w])), [works]);
 

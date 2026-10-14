@@ -22,7 +22,7 @@ export default function Guide() {
   const { settings, markVisited } = useSettings();
   const [showSpeed, setShowSpeed] = useState(false);
   // Rota ekranıyla aynı oturum: tam ekrana geçince ilerleme sürer.
-  const sim = useNavSession(slug, profile, { speechRate: settings.speechRate, onArrive: markVisited });
+  const sim = useNavSession(slug, profile, { speechRate: settings.speechRate, onArrive: markVisited, start: settings.simStart });
   const { plan } = sim;
   const { speed } = sim.state;
   const s = useMemo(() => styles(t), [t]);

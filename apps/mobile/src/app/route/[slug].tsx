@@ -9,13 +9,13 @@ import { DeferredMap } from '@/components/deferred-map';
 import { NavAlertBanner } from '@/components/nav-alert';
 import { ScenarioPanel } from '@/components/scenario-panel';
 import { SoundCaptions } from '@/components/sound-captions';
-import { Button, Segmented } from '@/components/ui';
+import { Button, Chip, Segmented } from '@/components/ui';
 import { PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
 import { radius, space, type } from '@/design/type';
 import { colorForType } from '@/design/work-glyph';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
-import { boundsOf, segmentLines, walkingSpeed } from '@/lib/nav';
+import { boundsOf, segmentLines, START_POINTS, walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
 import { useNavSession } from '@/lib/sim/session';
@@ -30,8 +30,8 @@ export default function RouteScreen() {
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
   const { profile } = useProfile();
-  const { settings, markVisited } = useSettings();
-  const sim = useNavSession(slug, profile, { speechRate: settings.speechRate, onArrive: markVisited });
+  const { settings, markVisited, update } = useSettings();
+  const sim = useNavSession(slug, profile, { speechRate: settings.speechRate, onArrive: markVisited, start: settings.simStart });
   const { plan } = sim;
   const dev = settings.devSimulation;
 
@@ -49,7 +49,8 @@ export default function RouteScreen() {
   const { stepIndex, running, finished, distance, speed } = sim.state;
   const current = stepIndex >= 0 ? plan.steps[stepIndex] : undefined;
   const started = running || distance > 0;
-  const summary = [tr('route.summary', { m: Math.round(plan.route.lengthM), min: minutes }), plan.stairSegments === 0 ? tr('route.noStairs') : tr('route.stairs', { n: plan.stairSegments })].join(' · ');
+  const startName = START_POINTS.find((p) => p.id === settings.simStart)?.name;
+  const summary = [startName ? tr('sim.from', { name: startName[lang] ?? startName.tr }) : null, tr('route.summary', { m: Math.round(plan.route.lengthM), min: minutes }), plan.stairSegments === 0 ? tr('route.noStairs') : tr('route.stairs', { n: plan.stairSegments })].filter(Boolean).join(' · ');
 
   const routeLine: GeoJSON.Feature = { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: plan.geometry.line } };
   const walked: GeoJSON.Feature = { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: walkedLine(plan.geometry.line, distance, sim.state.position) } };
@@ -102,6 +103,15 @@ export default function RouteScreen() {
 
         {dev ? (
           <>
+            {/* Başlangıç: insanların buluştuğu ya da toplu taşımadan indiği yerler (data/lynch). */}
+            <View style={{ gap: space.sm }}>
+              <Text style={[type.meta, { color: t.textMuted }]}>{tr('sim.start')}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm, paddingHorizontal: space.xl }} style={{ marginHorizontal: -space.xl }}>
+                {START_POINTS.map((p) => (
+                  <Chip key={p.id} label={p.name[lang] ?? p.name.tr} selected={settings.simStart === p.id} onPress={() => update({ simStart: p.id })} />
+                ))}
+              </ScrollView>
+            </View>
             <NavAlertBanner alert={sim.state.alert} onDismiss={sim.dismissAlert} />
             {/* Canlı talimat: ekran okuyucu her yeni talimatı duyurur. */}
             <View style={[s.now, { backgroundColor: t.primary }]} accessibilityLiveRegion="polite" accessible>

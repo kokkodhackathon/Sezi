@@ -1,6 +1,6 @@
 import { distanceM, type UserProfile } from '@sezi/shared';
 
-import { DEFAULT_START_POINT, legBetween, nearestNode, pilotLandmarks } from './nav';
+import { DEFAULT_START_POINT, legBetween, nearestNode, pilotLandmarks, type LngLatLike } from './nav';
 
 /**
  * Turlar doğrulanmış eserlerden ve gerçek yol grafiğinden hesaplanır (yazılmış içerik yok).
@@ -35,14 +35,14 @@ export interface PlannedTour {
   stairs: number;
 }
 
-export function planTour(id: string, profile: UserProfile): PlannedTour | null {
+export function planTour(id: string, profile: UserProfile, from: LngLatLike = DEFAULT_START_POINT): PlannedTour | null {
   const def = TOURS.find((t) => t.id === id);
   if (!def) return null;
   const pool = pilotLandmarks.filter((n) => n.workSlug && (!def.types || def.types.includes(n.workType ?? '')));
   if (pool.length === 0) return null;
 
   const stops: TourStop[] = [];
-  let current = nearestNode(DEFAULT_START_POINT);
+  let current = nearestNode(from);
   const left = [...pool];
   while (left.length) {
     left.sort((a, b) => distanceM(current.location, a.location) - distanceM(current.location, b.location));
