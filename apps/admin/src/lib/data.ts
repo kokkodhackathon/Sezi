@@ -161,3 +161,137 @@ export const mediaUrl = (path: string) => MEDIA_BASE + path;
 export const STATUS_LABEL: Record<Status, string> = { draft: 'Taslak', verified: 'Doğrulandı', archived: 'Arşivde' };
 export const PRECISION_LABEL: Record<Precision, string> = { exact: 'Kesin', approximate: 'Yaklaşık', unknown: 'Yok' };
 export const CONDITION_LABEL: Record<Condition, string> = { intact: 'Ayakta', restored: 'Restore edildi', damaged: 'Hasarlı', destroyed: 'Yıkıldı', unknown: 'Bilinmiyor' };
+
+// ---------- Fotoğraf kutusu ----------
+
+export interface InboxPhoto {
+  id: string;
+  storage_path: string;
+  thumb_path: string | null;
+  folder: string | null;
+  source_file: string | null;
+  kind: 'photo' | 'aerial' | 'inscription';
+}
+
+export function useInbox() {
+  return useQuery({
+    queryKey: ['inbox'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('media')
+        .select('id, storage_path, thumb_path, folder, source_file, kind')
+        .is('work_id', null)
+        .order('folder')
+        .order('source_file');
+      if (error) throw error;
+      return (data ?? []) as InboxPhoto[];
+    },
+  });
+}
+
+/** Eser arama (fotoğraf bağlama, yeni eser kontrolü): ada göre, isteğe bağlı il süzgeciyle. */
+export async function searchWorks(q: string, city?: string) {
+  let query = supabase.from('works_view').select('id, slug, name, district, type_name, city_slug').order('name->>tr' as 'name').limit(12);
+  if (q.trim()) query = query.ilike('name->>tr' as 'name', `%${q.trim()}%`);
+  if (city) query = query.eq('city_slug', city);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []) as { id: string; slug: string; name: LocalizedText; district: string | null; type_name: LocalizedText; city_slug: string }[];
+}
+
+// ---------- Erişilebilirlik bildirimleri ----------
+
+export type ReportType = 'stairs' | 'ramp_blocked' | 'narrow_path' | 'surface_damage' | 'construction' | 'other';
+export type ReportStatus = 'pending' | 'approved' | 'rejected';
+
+export interface ReportRow {
+  id: string;
+  area: string | null;
+  segment_key: string | null;
+  work_slug: string | null;
+  type: ReportType;
+  note: string | null;
+  status: ReportStatus;
+  created_at: string;
+  reviewed_at: string | null;
+}
+
+export function useReports(status: ReportStatus) {
+  return useQuery({
+    queryKey: ['reports', status],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('a11y_reports')
+        .select('id, area, segment_key, work_slug, type, note, status, created_at, reviewed_at')
+        .eq('status', status)
+        .order('created_at', { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return (data ?? []) as ReportRow[];
+    },
+  });
+}
+
+export const REPORT_LABEL: Record<ReportType, string> = {
+  stairs: 'Merdiven var',
+  ramp_blocked: 'Rampa kapalı',
+  narrow_path: 'Geçit dar',
+  surface_damage: 'Zemin bozuk',
+  construction: 'İnşaat / yol kapalı',
+  other: 'Diğer',
+};
+/** Onaylanınca rotaya etkisi (uygulamadaki nav.ts ile aynı kural). */
+export const REPORT_EFFECT: Record<ReportType, string> = {
+  stairs: 'Yol parçası merdivenli sayılır: tekerlekli sandalye rotası kaçınır.',
+  ramp_blocked: 'Yol parçası kapanır: tüm rotalar kaçınır.',
+  narrow_path: 'Geçit dar sayılır: tekerlekli sandalye rotası kaçınır.',
+  surface_damage: 'Zemin bozuk sayılır: bastonlu ve tekerlekli sandalye rotası pahalılaşır.',
+  construction: 'Yol parçası kapanır: tüm rotalar kaçınır.',
+  other: 'Rotaya etkisi yok; yalnızca kayıt.',
+};
+
+// ---------- İller ----------
+
+export interface CityRow {
+  id: string;
+  slug: string;
+  name: LocalizedText;
+  is_active: boolean;
+  sort_order: number;
+  inventory_year: number | null;
+  inventory_works: number | null;
+  inventory_photos: number | null;
+  inventory_status: 'published' | 'printing' | 'in_progress' | 'planned' | null;
+  region_id: string;
+}
+
+export function useCitiesAdmin() {
+  return useQuery({
+    queryKey: ['cities-admin'],
+    queryFn: async () => {
+      const [cities, regions, counts] = await Promise.all([
+        supabase.from('cities').select('id, slug, name, is_active, sort_order, inventory_year, inventory_works, inventory_photos, inventory_status, region_id').order('sort_order'),
+        supabase.from('regions').select('id, name').order('id'),
+        supabase.from('works_view').select('city_slug'),
+      ]);
+      if (cities.error) throw cities.error;
+      if (regions.error) throw regions.error;
+      if (counts.error) throw counts.error;
+      const n = new Map<string, number>();
+      for (const r of counts.data ?? []) n.set(r.city_slug as string, (n.get(r.city_slug as string) ?? 0) + 1);
+      return { cities: cities.data as CityRow[], regions: regions.data as { id: string; name: LocalizedText }[], workCount: n };
+    },
+  });
+}
+
+/** Türkçe ad → URL dostu kısa ad (ı→i, ş→s …). */
+export function slugify(text: string): string {
+  const map: Record<string, string> = { ı: 'i', İ: 'i', ş: 's', Ş: 's', ğ: 'g', Ğ: 'g', ü: 'u', Ü: 'u', ö: 'o', Ö: 'o', ç: 'c', Ç: 'c', â: 'a', î: 'i', û: 'u' };
+  return text
+    .replace(/[ıİşŞğĞüÜöÖçÇâîû]/g, (c) => map[c] ?? c)
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}

@@ -2,7 +2,7 @@ import { bearingDeg, dueStep, initialTrack, pointAlong, soundKindFor, soundscape
 import * as Haptics from 'expo-haptics';
 import { useEffect, useMemo, useSyncExternalStore } from 'react';
 
-import { blockableAhead, detourFrom, pilotLandmarks, planRoute, walkingSpeed, type PlannedRoute } from '../nav';
+import { blockableAhead, detourFrom, navVersion, pilotLandmarks, planRoute, useNavVersion, walkingSpeed, type PlannedRoute } from '../nav';
 import { hapticAlert, hapticForTurn, playLandmarkCue } from './cues';
 import { stopSoundscape, updateSoundscape } from './soundscape-engine';
 import { say, silence } from './speech';
@@ -122,7 +122,8 @@ function emit(state: Partial<NavState>) {
   listeners.forEach((l) => l());
 }
 
-const keyOf = (slug: string, profile: UserProfile) => `${slug}|${JSON.stringify(profile)}`;
+// Onaylı bildirim gelince (grafik sürümü değişince) oturum yeni grafikle yeniden açılır.
+const keyOf = (slug: string, profile: UserProfile) => `${slug}|${JSON.stringify(profile)}|${navVersion()}`;
 const totalOf = (plan: PlannedRoute) => plan.geometry.nodeAtM.at(-1)!;
 
 function stopTimer() {
@@ -351,6 +352,7 @@ const snapshot = () => session;
  */
 export function useNavSession(slug: string, profile: UserProfile | null, opts: { speechRate: number; onArrive: (slug: string) => void }) {
   const current = useSyncExternalStore(subscribe, snapshot);
+  const version = useNavVersion();
   const key = profile ? keyOf(slug, profile) : '';
   // Oturum açılana kadar (ilk çizim) aynı planı yerelde hesapla: ekran boş kalmasın.
   const fallback = useMemo(() => (profile && current.key !== key ? planRoute(slug, profile) : null), [slug, profile, key, current.key]);
@@ -362,7 +364,7 @@ export function useNavSession(slug: string, profile: UserProfile | null, opts: {
 
   useEffect(() => {
     if (profile) open(slug, profile);
-  }, [slug, profile]);
+  }, [slug, profile, version]);
 
   useEffect(() => {
     consumers++;

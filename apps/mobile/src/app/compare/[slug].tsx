@@ -9,7 +9,7 @@ import { Badge } from '@/components/ui';
 import { radius, space, type } from '@/design/type';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
-import { boundsOf, planRoute, routeStats, walkingSpeed, type PlannedRoute } from '@/lib/nav';
+import { boundsOf, planRoute, routeStats, useNavVersion, walkingSpeed, type PlannedRoute } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 
 type ProfileKey = 'walker' | 'wheelchair' | 'blind';
@@ -26,6 +26,7 @@ export default function Compare() {
   const { t: tr, lang } = useT();
   const { profile } = useProfile();
 
+  const navVersion = useNavVersion();
   const rows = useMemo(() => {
     const base: UserProfile = { vision: 'full', mobility: 'none', hearing: 'full', senses: { audio: true, haptic: true, visual: true }, lang };
     const profiles: Record<ProfileKey, UserProfile> = {
@@ -38,7 +39,9 @@ export default function Compare() {
       const plan = planRoute(slug, p);
       return { key, profile: p, plan, stats: plan ? routeStats(plan) : null };
     });
-  }, [slug, lang]);
+    // navVersion: grafik modül düzeyinde değişir (onaylı bildirim); sürüm değişince rotalar yeniden hesaplanmalı.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug, lang, navVersion]);
 
   const style: Record<ProfileKey, { color: string; width: number; dash?: number[] }> = {
     walker: { color: t.text, width: 3 },

@@ -7,6 +7,10 @@ import './index.css';
 
 import { Layout } from './components/Layout';
 import { AuthProvider } from './lib/auth';
+import { Cities } from './pages/Cities';
+import { Inbox } from './pages/Inbox';
+import { NewWork } from './pages/NewWork';
+import { Reports } from './pages/Reports';
 import { WorkEdit } from './pages/WorkEdit';
 import { Works } from './pages/Works';
 
@@ -19,7 +23,11 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/eserler" replace /> },
       { path: 'eserler', element: <Works /> },
+      { path: 'eserler/yeni', element: <NewWork /> },
       { path: 'eserler/:slug', element: <WorkEdit /> },
+      { path: 'fotograflar', element: <Inbox /> },
+      { path: 'bildirimler', element: <Reports /> },
+      { path: 'iller', element: <Cities /> },
     ],
   },
 ]);

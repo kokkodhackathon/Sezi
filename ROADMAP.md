@@ -18,9 +18,9 @@ Son güncelleme: 13 Ekim 2026. Görevi bitiren, durum sütununu günceller.
 |---|---|
 | Çalışan mobil MVP, uçtan uca canlı demo | 🟡 Mobil var; admin ve çevrimdışı önbellek eksik |
 | Birden çok eser; her eserde tarihî bilgi, görsel, **kaynak** | 🟡 Kaynak var (cilt/sayfa); tarihçe ve görsel resmî veriyi bekliyor |
-| İçerik ekleme ve düzenleme; yeni il ve tür eklenebilir | 🔴 Şema hazır, admin paneli yok |
+| İçerik ekleme ve düzenleme; yeni il ve tür eklenebilir | 🟢 Admin paneli: eser ekleme/düzenleme, fotoğraf, il |
 | Ham veri kendi modelimize dönüştürüldü; doğrulanmamış içerik gerçek gibi gösterilmiyor | 🟢 Pipeline, `draft` / `verified`, konum kesinliği |
-| Topluluk katkısında moderasyon | 🔴 Bildirim cihazda kalıyor |
+| Topluluk katkısında moderasyon | 🟢 Bildirim → admin onayı → rota etkisi |
 | Erişilebilirlik ürünün içinde | 🟢 Profil, ekran okuyucu, kontrast, işitme karşılıkları. TalkBack denetimi bekliyor |
 | Girdi doğrulama, testler, modüler kod, README | 🟡 zod ve Vitest var; CI, pipeline ve E2E testleri yok |
 
@@ -41,14 +41,14 @@ Son güncelleme: 13 Ekim 2026. Görevi bitiren, durum sütununu günceller.
 | # | Öncelik | Görev | Sahip | Kabul ölçütü | Durum |
 |---|---|---|---|---|---|
 | 1 | P0 | Yeni ekranları telefonda doğrula: Keşfet çoklu il, il sayfası, eser detayı, Hanlar turu ve simülasyonu | Ediz | Ekran görüntüleri; çökme yok; TR/EN metinler taşmıyor | ⏳ |
-| 2 | P0 | Admin paneli MVP (`apps/admin`): magic link girişi + admin rolü, eser listesi ve filtre, eser düzenleme (TR/EN alanlar), `draft → verified`, `needs_review` kuyruğu | Ediz + Eda | Admin bir eseri düzenleyip onaylar, mobil yenilenince görünür; admin olmayan yazamaz (RLS) | ⬜ |
-| 3 | P0 | Admin'de harita üzerinde konum iğnesi: `approximate` / `unknown` → `exact` | Eda | Bursa Osmangazi'deki konumsuz eserlerin en az 50'si elle konumlanır | ⬜ |
+| 2 | P0 | Admin paneli MVP (`apps/admin`): magic link girişi + admin rolü, eser listesi ve filtre, eser düzenleme (TR/EN alanlar), `draft → verified`, `needs_review` kuyruğu | Ediz + Eda | Admin bir eseri düzenleyip onaylar, mobil yenilenince görünür; admin olmayan yazamaz (RLS) | ✅ Giriş, liste, düzenleme, yeni eser, iller, fotoğraf kutusu (14 Ekim) |
+| 3 | P0 | Admin'de harita üzerinde konum iğnesi: `approximate` / `unknown` → `exact` | Eda | Bursa Osmangazi'deki konumsuz eserlerin en az 50'si elle konumlanır | ⏳ Araç hazır; elle konumlama sürüyor |
 | 4 | P0 | Çevrimdışı önbellek: `works_view`, `cities` ve `exhibitions` yanıtlarını cihazda saklamak (TanStack persist + expo-sqlite) | Eda | Uçak modunda Keşfet, eser detayı ve tur açılıyor | ⬜ |
 | 5 | P0 | Resmî veri içe aktarma: tarihçe, mimari, fotoğraflar → `history`, `architecture`, `media` (Storage, WebP ≤1600 px, alt metin TR/EN) | Zehra + Ediz | Pilot alandaki 17 eserin metni ve en az 1 fotoğrafı var; her metin kaynağa bağlı | ⏳ Bursa fotoğrafları eklendi (51 fotoğraf, 47 eser); tarihçe metinleri bekleniyor |
 | 6 | P0 | Saha gezisi (Bursa Hanlar): basamak, eğim, zemin, genişlik ölçümü; 17 landmark için TR/EN talimat metni; ortam sesi kayıtları | Zehra | `nav-json` segmentleri ölçümle güncel; `instructions` ve `audio_assets` dolu | ⬜ |
 | 7 | P0 | Uygulama ikonu, açılış ekranı, ekran tasarımlarının gözden geçirilmesi | İnci | `app.json` ikon ve splash; tasarım notları uygulanmış | ⏳ Sade tasarım dili mobil ekranlara uygulandı; DESIGN.md yazıldı. Android emülatöründe temel akış kontrol edildi; gerçek telefon, ikon/splash ve kapsamlı erişilebilirlik kontrolü bekliyor |
 | 8 | P0 | Demo senaryosu ve provası; yedek video | Hepsi | Uçak modunda baştan sona 5 dakikalık akış | ⬜ |
-| 9 | P1 | Erişilebilirlik bildirimi gönderimi: oturum kalıcı, kuyruktaki bildirim `a11y_reports` tablosuna gider, admin onaylayınca segment `blocked` / ağırlık güncellenir | Ediz | Merdiven bildirimi onaylanınca rota o segmentten kaçınır (test) | ⬜ |
+| 9 | P1 | Erişilebilirlik bildirimi gönderimi: oturum kalıcı, kuyruktaki bildirim `a11y_reports` tablosuna gider, admin onaylayınca segment `blocked` / ağırlık güncellenir | Ediz | Merdiven bildirimi onaylanınca rota o segmentten kaçınır (test) | ✅ Hesapsız gönderim (RLS), admin onayı → segment_overrides → uygulama rotası |
 | 10 | P1 | Gerçek GPS modu: konuma göre başlangıç, canlı takip, pusula ile panlama | Eda | Sahada konum en yakın kenara eşleniyor; sapmada uyarı | ⬜ |
 | 11 | P1 | Sezi'ye Sor (RAG): `LLMProvider` arayüzü, `doc_chunks` embedding'leri, alıntılı cevap, kaynak yoksa "bilmiyorum" | Ediz | 10 soruluk test seti: kaynaklıya alıntılı cevap, kaynaksıza red | ⏸ sağlayıcı kararı |
 | 12 | P1 | TalkBack denetimi: onboarding → Keşfet → eser → tur → rehberlik | Eda + İnci | Ekrana bakmadan tamamlanıyor; bulgular düzeltilmiş | ⬜ |
@@ -78,6 +78,8 @@ Durum işaretleri: ⬜ başlamadı · ⏳ sürüyor · ⏸ bekliyor · ✅ bitti
 - **Final günü internet olmaz.** Görev #4 (çevrimdışı önbellek) P0.
 
 ## Biten işler (özet)
+
+- **14 Ekim (admin paneli):** giriş ve rol; eser listesi/düzenleme/yeni eser; haritada konum; fotoğraf onayı ve fotoğraf kutusu (46 eşleşmeyen arşiv fotoğrafı); bildirim moderasyonu; il yönetimi. Uygulama: bildirimler hesapsız sunucuya gider, onaylı bildirimler rotaya uygulanır (internetsizken son bilinen hâl), Keşfet'te aşağı çekip yenile.
 
 - **14 Ekim (tasarım ve fotoğraflar):**
   - "Çini" tasarım dili: açık tema birincil; önce fotoğraf, az yazı; çerçevesiz kartlar. DESIGN.md güncellendi.

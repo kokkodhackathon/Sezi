@@ -15,6 +15,8 @@ import {
   type UserProfile,
 } from '@sezi/shared';
 
+import { useSyncExternalStore } from 'react';
+
 // Pilot grafiği uygulamaya gömülü: rota hesabı ve rehberlik internetsiz çalışır.
 import raw from '../../assets/pilot/bursa-hanlar-nav.json';
 
@@ -23,6 +25,50 @@ type PilotNode = NavNode & { workSlug?: string; workType?: string };
 const nodes = new Map<string, PilotNode>((raw.nodes as PilotNode[]).map((n) => [n.id, n]));
 const segments = (raw.segments as unknown[]).map((s) => NavSegment.parse(s));
 const segMap = new Map(segments.map((s) => [s.id, s]));
+
+/** Pilot alanın kimliği (bildirimler ve onaylı etkiler bununla eşleşir). */
+export const PILOT_AREA: string = raw.area;
+
+// ---------- Onaylı erişilebilirlik bildirimleri ----------
+// Admin panelinde onaylanan bildirim (segment_overrides) yol parçasının özelliğini değiştirir;
+// rota motoru değişmez, yalnızca grafiğin o parçası güncellenir. Kural veritabanı tetikleyicisiyle aynı.
+export type OverrideType = 'stairs' | 'ramp_blocked' | 'narrow_path' | 'surface_damage' | 'construction' | 'other';
+
+let effective: NavSegment[] = segments;
+let effMap = segMap;
+let version = 0;
+const versionListeners = new Set<() => void>();
+
+function applyOverride(s: NavSegment, types: Set<OverrideType>): NavSegment {
+  let next = s;
+  if (types.has('stairs')) next = { ...next, steps: Math.max(next.steps, 1) };
+  if (types.has('ramp_blocked') || types.has('construction')) next = { ...next, blocked: true };
+  if (types.has('narrow_path')) next = { ...next, widthCm: Math.min(next.widthCm ?? 80, 60) };
+  if (types.has('surface_damage')) next = { ...next, surface: 'gravel' };
+  return next;
+}
+
+/** Sunucudan gelen onaylı etkileri grafiğe uygular; değişiklik varsa rotalar yeniden hesaplanır. */
+export function setOverrides(list: { segment_key: string; type: OverrideType }[]) {
+  const by = new Map<string, Set<OverrideType>>();
+  for (const o of list) by.set(o.segment_key, (by.get(o.segment_key) ?? new Set()).add(o.type));
+  effective = by.size ? segments.map((s) => (by.has(s.id) ? applyOverride(s, by.get(s.id)!) : s)) : segments;
+  effMap = new Map(effective.map((s) => [s.id, s]));
+  version++;
+  versionListeners.forEach((l) => l());
+}
+
+/** Rota hesaplayan ekranlar bu sürümü useMemo bağımlılığına ekler: onay gelince plan yenilenir. */
+export function useNavVersion(): number {
+  return useSyncExternalStore(
+    (l) => {
+      versionListeners.add(l);
+      return () => versionListeners.delete(l);
+    },
+    () => version,
+  );
+}
+export const navVersion = () => version;
 
 /** Simülasyon başlangıcı: Atatürk Caddesi'ndeki T1 Ulucami tramvay durağı (bölgeye en yaygın varış noktası). */
 const DEFAULT_START: LngLat = [29.0620479, 40.1834979];
@@ -68,10 +114,10 @@ export interface PlanOptions {
   leadIn?: boolean;
 }
 
-/** Kapalı segmentler işaretlenmiş graf (yoksa orijinali). */
+/** Kapalı segmentler işaretlenmiş graf (onaylı bildirimler zaten uygulanmış). */
 function segmentsWith(blocked?: ReadonlySet<string>): NavSegment[] {
-  if (!blocked || blocked.size === 0) return segments;
-  return segments.map((s) => (blocked.has(s.id) ? { ...s, blocked: true } : s));
+  if (!blocked || blocked.size === 0) return effective;
+  return effective.map((s) => (blocked.has(s.id) ? { ...s, blocked: true } : s));
 }
 
 export function planRoute(destSlug: string, profile: UserProfile, from: LngLat = DEFAULT_START, opts: PlanOptions = {}): PlannedRoute | null {
@@ -89,7 +135,7 @@ export function planRoute(destSlug: string, profile: UserProfile, from: LngLat =
     steps,
     start,
     end,
-    stairSegments: route.segmentIds.filter((id) => (segMap.get(id)?.steps ?? 0) > 0).length,
+    stairSegments: route.segmentIds.filter((id) => (effMap.get(id)?.steps ?? 0) > 0).length,
     passedLandmarks: route.nodeIds.slice(1, -1).map((id) => nodes.get(id)!).filter((n) => n.lynchType === 'landmark'),
   };
 }
@@ -134,9 +180,9 @@ export const pilotLandmarks = [...nodes.values()].filter((n) => n.lynchType === 
 
 /** İki düğüm arası rota uzunluğu ve basamak sayısı (tur planlama için). */
 export function legBetween(fromId: string, toId: string, profile: UserProfile): { lengthM: number; stairs: number } | null {
-  const r = findRoute(segments, profile, fromId, toId);
+  const r = findRoute(effective, profile, fromId, toId);
   if (!r) return null;
-  return { lengthM: r.lengthM, stairs: r.segmentIds.filter((id) => (segMap.get(id)?.steps ?? 0) > 0).length };
+  return { lengthM: r.lengthM, stairs: r.segmentIds.filter((id) => (effMap.get(id)?.steps ?? 0) > 0).length };
 }
 
 /** Bir esere en yakın yol segmenti (erişilebilirlik bildirimi bu segmente bağlanır). */
@@ -161,7 +207,7 @@ export function routeStats(plan: PlannedRoute) {
   let busyM = 0;
   let cobbleM = 0;
   for (const id of plan.route.segmentIds) {
-    const seg = segMap.get(id);
+    const seg = effMap.get(id);
     if (!seg) continue;
     if (seg.noise >= 0.6) busyM += seg.lengthM;
     if (seg.surface === 'cobble') cobbleM += seg.lengthM;

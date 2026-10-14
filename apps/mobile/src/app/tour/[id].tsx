@@ -10,7 +10,7 @@ import { colorForType, WorkGlyphInline } from '@/design/work-glyph';
 import { Image } from 'expo-image';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
-import { walkingSpeed } from '@/lib/nav';
+import { useNavVersion, walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
 import { planTour } from '@/lib/tours';
@@ -23,7 +23,10 @@ export default function TourDetail() {
   const { t: tr, lang } = useT();
   const { profile } = useProfile();
   const { visited } = useSettings();
-  const plan = useMemo(() => (profile ? planTour(id, profile) : null), [id, profile]);
+  const navVersion = useNavVersion();
+  // navVersion: grafik modül düzeyinde değişir (onaylı bildirim); sürüm değişince plan yeniden hesaplanmalı.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const plan = useMemo(() => (profile ? planTour(id, profile) : null), [id, profile, navVersion]);
   const { data: works } = useWorks('bursa');
   const bySlug = useMemo(() => new Map((works ?? []).map((w) => [w.slug, w])), [works]);
 

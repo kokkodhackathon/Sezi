@@ -1,20 +1,35 @@
-# Sezi admin paneli
+# Sezi yönetim paneli
 
-**Durum:** Vite + React + TypeScript şablonu; uygulama henüz yazılmadı. Kapsam ve kabul ölçütleri: [ROADMAP.md](../../ROADMAP.md) görev #2, #3, #9.
-
-## Planlanan özellikler
-
-1. **Giriş:** Supabase magic link. Yalnızca `app_metadata.role = 'admin'` olan kullanıcı yazabilir; RLS bunu zaten zorluyor.
-2. **Eserler:**
-   - Liste: il, ilçe, tür, durum, `needs_review` ve konum kesinliği filtreleri.
-   - Düzenleme: TR/EN alanlar, kaynak bağlama, `draft → verified`.
-3. **Konum:** Harita üzerinde iğne (MapLibre GL JS). `approximate` / `unknown` konumu `exact` yapar.
-4. **Medya:** Fotoğraf yükleme (Storage, WebP ≤1600 px), TR/EN alt metin, telif bilgisi.
-5. **Moderasyon:** Erişilebilirlik bildirimleri; onaylanınca ilgili segment güncellenir.
+Vite + React + TypeScript; Supabase (yalnızca anonim/publishable anahtar, yazma yetkisi RLS'te), TanStack Query, React Router, MapLibre GL. Görsel dil mobil uygulamayla aynı "Çini" token'ları ([DESIGN.md](../../DESIGN.md)).
 
 ## Çalıştırma
 
 ```bash
-cp ../../.env.example .env   # VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY
-pnpm dev                     # http://localhost:5173
+# apps/admin/.env: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY (mobil .env ile aynı değerler)
+pnpm --filter @sezi/admin dev     # http://localhost:3000
 ```
+
+Port 3000, Supabase Auth'un varsayılan "Site URL" adresi: e-postadaki giriş bağlantısı ek ayar olmadan buraya döner.
+
+## Yönetici yapmak
+
+Kullanıcı panelden bir kez giriş yapar, sonra (Supabase MCP ya da SQL Editor):
+
+```sql
+update auth.users set raw_app_meta_data = raw_app_meta_data || '{"role":"admin"}' where email = '<e-posta>';
+```
+
+Kullanıcı çıkış yapıp yeniden girince rol oturuma yazılır.
+
+## Sayfalar
+
+| Sayfa | Ne yapar | Uygulamaya etkisi |
+|---|---|---|
+| Eserler | Arama; il, tür, durum, konum, fotoğraf, inceleme süzgeçleri | – |
+| Eser düzenleme | TR/EN alanlar, tür, ilçe, durum; haritada konum; fotoğraf onayı ve kapak | `verified` eser ve fotoğraflar uygulamada görünür (aşağı çekip yenileyince) |
+| Yeni eser | Kimlik bilgileriyle taslak açar; benzer adlı eser uyarısı | Yayımlanınca görünür |
+| Fotoğraf kutusu | Kitapta eşleşmeyen arşiv fotoğraflarını klasör ipucuyla esere bağlar | "Bağla ve yayımla" ile eserin galerisine girer |
+| Bildirimler | Erişilebilirlik bildirimlerini haritada gösterir; onay / ret | Onay `segment_overrides` tablosuna yazılır; uygulama rotada o yol parçasından kaçınır |
+| İller | İl ekleme, yayına alma | Yalnızca yayındaki iller uygulamanın il seçicisinde |
+
+Pilot alan grafiği mobil uygulamanın dosyasından okunur (`apps/mobile/assets/pilot/*-nav.json`), kopya tutulmaz.

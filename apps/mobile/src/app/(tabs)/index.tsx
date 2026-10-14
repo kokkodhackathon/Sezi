@@ -31,7 +31,7 @@ export default function Explore() {
   const active = (cities ?? []).filter((c) => c.is_active);
   const citySlug = active.some((c) => c.slug === settings.city) ? settings.city : (active[0]?.slug ?? settings.city);
   const city = active.find((c) => c.slug === citySlug);
-  const { data: works, isLoading, error, refetch } = useWorks(citySlug);
+  const { data: works, isLoading, error, refetch, isRefetching } = useWorks(citySlug);
   const [kind, setKind] = useState<string | null>(null);
   const [district, setDistrict] = useState<string | null>(null);
   const [view, setView] = useState<'list' | 'map'>('list');
@@ -175,6 +175,12 @@ export default function Explore() {
         ListHeaderComponent={header}
         contentContainerStyle={s.list}
         initialNumToRender={8}
+        // Aşağı çekip yenile: admin panelinde onaylanan içerik hemen gelir.
+        refreshing={isRefetching}
+        onRefresh={() => {
+          void refetch();
+          void reloadCities();
+        }}
         renderItem={({ item, index }) =>
           index === 0 && coverOf(item) && view === 'list' ? (
             <FeatureCard work={item} t={t} lang={lang} onPress={() => open(item.slug)} />

@@ -31,7 +31,13 @@ export function Layout() {
           <small>Yönetim paneli</small>
         </div>
         <nav className="nav" aria-label="Ana menü">
-          <NavLink to="/eserler">Eserler</NavLink>
+          <NavLink to="/eserler" end>
+            Eserler
+          </NavLink>
+          <NavLink to="/eserler/yeni">Yeni eser</NavLink>
+          <NavLink to="/fotograflar">Fotoğraf kutusu</NavLink>
+          <NavLink to="/bildirimler">Bildirimler</NavLink>
+          <NavLink to="/iller">İller</NavLink>
         </nav>
         <div className="user">
           <span>{session.user.email}</span>

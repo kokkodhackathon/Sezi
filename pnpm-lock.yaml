@@ -32,6 +32,9 @@ importers:
         specifier: ^8.4.0
         version: 8.4.0(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
     devDependencies:
+      '@types/geojson':
+        specifier: ^7946.0.16
+        version: 7946.0.16
       '@types/node':
         specifier: ^24.13.3
         version: 24.19.2

@@ -19,7 +19,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 | Paket | Görev | Durum |
 |---|---|---|
 | `apps/mobile` | Kullanıcı uygulaması | Tüm final ekranları var, bir kısmı mock (aşağıda) |
-| `apps/admin` | İçerik girişi, onay, moderasyon | Vite şablonu; yazılmadı |
+| `apps/admin` | İçerik girişi, onay, moderasyon | Eserler, yeni eser, fotoğraf kutusu, bildirimler, iller (apps/admin/README.md) |
 | `packages/shared` | zod şemaları, geo, rota ve yönlendirme motoru, tema token'ları | Testli (19 test) |
 | `supabase` | Migration'lar, seed'ler | 3 migration uygulandı; güvenlik uyarısı yok |
 | `data` | Ham veri → model dönüşümü | Envanter pipeline'ı ve nav grafiği üretici |
@@ -46,6 +46,11 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 **Navigasyon**
 - `nav_nodes`, `nav_segments`, `instructions`, `audio_assets`
 - Şu an kullanılmıyor: uygulama gömülü JSON grafiği okuyor (aşağıda).
+
+**Admin ↔ uygulama bağı**
+- `a11y_reports`: hesapsız eklenebilir (yalnızca `pending`, pilot grafiği anahtarı `area` + `segment_key`); okuma yalnızca admin. Ekleme tetikleyicisi notu temizler, cihaz başına saatte 10 bildirim sınırı koyar.
+- `segment_overrides`: admin onayında tetikleyiciyle dolar (geri alınınca silinir); herkes okur. Uygulama açılışta ve öne gelince çeker, rota grafiğine uygular (`nav.ts › setOverrides`), cihazda saklar.
+- `media.work_id` boş olabilir: eşleşmeyen arşiv fotoğrafı taslak olarak "fotoğraf kutusu"nda bekler.
 
 **Topluluk ve yapay zekâ**
 - `a11y_reports`: pending → approved / rejected
@@ -103,14 +108,13 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 | `guide/[slug]` | Tam ekran canlı rehberlik (koyu tema) | gömülü grafik |
 | `exhibitions` | Envanter fotoğraf sergileri | `exhibitions` |
 | `search` | Ad, tür, ilçe ve il araması | `works_view` |
-| `report/new`, `reports` | Erişilebilirlik bildirimi: **cihazda kuyruk**, sunucuya gönderim yok | cihaz |
+| `report/new`, `reports` | Erişilebilirlik bildirimi: cihazda kuyruk → sunucu (hesapsız, RLS); onaylanınca "onaylandı" | `a11y_reports`, `segment_overrides` |
 | `sign-in` | Magic link (Supabase OTP); oturum kalıcı değil | Supabase Auth |
 | `complex/[slug]` | Külliye ekranı; Bursa verisinde külliye bağlantısı henüz yok | `works_view` |
 | `settings`, `about`, `lab` | Ayarlar, proje ve envanter bilgisi, cihaz testleri (ses, pusula, haptik) | – |
 
 **Mock ya da eksik kalanlar**
 - Ask'te LLM yok.
-- Bildirimler sunucuya gitmiyor.
 - Galeri yer tutucu.
 - Tarihçe metni yok (kitap sayfasına yönlendiriyor).
 - Eser listesi için çevrimdışı önbellek yok; yalnızca rota internetsiz çalışıyor.

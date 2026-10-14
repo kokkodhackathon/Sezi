@@ -10,6 +10,7 @@ import { useSeziTheme , useIsDark } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
 import { ProfileProvider, useProfile } from '@/lib/profile';
 import { SettingsProvider } from '@/lib/settings';
+import { useServerSync } from '@/lib/sync';
 
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
@@ -41,6 +42,7 @@ export default function RootLayout() {
 }
 
 function AppStack() {
+  useServerSync();
   const reducedMotion = useReducedMotion();
   const dark = useIsDark();
   const t = useSeziTheme();

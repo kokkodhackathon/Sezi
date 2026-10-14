@@ -1,5 +1,4 @@
 import type { ThemeColors } from '@sezi/shared';
-import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -8,7 +7,7 @@ import { InfoIcon } from '@/design/icons';
 import { space, type } from '@/design/type';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
-import { useReports } from '@/lib/reports';
+import { syncReports, useReports } from '@/lib/reports';
 import { loc, useWorks } from '@/lib/works';
 
 export default function Reports() {
@@ -32,7 +31,7 @@ export default function Reports() {
           {queued ? (
             <View style={{ gap: space.md }}>
               <Note text={tr('reports.queuedHelp')} icon={<InfoIcon color={t.textMuted} />} />
-              <Button label={tr('profile.signIn')} variant="outline" onPress={() => router.push('/sign-in')} />
+              <Button label={tr('reports.retry')} variant="outline" onPress={() => void syncReports()} />
             </View>
           ) : null}
           {reports.map((r) => {
