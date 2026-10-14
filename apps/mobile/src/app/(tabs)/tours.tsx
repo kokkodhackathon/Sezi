@@ -13,7 +13,7 @@ import { useT, type MessageKey } from '@/lib/i18n';
 import { formatDistance, walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { planTour, TOURS } from '@/lib/tours';
-import { coverOf, photoUrl, useWorks } from '@/lib/works';
+import { photoUrl, useWorks } from '@/lib/works';
 
 /** Turlar: her tur bir fotoğraf kartı; açıklama ekran okuyucu etiketinde, görünen metin tek satır. */
 export default function Tours() {
@@ -23,6 +23,16 @@ export default function Tours() {
   const { data: works } = useWorks('bursa');
   const plans = useMemo(() => (profile ? TOURS.map((d) => planTour(d.id, profile)) : []), [profile]);
   const bySlug = useMemo(() => new Map((works ?? []).map((w) => [w.slug, w])), [works]);
+  // Her tur kapak olarak, önceki turlarda kullanılmamış ilk fotoğrafı alır (aynı kare tekrarlanmasın).
+  const covers = useMemo(() => {
+    const used = new Set<string>();
+    return plans.map((plan) => {
+      const photos = (plan?.stops ?? []).map((st) => bySlug.get(st.slug)).flatMap((w) => (w ? w.photos : []));
+      const pick = photos.find((p) => !used.has(p.id));
+      if (pick) used.add(pick.id);
+      return pick;
+    });
+  }, [plans, bySlug]);
   if (!profile) return null;
 
   return (
@@ -37,8 +47,7 @@ export default function Tours() {
           const minutes = Math.max(1, Math.round(plan.lengthM / walkingSpeed(profile) / 60));
           const access = plan.stairs === 0 ? tr('tours.stepFree') : tr('tours.stairs', { n: plan.stairs });
           const meta = [tr('tours.stops', { n: plan.stops.length }), formatDistance(plan.lengthM, lang), tr('common.min', { n: minutes })].join(' · ');
-          // Kapak: fotoğrafı olan ilk durak.
-          const cover = plan.stops.map((st) => bySlug.get(st.slug)).map((w) => (w ? coverOf(w) : undefined)).find(Boolean);
+          const cover = covers[i];
           return (
             <Pressable
               key={id}
