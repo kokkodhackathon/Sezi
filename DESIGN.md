@@ -161,7 +161,7 @@ components:
 - **Renk görevi:** turkuaz etkileşim (düğme, seçili şerit), mercan yalnızca vurgu (UNESCO, haritada hedef, seçili nokta). Renk tek başına anlam taşımaz.
 - **Yazı:** eser, tur, il adları ve ekran başlıkları Fraunces; arayüz, talimat ve okuma metni Atkinson Hyperlegible Next.
 - **Açık tema birincildir**; koyu tema ayarlardan seçilir, az gören profili yüksek kontrast temasını kullanır.
-- **Simülasyon** (sanal yürüyüş, jüri senaryoları, cihaz testleri) yalnızca Ayarlar → Geliştirici seçenekleri → Simülasyon modu açıkken görünür.
+- **Simülasyon** (sanal yürüyüş, jüri senaryoları, profillere göre rota, cihaz testleri) yalnızca Ayarlar → Geliştirici seçenekleri → Simülasyon modu açıkken görünür.
 
 
 # Design System: Sezi

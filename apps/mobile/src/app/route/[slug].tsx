@@ -119,12 +119,11 @@ export default function RouteScreen() {
             <Button variant="ghost" label={tr('guide.fullscreen')} hint={tr('guide.fullscreenHint')} onPress={() => router.push({ pathname: '/guide/[slug]', params: { slug } })} />
             {started ? <SoundCaptions sounds={sim.state.sounds} muted={profile.hearing === 'deaf' || !profile.senses.audio || sim.state.noisy} /> : null}
             <ScenarioPanel state={sim.state} onBlock={sim.blockAhead} onWrongTurn={sim.wrongTurn} onCrowd={sim.toggleCrowd} />
+            <Button variant="outline" label={tr('sim.compare')} hint={tr('sim.compareHint')} onPress={() => router.push({ pathname: '/compare/[slug]', params: { slug } })} />
           </>
         ) : (
           <Text style={[type.body, { color: t.textMuted }]}>{tr('route.fieldOnly')}</Text>
         )}
-
-        <Button variant="outline" label={tr('sim.compare')} hint={tr('sim.compareHint')} onPress={() => router.push({ pathname: '/compare/[slug]', params: { slug } })} />
 
         <View style={{ gap: space.xs }}>
           <Text style={[type.heading, { color: t.text }]} accessibilityRole="header">
