@@ -78,3 +78,40 @@ export function SearchIcon({ color, size = 20 }: IconProps) {
     </Svg>
   );
 }
+
+export function MapIcon({ color, size = 22 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Path d="M9 4 L3 6.5 V20 L9 17.5 L15 20 L21 17.5 V4 L15 6.5 Z M9 4 V17.5 M15 6.5 V20" stroke={color} strokeWidth={1.8} fill="none" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function ListIcon({ color, size = 22 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Path d="M8 6 H20 M8 12 H20 M8 18 H20" stroke={color} strokeWidth={2} strokeLinecap="round" />
+      <Circle cx="4" cy="6" r="1.4" fill={color} />
+      <Circle cx="4" cy="12" r="1.4" fill={color} />
+      <Circle cx="4" cy="18" r="1.4" fill={color} />
+    </Svg>
+  );
+}
+
+export function PinIcon({ color, size = 16 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Path d="M12 21 C12 21 5 14.5 5 9.5 A7 7 0 0 1 19 9.5 C19 14.5 12 21 12 21 Z" stroke={color} strokeWidth={2} fill="none" />
+      <Circle cx="12" cy="9.5" r="2.4" fill={color} />
+    </Svg>
+  );
+}
+
+export function SoundIcon({ color, size = 22 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Path d="M4 9.5 H8 L13 5 V19 L8 14.5 H4 Z" fill={color} />
+      <Path d="M16.5 8.5 A5 5 0 0 1 16.5 15.5 M19 6 A8.5 8.5 0 0 1 19 18" stroke={color} strokeWidth={1.8} fill="none" strokeLinecap="round" />
+    </Svg>
+  );
+}

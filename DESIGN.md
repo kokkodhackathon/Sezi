@@ -1,36 +1,38 @@
 ---
 name: Sezi
-description: Sıcak ve sade, erişilebilir vakıf mirası rehberi.
+description: "Çini" — önce fotoğraf, az yazı; sıcak beyaz zemin, İznik turkuazı, mercan kırmızısı yalnızca vurguda.
 colors:
-  light-background: "#F7F1E3"
+  light-background: "#FAF7F2"
   light-surface: "#FFFFFF"
-  light-text: "#3A1A10"
-  light-text-muted: "#6E5F55"
-  light-primary: "#2F6E66"
+  light-soft: "#F1ECE5"
+  light-text: "#1E1A17"
+  light-text-muted: "#5F5650"
+  light-primary: "#0B6E73"
   light-on-primary: "#FFFFFF"
-  light-accent: "#A84428"
+  light-accent: "#B8321F"
   light-on-accent: "#FFFFFF"
-  light-danger: "#7B1D1D"
-  light-border: "#D9D2CA"
-  dark-background: "#1E1612"
-  dark-surface: "#2A201B"
-  dark-text: "#F3E9DC"
-  dark-text-muted: "#B9A99B"
-  dark-primary: "#86CDC4"
-  dark-on-primary: "#1E1612"
-  dark-accent: "#E08A6C"
-  dark-on-accent: "#1E1612"
+  light-danger: "#8E1F1A"
+  light-border: "#ECE6DE"
+  dark-background: "#161311"
+  dark-surface: "#211C19"
+  dark-soft: "#2A2420"
+  dark-text: "#F2EDE7"
+  dark-text-muted: "#B5ABA2"
+  dark-primary: "#6FC7C4"
+  dark-on-primary: "#161311"
+  dark-accent: "#F08A70"
+  dark-on-accent: "#161311"
   dark-danger: "#F28B82"
-  dark-border: "#4A3B33"
+  dark-border: "#332C27"
   high-contrast-background: "#FFFFFF"
   high-contrast-surface: "#FFFFFF"
   high-contrast-text: "#000000"
-  high-contrast-text-muted: "#3A1A10"
-  high-contrast-primary: "#1D4A44"
+  high-contrast-text-muted: "#1E1A17"
+  high-contrast-primary: "#064C50"
   high-contrast-on-primary: "#FFFFFF"
-  high-contrast-accent: "#622714"
+  high-contrast-accent: "#8E1F1A"
   high-contrast-on-accent: "#FFFFFF"
-  high-contrast-danger: "#7B1D1D"
+  high-contrast-danger: "#8E1F1A"
   high-contrast-border: "#000000"
 typography:
   hero:
@@ -150,6 +152,17 @@ components:
     rounded: "{rounded.pill}"
     padding: "8px 16px"
 ---
+
+## Çini ilkeleri (14 Ekim 2026)
+
+- **Kaynak:** Bursa vakıf eserlerinin kubbe ve çini süslemeleri (envanter fotoğraf arşivi). Turkuaz, mercan kırmızısı, beyaz ve koyu mürekkep.
+- **Önce fotoğraf, sonra yazı.** Liste ve kartlar fotoğrafla açılır; fotoğrafı olmayan eser yumuşak dolgulu alanda tür simgesiyle gösterilir. Uzun açıklama yerine tek satır (tür · ilçe); ayrıntı eser sayfasında ve ekran okuyucu etiketinde.
+- **Kutu yerine boşluk.** Kartlar çerçevesiz, yumuşak gölgeli (`softShadow`); etiketler dolu küçük hap; ayraçlar ince.
+- **Renk görevi:** turkuaz etkileşim (düğme, seçili şerit), mercan yalnızca vurgu (UNESCO, haritada hedef, seçili nokta). Renk tek başına anlam taşımaz.
+- **Yazı:** eser, tur, il adları ve ekran başlıkları Fraunces; arayüz, talimat ve okuma metni Atkinson Hyperlegible Next.
+- **Açık tema birincildir**; koyu tema ayarlardan seçilir, az gören profili yüksek kontrast temasını kullanır.
+- **Simülasyon** (sanal yürüyüş, jüri senaryoları, cihaz testleri) yalnızca Ayarlar → Geliştirici seçenekleri → Simülasyon modu açıkken görünür.
+
 
 # Design System: Sezi
 

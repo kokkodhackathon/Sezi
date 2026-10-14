@@ -1,6 +1,6 @@
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Badge } from '@/components/ui';
+import { Badge, softShadow } from '@/components/ui';
 import { ExternalIcon } from '@/design/icons';
 import { radius, space, type } from '@/design/type';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
@@ -40,7 +40,7 @@ export function ExhibitionCard({ exhibition: e }: { exhibition: ExhibitionRow })
       ) : null}
     </>
   );
-  const cardStyle = [styles.card, { backgroundColor: t.surface, borderColor: t.border }];
+  const cardStyle = [styles.card, softShadow(t), { backgroundColor: t.surface }];
   if (!e.source_url) return <View style={cardStyle}>{body}</View>;
   return (
     <Pressable
@@ -55,7 +55,7 @@ export function ExhibitionCard({ exhibition: e }: { exhibition: ExhibitionRow })
 }
 
 const styles = StyleSheet.create({
-  card: { gap: space.sm, padding: space.lg, borderRadius: radius.lg, borderWidth: 1 },
+  card: { gap: space.sm, padding: space.lg, borderRadius: radius.xl },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
   link: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.xs },
 });

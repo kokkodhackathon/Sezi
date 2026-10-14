@@ -25,7 +25,7 @@ describe("tema kontrastı (WCAG AA ≥ 4.5)", () => {
     expect(t.motifOpacity).toBe(0);
   });
 
-  it("moodboard turkuazı beyaz metin için uygun değil (bu yüzden turquoiseDeep var)", () => {
+  it("dekoratif turkuaz beyaz metin için uygun değil (bu yüzden turquoiseDeep var)", () => {
     expect(contrastRatio(palette.white, palette.turquoise)).toBeLessThan(4.5);
   });
 });

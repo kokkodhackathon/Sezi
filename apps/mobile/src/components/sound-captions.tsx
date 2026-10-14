@@ -14,7 +14,7 @@ export function SoundCaptions({ sounds, muted }: { sounds: SoundVoice[]; muted: 
   const t = useSeziTheme();
   const { t: tr, lang } = useT();
   return (
-    <View style={[styles.box, { borderColor: t.border, backgroundColor: t.surface }]}>
+    <View style={[styles.box, { backgroundColor: t.soft }]}>
       <Text style={[type.eyebrow, { color: t.primary }]}>{tr('sound.title')}</Text>
       {sounds.length === 0 ? <Text style={[type.meta, { color: t.textMuted }]}>{tr('sound.none')}</Text> : null}
       {sounds.map((v) => {
@@ -36,7 +36,7 @@ export function SoundCaptions({ sounds, muted }: { sounds: SoundVoice[]; muted: 
 }
 
 const styles = StyleSheet.create({
-  box: { gap: space.sm, padding: space.md, borderRadius: radius.md, borderWidth: 1 },
+  box: { gap: space.sm, padding: space.lg, borderRadius: radius.xl },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
   meter: { width: 44, height: 6, borderRadius: 3, overflow: 'hidden' },
 });

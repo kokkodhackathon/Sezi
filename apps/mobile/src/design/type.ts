@@ -30,8 +30,11 @@ export const font = {
 /** Tipografi ölçeği. Okuma metni 17/26'nın altına inmez. */
 export const type = {
   hero: { fontFamily: font.displayBold, fontSize: 44, lineHeight: 50, letterSpacing: -0.5 },
+  /** Sekme ekranı başlığı (Keşfet, Turlar…): Fraunces, sakin ve büyük. */
+  screenTitle: { fontFamily: font.display, fontSize: 34, lineHeight: 40, letterSpacing: -0.4 },
   display: { fontFamily: font.bodyBold, fontSize: 32, lineHeight: 40, letterSpacing: -0.3 },
-  title: { fontFamily: font.bodySemi, fontSize: 26, lineHeight: 34 },
+  /** Eser, tur ve il adları: Fraunces (müze etiketi tonu). */
+  title: { fontFamily: font.display, fontSize: 26, lineHeight: 32, letterSpacing: -0.2 },
   editorial: { fontFamily: font.display, fontSize: 32, lineHeight: 40, letterSpacing: -0.3 },
   heading: { fontFamily: font.bodyBold, fontSize: 20, lineHeight: 26 },
   itemTitle: { fontFamily: font.bodySemi, fontSize: 18, lineHeight: 24 },
@@ -47,5 +50,5 @@ export function upper(text: string, lang: 'tr' | 'en'): string {
   return lang === 'tr' ? text.replace(/i/g, 'İ').replace(/ı/g, 'I').toUpperCase() : text.toUpperCase();
 }
 
-export const radius = { sm: 8, md: 12, lg: 16, pill: 999 } as const;
+export const radius = { sm: 8, md: 12, lg: 16, xl: 20, pill: 999 } as const;
 export const space = { xs: 4, sm: 8, md: 12, lg: 16, xl: 24, xxl: 32 } as const;

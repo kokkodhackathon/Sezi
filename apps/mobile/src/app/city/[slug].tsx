@@ -10,7 +10,8 @@ import { radius, space, type } from '@/design/type';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings';
-import { loc, useCities, useExhibitions, useInventoryBooks, useWorks } from '@/lib/works';
+import { coverOf, loc, photoUrl, useCities, useExhibitions, useInventoryBooks, useWorks } from '@/lib/works';
+import { Image } from 'expo-image';
 
 export default function CityScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -35,15 +36,19 @@ export default function CityScreen() {
   const fmt = (n: number | null) => (n === null ? '—' : n.toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-GB'));
   const cityBooks = (books ?? []).filter((b) => b.city_id === city.id).sort((a, b) => (a.volume ?? 0) - (b.volume ?? 0));
   const cityExh = (exhibitions ?? []).filter((e) => e.city?.slug === slug);
+  // Kapak: ilin havadan çekilmiş bir fotoğrafı varsa o, yoksa ilk fotoğraflı eser.
+  const withPhoto = (works ?? []).filter((w) => coverOf(w));
+  const cover = withPhoto.flatMap((w) => w.photos).find((p) => p.kind === 'aerial') ?? (withPhoto[0] ? coverOf(withPhoto[0]) : undefined);
   const districts = new globalThis.Map<string, number>();
   for (const w of works ?? []) if (w.district) districts.set(w.district, (districts.get(w.district) ?? 0) + 1);
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
       <Stack.Screen options={{ title: '' }} />
+      {cover ? <Image source={{ uri: photoUrl(cover, 'full') }} placeholder={{ uri: photoUrl(cover, 'thumb') }} style={s.cover} contentFit="cover" transition={150} accessible={false} /> : null}
       <View style={s.hero}>
         <View style={{ flex: 1, gap: space.xs }}>
-          <Text style={[type.display, { color: t.text }]} accessibilityRole="header">
+          <Text style={[type.title, { color: t.text, fontSize: 34, lineHeight: 40 }]} accessibilityRole="header">
             {loc(city.name, lang)}
           </Text>
           <Text style={[type.meta, { color: t.textMuted }]}>{tr(`inv.status.${city.inventory_status ?? 'planned'}`)}</Text>
@@ -131,6 +136,7 @@ const makeStyles = (t: ThemeColors) =>
     screen: { flex: 1, backgroundColor: t.background },
     body: { padding: space.xl, gap: space.xl, paddingBottom: 56 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.background },
+    cover: { width: '100%', aspectRatio: 16 / 10, borderRadius: radius.xl },
     hero: { flexDirection: 'row', gap: space.lg, alignItems: 'center' },
     stats: { flexWrap: 'wrap', flexDirection: 'row', gap: space.sm },
     districts: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },

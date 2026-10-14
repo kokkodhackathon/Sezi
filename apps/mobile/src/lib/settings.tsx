@@ -2,15 +2,19 @@ import Storage from 'expo-sqlite/kv-store';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { z } from 'zod';
 
-const KEY = 'sezi.settings.v1';
+/** v2: birincil tema açık tema oldu; eski kayıttan yalnızca konuşma hızı ve il taşınır. */
+const KEY = 'sezi.settings.v2';
+const LEGACY_KEY = 'sezi.settings.v1';
 const VISITED_KEY = 'sezi.visited.v1';
 
 const SettingsSchema = z.object({
-  themeMode: z.enum(['system', 'light', 'dark']).default('system'),
+  themeMode: z.enum(['system', 'light', 'dark']).default('light'),
   /** expo-speech hızı: 0.7 yavaş – 1.2 hızlı. */
   speechRate: z.number().min(0.5).max(1.5).default(0.95),
   /** Keşfet ekranında seçili envanter ili. */
   city: z.string().default('bursa'),
+  /** Geliştirici seçenekleri: sanal yürüyüş, jüri senaryoları ve cihaz testleri. */
+  devSimulation: z.boolean().default(false),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 
@@ -37,7 +41,11 @@ interface SettingsContextValue {
 const Ctx = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, setSettings] = useState<Settings>(() => loadJson(KEY, SettingsSchema, SettingsSchema.parse({})));
+  const [settings, setSettings] = useState<Settings>(() => {
+    if (Storage.getItemSync(KEY)) return loadJson(KEY, SettingsSchema, SettingsSchema.parse({}));
+    const legacy = loadJson(LEGACY_KEY, SettingsSchema, SettingsSchema.parse({}));
+    return SettingsSchema.parse({ speechRate: legacy.speechRate, city: legacy.city });
+  });
   const [visited, setVisited] = useState<string[]>(() => loadJson(VISITED_KEY, z.array(z.string()), []));
 
   const update = useCallback((patch: Partial<Settings>) => {

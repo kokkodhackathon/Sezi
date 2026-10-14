@@ -12,6 +12,11 @@ import { useSeziTheme } from '@/hooks/use-sezi-theme';
 
 type Variant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
 
+/** Çini dili: çerçeve yerine yumuşak gölge (kartlar, seçili parçalar). */
+export function softShadow(t: ThemeColors): ViewStyle {
+  return { shadowColor: t.shadow, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: 4 }, elevation: 2 };
+}
+
 export function Button({
   label,
   onPress,
@@ -72,7 +77,7 @@ function variantColors(t: ThemeColors, v: Variant) {
 
 export function Card({ children, style, padded = true }: { children: ReactNode; style?: ViewStyle; padded?: boolean }) {
   const t = useSeziTheme();
-  return <View style={[styles.card, { backgroundColor: t.surface, borderColor: t.border }, padded && { padding: space.lg }, style]}>{children}</View>;
+  return <View style={[styles.card, softShadow(t), { backgroundColor: t.surface }, padded && { padding: space.lg }, style]}>{children}</View>;
 }
 
 export function SectionTitle({ title, action }: { title: string; action?: ReactNode }) {
@@ -183,7 +188,7 @@ export function Segmented<T extends string | number>({
   const t = useSeziTheme();
   const { fontScale } = useWindowDimensions();
   return (
-    <View style={[styles.segmented, { backgroundColor: t.background, borderColor: t.textMuted, flexDirection: fontScale > 1.5 ? 'column' : 'row' }]} accessibilityRole="radiogroup" accessibilityLabel={label}>
+    <View style={[styles.segmented, { backgroundColor: t.soft, flexDirection: fontScale > 1.5 ? 'column' : 'row' }]} accessibilityRole="radiogroup" accessibilityLabel={label}>
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -193,8 +198,8 @@ export function Segmented<T extends string | number>({
             accessibilityRole="radio"
             accessibilityLabel={o.label}
             accessibilityState={{ checked: on }}
-            style={[styles.segment, on && { backgroundColor: t.surface, borderColor: t.primary, borderWidth: 2 }]}>
-            <Text style={[type.button, { fontSize: 15, color: on ? t.primary : t.textMuted, textAlign: 'center', flexShrink: 1 }]}>{o.label}</Text>
+            style={[styles.segment, on && [{ backgroundColor: t.surface }, softShadow(t)]]}>
+            <Text style={[type.button, { fontSize: 15, color: on ? t.text : t.textMuted, textAlign: 'center', flexShrink: 1 }]}>{o.label}</Text>
           </Pressable>
         );
       })}
@@ -213,7 +218,7 @@ export function Chip({ label, selected, onPress, icon }: { label: string; select
       accessibilityState={{ selected }}
       style={({ pressed }) => [
         styles.chip,
-        { borderColor: selected ? t.primary : t.border, backgroundColor: selected ? t.primary : t.surface },
+        { backgroundColor: selected ? t.primary : t.soft },
         pressed && { opacity: 0.85 },
       ]}>
       {icon ? icon(fg) : null}
@@ -225,11 +230,12 @@ export function Chip({ label, selected, onPress, icon }: { label: string; select
 /** Küçük durum etiketi (ör. "Basamaksız", "Ziyaret edildi", "Beklemede"). */
 export function Badge({ label, tone = 'neutral' }: { label: string; tone?: 'neutral' | 'primary' | 'accent' | 'danger' }) {
   const t = useSeziTheme();
-  const c = { neutral: t.textMuted, primary: t.primary, accent: t.accent, danger: t.danger }[tone];
+  const filled = tone === 'accent' || tone === 'danger';
+  const bg = { neutral: t.soft, primary: t.soft, accent: t.accent, danger: t.danger }[tone];
+  const fg = { neutral: t.text, primary: t.primary, accent: t.onAccent, danger: t.onAccent }[tone];
   return (
-    <View style={[styles.badge, { borderColor: t.border }]}>
-      <View style={{ width: 5, height: 5, borderRadius: 3, backgroundColor: c }} />
-      <Text style={[type.meta, { color: c }]}>{label}</Text>
+    <View style={[styles.badge, { backgroundColor: bg }]}>
+      <Text style={[type.meta, { color: fg, fontFamily: filled || tone === 'primary' ? type.button.fontFamily : type.meta.fontFamily, fontSize: 14 }]}>{label}</Text>
     </View>
   );
 }
@@ -237,7 +243,7 @@ export function Badge({ label, tone = 'neutral' }: { label: string; tone?: 'neut
 export function EmptyState({ title, body, icon, action }: { title: string; body?: string; icon?: ReactNode; action?: ReactNode }) {
   const t = useSeziTheme();
   return (
-    <View style={[styles.empty, { borderColor: t.border, backgroundColor: t.surface }]}>
+    <View style={styles.empty}>
       {icon}
       <Text style={[type.heading, { color: t.text, textAlign: 'center' }]}>{title}</Text>
       {body ? <Text style={[type.body, { color: t.textMuted, textAlign: 'center' }]}>{body}</Text> : null}
@@ -261,7 +267,7 @@ export function Field({ label, error, help, ...input }: TextInputProps & { label
         style={[
           type.body,
           styles.input,
-          { color: t.text, backgroundColor: t.surface, borderColor: error ? t.danger : t.textMuted },
+          { color: t.text, backgroundColor: t.surface, borderColor: error ? t.danger : t.border },
           input.multiline && { minHeight: 120, textAlignVertical: 'top' },
         ]}
       />
@@ -280,7 +286,7 @@ export function Field({ label, error, help, ...input }: TextInputProps & { label
 export function Note({ text, icon }: { text: string; icon?: ReactNode }) {
   const t = useSeziTheme();
   return (
-    <View style={[styles.note, { borderColor: t.border, backgroundColor: t.surface }]}>
+    <View style={[styles.note, { backgroundColor: t.soft }]}>
       {icon}
       <Text style={[type.meta, { color: t.textMuted, flex: 1 }]}>{text}</Text>
     </View>
@@ -293,21 +299,21 @@ const styles = StyleSheet.create({
     gap: space.sm,
     minHeight: 56,
     paddingHorizontal: space.xl,
-    borderRadius: radius.md,
-    borderWidth: 1,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
     paddingVertical: space.md,
     alignItems: 'center',
     justifyContent: 'center',
   },
   btnCompact: { minHeight: 48, paddingHorizontal: space.lg },
-  card: { borderRadius: radius.lg, borderWidth: 1, overflow: 'hidden' },
+  card: { borderRadius: radius.xl, overflow: 'hidden' },
   sectionTitle: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingTop: space.sm },
   row: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 64, paddingHorizontal: space.lg, paddingVertical: space.md },
-  segmented: { flexDirection: 'row', padding: 4, borderRadius: radius.md, borderWidth: 1, gap: 4 },
-  segment: { flex: 1, minWidth: 48, minHeight: 48, paddingVertical: space.sm, paddingHorizontal: space.xs, borderRadius: radius.sm, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'transparent' },
-  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 48, minHeight: 48, paddingVertical: space.sm, paddingHorizontal: space.lg, borderRadius: radius.pill, borderWidth: 1 },
-  badge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: space.sm, paddingVertical: 4, borderRadius: radius.sm, borderWidth: 1 },
+  segmented: { flexDirection: 'row', padding: 4, borderRadius: radius.pill, gap: 4 },
+  segment: { flex: 1, minWidth: 48, minHeight: 48, paddingVertical: space.sm, paddingHorizontal: space.xs, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 6, minWidth: 48, minHeight: 44, paddingVertical: space.sm, paddingHorizontal: space.lg, borderRadius: radius.pill },
+  badge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: radius.pill },
   empty: { alignItems: 'center', gap: space.md, paddingVertical: space.xxl, paddingHorizontal: space.lg },
-  input: { minHeight: 56, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.md, borderWidth: 1 },
-  note: { flexDirection: 'row', gap: space.md, padding: space.lg, borderRadius: radius.md, borderWidth: 1 },
+  input: { minHeight: 56, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.lg, borderWidth: 1.5 },
+  note: { flexDirection: 'row', gap: space.md, padding: space.lg, borderRadius: radius.lg },
 });

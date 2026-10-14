@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Button, Card, ListRow, Note, SectionTitle, Segmented } from '@/components/ui';
+import { Button, Card, ListRow, Note, SectionTitle, Segmented, ToggleRow } from '@/components/ui';
 import { InfoIcon, PlayIcon } from '@/design/icons';
 import { space, type } from '@/design/type';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
@@ -69,7 +69,18 @@ export default function SettingsScreen() {
 
       <Card padded={false}>
         <ListRow first title={tr('profile.edit')} onPress={() => router.push('/onboarding')} />
-        <ListRow title={tr('settings.device')} subtitle={tr('settings.deviceSub')} onPress={() => router.push('/lab')} />
+      </Card>
+
+      <SectionTitle title={tr('dev.title')} />
+      <Card padded={false}>
+        <ToggleRow
+          first
+          title={tr('dev.simulation')}
+          subtitle={tr('dev.simulationSub')}
+          value={settings.devSimulation}
+          onChange={(v) => update({ devSimulation: v })}
+        />
+        {settings.devSimulation ? <ListRow title={tr('settings.device')} subtitle={tr('settings.deviceSub')} onPress={() => router.push('/lab')} /> : null}
       </Card>
 
       <SectionTitle title={tr('settings.data')} />

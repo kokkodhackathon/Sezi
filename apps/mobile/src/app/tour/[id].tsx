@@ -6,13 +6,15 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Badge, Button, EmptyState, SectionTitle } from '@/components/ui';
 import { ChevronIcon, TurnIcon } from '@/design/icons';
 import { radius, space, type } from '@/design/type';
-import { WorkGlyph } from '@/design/work-glyph';
+import { colorForType, WorkGlyphInline } from '@/design/work-glyph';
+import { Image } from 'expo-image';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
 import { walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
 import { planTour } from '@/lib/tours';
+import { coverOf, photoUrl, useWorks } from '@/lib/works';
 
 export default function TourDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,6 +24,8 @@ export default function TourDetail() {
   const { profile } = useProfile();
   const { visited } = useSettings();
   const plan = useMemo(() => (profile ? planTour(id, profile) : null), [id, profile]);
+  const { data: works } = useWorks('bursa');
+  const bySlug = useMemo(() => new Map((works ?? []).map((w) => [w.slug, w])), [works]);
 
   if (!profile || !plan || plan.stops.length === 0) {
     return (
@@ -39,7 +43,7 @@ export default function TourDetail() {
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
       <Stack.Screen options={{ title: '' }} />
       <View style={{ gap: space.xs }}>
-        <Text style={[type.editorial, { color: t.text }]} accessibilityRole="header">
+        <Text style={[type.title, { color: t.text, fontSize: 30, lineHeight: 36 }]} accessibilityRole="header">
           {title}
         </Text>
         <Text style={[type.body, { color: t.textMuted }]}>{tr(`tours.${id}.body` as MessageKey)}</Text>
@@ -79,7 +83,17 @@ export default function TourDetail() {
                 accessibilityRole="button"
                 accessibilityLabel={`${i + 1}. ${name}. ${tr('tours.leg', { m: Math.round(stop.legM) })}${isVisited ? `. ${tr('work.visited')}` : ''}`}
                 style={({ pressed }) => [s.stopCard, pressed && { backgroundColor: t.background }]}>
-                <WorkGlyph slug={stop.type} size={44} />
+                {(() => {
+                  const w = bySlug.get(stop.slug);
+                  const c = w ? coverOf(w) : undefined;
+                  return c ? (
+                    <Image source={{ uri: photoUrl(c, 'thumb') }} style={s.thumb} contentFit="cover" accessible={false} />
+                  ) : (
+                    <View style={[s.thumb, { backgroundColor: t.soft, alignItems: 'center', justifyContent: 'center' }]}>
+                      <WorkGlyphInline slug={stop.type} color={colorForType(stop.type)} size={24} />
+                    </View>
+                  );
+                })()}
                 <View style={{ flex: 1, gap: 4 }}>
                   <Text style={[type.itemTitle, { color: t.text }]}>{name}</Text>
                   <Text style={[type.meta, { color: t.textMuted }]}>{tr('tours.leg', { m: Math.round(stop.legM) })}</Text>
@@ -99,7 +113,7 @@ export default function TourDetail() {
 
 function Stat({ value, label, t }: { value: string; label: string; t: ThemeColors }) {
   return (
-    <View style={[statStyle.box, { borderColor: t.border }]} accessible accessibilityLabel={`${value} ${label}`}>
+    <View style={statStyle.box} accessible accessibilityLabel={`${value} ${label}`}>
       <Text style={[type.title, { color: t.text, fontSize: 24, lineHeight: 30 }]}>{value}</Text>
       <Text style={[type.meta, { color: t.textMuted }]} >
         {label}
@@ -125,11 +139,9 @@ const makeStyles = (t: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: space.md,
-      padding: space.md,
+      paddingVertical: space.sm,
       marginBottom: space.md,
       borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: t.border,
-      backgroundColor: t.surface,
     },
+    thumb: { width: 64, height: 64, borderRadius: radius.lg },
   });

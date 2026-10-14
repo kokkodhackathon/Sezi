@@ -44,7 +44,30 @@ npx supabase@latest db query --linked --project-ref jejsvycpzulpleftkssj -f supa
 - `"type"` türü elle düzeltir.
 - Düzeltmeden sonra `inventory_import.py` ve seed adımlarını yeniden çalıştırın.
 
-## 2. Pilot alan navigasyon grafiği (OSM)
+## 2. Envanter fotoğraf arşivi
+
+Organizasyon 14 Ekim'de Bursa örnekleminin yüksek çözünürlüklü arşivini paylaştı (yerelde `docs/drive/`, git'e girmez). Dosya adları eseri söylemez ("ERD03201 kopya.jpg"); aynı fotoğraflar yayımlanmış kitapta da var.
+
+```bash
+# izole ortam: pip install pillow pymupdf
+python -I data/inventory_photos.py docs/drive bursa data/raw/books/bursa-envanteri-cilt-{1,2,3}.pdf
+python -I data/inventory_media_import.py bursa --upload
+npx supabase@latest db query --linked --project-ref jejsvycpzulpleftkssj -f supabase/seed_media_bursa.sql
+```
+
+**`inventory_photos.py`**
+1. Her fotoğrafı 1600 px ve 480 px WebP'ye küçültür (`data/out/photos/<il>/`).
+2. Kitap PDF'lerindeki her görselin algısal özetini (dHash) çıkarır; sayfa numarası çift sayfa yayılımının üst köşesinden okunur. Özetler `book_hashes.json` dosyasında önbelleğe alınır.
+3. Fotoğrafı, kitaptaki karenin en-boy oranına kırparak en yakın görsele eşler; eşleşen sayfa, veritabanındaki cilt/sayfa bilgisiyle esere bağlanır.
+4. Klasör adındaki ilçeyle çelişen eşleşme reddedilir ("4-İnegöl Klasörü" → İnegöl).
+
+**`inventory_media_import.py`**: eşleşme uzaklığı ≤ 30 olan fotoğraf `verified`, 31–48 arası `draft` girer (admin gözle onaylar). Dosyaları Storage `media/<il>/` altına yükler.
+
+**Sonuç (Bursa):** 97 fotoğraftan 51'i 47 esere bağlandı (46 doğrulanmış, 5 taslak). Eşleşmeyenler kitapta farklı kırpılmış ya da basılmamış kareler; admin panelinden elle bağlanacak.
+
+**Yeni il:** kitap PDF'leri + arşiv klasörü + il slug'ı; kod değişmez.
+
+## 3. Pilot alan navigasyon grafiği (OSM)
 
 **1. OSM yaya ağını indirin.** Merkez ve yarıçap `build_nav_graph.py › AREAS` sözlüğünde. Bursa Hanlar: 40.18415, 29.06135, 450 m.
 
@@ -70,6 +93,6 @@ Bunlar tahmindir; saha ölçümü gelince güncellenir (ROADMAP #6). Yol verisin
 
 **Yeni pilot alan eklemek:** `AREAS` sözlüğüne bir girdi ekleyin, Overpass çıktısını `data/raw/osm_<alan>.json` olarak indirin ve script'i alan adıyla çalıştırın.
 
-## 3. Eski: İstanbul Wikidata pilotu
+## 4. Eski: İstanbul Wikidata pilotu
 
 `wikidata_pilot.py` ve `supabase/seed_wikidata_pilot.sql` ilk prototipin Süleymaniye verisidir. Kayıtlar veritabanında `archived` durumunda; yeni işte kullanmayın.

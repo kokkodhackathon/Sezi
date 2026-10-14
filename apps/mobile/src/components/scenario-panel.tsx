@@ -34,7 +34,7 @@ export function ScenarioPanel({
   ];
 
   return (
-    <View style={[styles.panel, { borderColor: t.border, backgroundColor: t.surface }]}>
+    <View style={[styles.panel, { backgroundColor: t.soft }]}>
       <Text style={[type.heading, { color: t.text }]} accessibilityRole="header">{tr('sim.scenarios')}</Text>
       <Text style={[type.meta, { color: t.textMuted }]}>{tr('sim.scenariosBody')}</Text>
       {items.map((it) => (
@@ -48,7 +48,7 @@ export function ScenarioPanel({
           accessibilityState={it.toggle ? { checked: it.active, disabled } : { disabled, busy: it.active }}
           style={({ pressed }) => [
             styles.item,
-            { borderColor: it.active ? t.primary : t.border, backgroundColor: it.active ? t.primary : t.background },
+            { backgroundColor: it.active ? t.primary : t.surface },
             disabled && { opacity: 0.4 },
             pressed && { opacity: 0.85 },
           ]}>
@@ -67,6 +67,6 @@ export function ScenarioPanel({
 }
 
 const styles = StyleSheet.create({
-  panel: { gap: space.md, padding: space.lg, borderRadius: radius.lg, borderWidth: 1 },
-  item: { gap: 2, minHeight: 56, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.md, borderWidth: 1.5, justifyContent: 'center' },
+  panel: { gap: space.md, padding: space.lg, borderRadius: radius.xl },
+  item: { gap: 2, minHeight: 56, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.lg, justifyContent: 'center' },
 });

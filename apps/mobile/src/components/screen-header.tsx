@@ -9,7 +9,7 @@ export function ScreenHeader({ title, subtitle, action }: { eyebrow?: string; ti
   return (
     <View style={styles.wrap}>
       <View style={styles.row}>
-        <Text style={[type.display, { color: t.text, flex: 1 }]} accessibilityRole="header">{title}</Text>
+        <Text style={[type.screenTitle, { color: t.text, flex: 1 }]} accessibilityRole="header">{title}</Text>
         {action}
       </View>
       {subtitle ? <Text style={[type.body, { color: t.textMuted }]}>{subtitle}</Text> : null}

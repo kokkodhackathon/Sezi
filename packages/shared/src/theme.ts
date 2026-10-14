@@ -1,29 +1,36 @@
 /**
- * Sezi tasarım token'ları — kaynak: docs/Moodboard.png (piksel örneklemesi).
- * Ham moodboard renkleri `palette` içinde; arayüz yalnızca `themes` üzerinden renk kullanır.
- * Metin/zemin çiftleri WCAG AA (4.5:1) için theme.test.ts'te doğrulanır.
+ * Sezi tasarım token'ları — "Çini" yönü (14 Ekim 2026).
+ * Kaynak: Bursa'daki vakıf eserlerinin kubbe ve çini süslemeleri (envanter fotoğraf arşivi):
+ * sıcak beyaz zemin, İznik turkuazı, mercan kırmızısı yalnızca vurguda, koyu mürekkep metin.
+ * Arayüz yalnızca `themes` üzerinden renk kullanır; metin/zemin çiftleri theme.test.ts'te WCAG AA ile doğrulanır.
  */
 export const palette = {
-  turquoise: "#479389", // moodboard koyu turkuaz — yalnızca dekoratif (beyaz metinle 3.6:1)
-  turquoiseLight: "#86CDC4",
-  turquoiseDeep: "#2F6E66", // etkileşimli öğeler için AA uyumlu turkuaz
-  terracotta: "#BA765B",
-  terracottaLight: "#E08A6C",
-  rust: "#A84428",
-  brown: "#622714",
-  brownInk: "#3A1A10",
-  crimson: "#7B1D1D", // kilim motifi kırmızısı
-  cream: "#F7F1E3",
-  sand: "#D9D2CA",
-  stone: "#A59887",
-  night: "#1E1612",
-  nightRaised: "#2A201B",
+  ivory: "#FAF7F2", // zemin: fotoğraflar sarımsı krem yerine sıcak beyaz üstünde parlar
   white: "#FFFFFF",
+  ink: "#1E1A17", // metin: kahve tonlu mürekkep
+  inkMuted: "#5F5650",
+  turquoise: "#3FA6A6", // İznik turkuazı — yalnızca dekoratif (beyaz metinle AA geçmez)
+  turquoiseDeep: "#0B6E73", // etkileşimli öğeler için AA uyumlu turkuaz
+  turquoiseLight: "#6FC7C4",
+  coral: "#B8321F", // mercan kırmızısı: vurgu, seçili durum, UNESCO
+  coralLight: "#F08A70",
+  sand: "#ECE6DE", // ince ayraç
+  mist: "#F1ECE5", // yumuşak dolgu (etiket, boş görsel)
+  brown: "#6B3A22",
+  crimson: "#8E1F1A",
+  night: "#161311",
+  nightRaised: "#211C19",
+  // Eski adlar (eser türü renkleri ve geriye uyum için)
+  rust: "#A4432A",
+  brownInk: "#1E1A17",
+  cream: "#FAF7F2",
 } as const;
 
 export interface ThemeColors {
   background: string;
   surface: string;
+  /** Yumuşak dolgu: etiket, olgu satırı, fotoğrafı olmayan eser kutusu. */
+  soft: string;
   text: string;
   textMuted: string;
   primary: string;
@@ -32,6 +39,8 @@ export interface ThemeColors {
   onAccent: string;
   danger: string;
   border: string;
+  /** Kart gölgesinin rengi (çerçeve yerine). */
+  shadow: string;
   /** Motif desenleri — düşük opaklıkla kullanılır, metin taşımaz. */
   motif: string;
   motifOpacity: number;
@@ -39,45 +48,51 @@ export interface ThemeColors {
 
 export const themes: Record<"light" | "dark" | "highContrast", ThemeColors> = {
   light: {
-    background: palette.cream,
+    background: palette.ivory,
     surface: palette.white,
-    text: palette.brownInk,
-    textMuted: "#6E5F55",
+    soft: palette.mist,
+    text: palette.ink,
+    textMuted: palette.inkMuted,
     primary: palette.turquoiseDeep,
     onPrimary: palette.white,
-    accent: palette.rust,
+    accent: palette.coral,
     onAccent: palette.white,
     danger: palette.crimson,
     border: palette.sand,
-    motif: palette.terracotta,
-    motifOpacity: 0.08,
+    shadow: "#3A2A1E",
+    motif: palette.turquoise,
+    motifOpacity: 0.12,
   },
   dark: {
     background: palette.night,
     surface: palette.nightRaised,
-    text: "#F3E9DC",
-    textMuted: "#B9A99B",
+    soft: "#2A2420",
+    text: "#F2EDE7",
+    textMuted: "#B5ABA2",
     primary: palette.turquoiseLight,
     onPrimary: palette.night,
-    accent: palette.terracottaLight,
+    accent: palette.coralLight,
     onAccent: palette.night,
     danger: "#F28B82",
-    border: "#4A3B33",
-    motif: palette.terracottaLight,
-    motifOpacity: 0.06,
+    border: "#332C27",
+    shadow: "#000000",
+    motif: palette.turquoiseLight,
+    motifOpacity: 0.08,
   },
   // Az gören kullanıcı modu: motif kapalı, en yüksek kontrast.
   highContrast: {
     background: palette.white,
     surface: palette.white,
+    soft: "#EDEDED",
     text: "#000000",
-    textMuted: palette.brownInk,
-    primary: "#1D4A44",
+    textMuted: palette.ink,
+    primary: "#064C50",
     onPrimary: palette.white,
-    accent: palette.brown,
+    accent: "#8E1F1A",
     onAccent: palette.white,
-    danger: palette.crimson,
+    danger: "#8E1F1A",
     border: "#000000",
+    shadow: "#000000",
     motif: palette.white,
     motifOpacity: 0,
   },

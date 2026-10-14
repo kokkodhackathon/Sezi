@@ -44,7 +44,7 @@ Son güncelleme: 13 Ekim 2026. Görevi bitiren, durum sütununu günceller.
 | 2 | P0 | Admin paneli MVP (`apps/admin`): magic link girişi + admin rolü, eser listesi ve filtre, eser düzenleme (TR/EN alanlar), `draft → verified`, `needs_review` kuyruğu | Ediz + Eda | Admin bir eseri düzenleyip onaylar, mobil yenilenince görünür; admin olmayan yazamaz (RLS) | ⬜ |
 | 3 | P0 | Admin'de harita üzerinde konum iğnesi: `approximate` / `unknown` → `exact` | Eda | Bursa Osmangazi'deki konumsuz eserlerin en az 50'si elle konumlanır | ⬜ |
 | 4 | P0 | Çevrimdışı önbellek: `works_view`, `cities` ve `exhibitions` yanıtlarını cihazda saklamak (TanStack persist + expo-sqlite) | Eda | Uçak modunda Keşfet, eser detayı ve tur açılıyor | ⬜ |
-| 5 | P0 | Resmî veri içe aktarma: tarihçe, mimari, fotoğraflar → `history`, `architecture`, `media` (Storage, WebP ≤1600 px, alt metin TR/EN) | Zehra + Ediz | Pilot alandaki 17 eserin metni ve en az 1 fotoğrafı var; her metin kaynağa bağlı | ⏸ veri bekleniyor |
+| 5 | P0 | Resmî veri içe aktarma: tarihçe, mimari, fotoğraflar → `history`, `architecture`, `media` (Storage, WebP ≤1600 px, alt metin TR/EN) | Zehra + Ediz | Pilot alandaki 17 eserin metni ve en az 1 fotoğrafı var; her metin kaynağa bağlı | ⏳ Bursa fotoğrafları eklendi (51 fotoğraf, 47 eser); tarihçe metinleri bekleniyor |
 | 6 | P0 | Saha gezisi (Bursa Hanlar): basamak, eğim, zemin, genişlik ölçümü; 17 landmark için TR/EN talimat metni; ortam sesi kayıtları | Zehra | `nav-json` segmentleri ölçümle güncel; `instructions` ve `audio_assets` dolu | ⬜ |
 | 7 | P0 | Uygulama ikonu, açılış ekranı, ekran tasarımlarının gözden geçirilmesi | İnci | `app.json` ikon ve splash; tasarım notları uygulanmış | ⏳ Sade tasarım dili mobil ekranlara uygulandı; DESIGN.md yazıldı. Android emülatöründe temel akış kontrol edildi; gerçek telefon, ikon/splash ve kapsamlı erişilebilirlik kontrolü bekliyor |
 | 8 | P0 | Demo senaryosu ve provası; yedek video | Hepsi | Uçak modunda baştan sona 5 dakikalık akış | ⬜ |
@@ -78,6 +78,11 @@ Durum işaretleri: ⬜ başlamadı · ⏳ sürüyor · ⏸ bekliyor · ✅ bitti
 - **Final günü internet olmaz.** Görev #4 (çevrimdışı önbellek) P0.
 
 ## Biten işler (özet)
+
+- **14 Ekim (tasarım ve fotoğraflar):**
+  - "Çini" tasarım dili: açık tema birincil; önce fotoğraf, az yazı; çerçevesiz kartlar. DESIGN.md güncellendi.
+  - Bursa fotoğraf arşivi kitap sayfalarıyla eşlenip eserlere bağlandı (Storage + `media`); Keşfet, eser, tur ve il ekranları fotoğraflı.
+  - Simülasyon özellikleri Ayarlar → Geliştirici seçenekleri → Simülasyon modu arkasına alındı.
 
 - **14 Ekim (simülasyon):**
   - Sanal yürüyüşçü GPS benzeri ölçüm üretir; takip, rotadan sapma ve talimat zamanlaması gerçek GPS ile ortak (`shared/tracking`). Gerçek GPS modu (#10) için kaynak değiştirmek yeterli.

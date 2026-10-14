@@ -24,6 +24,25 @@ export interface WorkExhibition {
   ends_on: string | null;
 }
 
+/** Envanter fotoğrafı (Storage `media` bucket'ı; yollar bucket içinden). */
+export interface WorkPhoto {
+  id: string;
+  path: string;
+  thumb: string | null;
+  alt: LocalizedText;
+  credit: string | null;
+  kind: 'photo' | 'aerial' | 'inscription';
+  width: number | null;
+  height: number | null;
+}
+
+const MEDIA_BASE = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/media/`;
+/** Fotoğrafın herkese açık adresi; küçük boy istenirse ve varsa önizleme dosyası. */
+export function photoUrl(p: WorkPhoto, size: 'thumb' | 'full' = 'full'): string {
+  return MEDIA_BASE + (size === 'thumb' && p.thumb ? p.thumb : p.path);
+}
+export const coverOf = (w: WorkRow): WorkPhoto | undefined => w.photos[0];
+
 export type WorkCondition = 'intact' | 'restored' | 'damaged' | 'destroyed' | 'unknown';
 export type LocationPrecision = 'exact' | 'approximate' | 'unknown';
 
@@ -55,6 +74,7 @@ export interface WorkRow {
   lat: number | null;
   sources: WorkSource[];
   exhibitions: WorkExhibition[];
+  photos: WorkPhoto[];
 }
 
 /** Haritada gösterilebilir eser (konumu bilinen). */
