@@ -106,6 +106,12 @@ export function blockableAhead(plan: PlannedRoute, alongM: number) {
   return segmentAhead(plan.route, plan.geometry, alongM);
 }
 
+/** Mesafe metni: 1 km altı metre, üstü tek ondalıklı kilometre (TR'de virgülle). */
+export function formatDistance(m: number, lang: 'tr' | 'en'): string {
+  if (m < 1000) return `${Math.round(m)} m`;
+  return `${(m / 1000).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-GB', { maximumFractionDigits: 1 })} km`;
+}
+
 /** Profile göre yürüme hızı (m/sn); süre tahmini ve simülasyon için. */
 export function walkingSpeed(profile: UserProfile): number {
   if (profile.mobility === 'wheelchair') return 0.9;

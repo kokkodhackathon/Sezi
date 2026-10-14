@@ -54,6 +54,8 @@ export default function WorkDetail() {
 function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<typeof makeStyles> }) {
   const [speaking, setSpeaking] = useState(false);
   const [viewer, setViewer] = useState<number | null>(null);
+  // Kapak geçilince durum çubuğunun altına zemin rengi şerit gelir (içerik saatin altına girmesin).
+  const [scrolled, setScrolled] = useState(false);
   const insets = useSafeAreaInsets();
   const { t: tr, lang } = useT();
   const { profile } = useProfile();
@@ -71,7 +73,6 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
   const otherSources = work.sources.filter((x) => x.kind !== 'inventory');
   const access = profile && hasRouteTo(work.slug) ? planRoute(work.slug, profile) : null;
   const canHear = profile?.hearing !== 'deaf';
-  const showTranscript = profile?.hearing === 'hard' || profile?.hearing === 'deaf';
   const place = [work.district, city].filter(Boolean).join(', ');
   const credit = work.photos.find((p) => p.credit)?.credit;
 
@@ -98,14 +99,18 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
   return (
     <View style={s.screen}>
       <Stack.Screen options={{ headerShown: false }} />
-      <StatusBar style={cover ? 'light' : 'auto'} />
-      <ScrollView contentContainerStyle={{ paddingBottom: space.xxl + insets.bottom }}>
+      <StatusBar style={cover && !scrolled ? 'light' : 'auto'} />
+      <ScrollView
+        contentContainerStyle={{ paddingBottom: space.xxl + insets.bottom }}
+        scrollEventThrottle={64}
+        onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > (cover ? 360 : 40))}>
         {/* Kapak: fotoğraf varsa tam genişlik, ad fotoğrafın üstünde; yoksa tür simgeli yumuşak alan. */}
         {cover ? (
           <Pressable onPress={() => setViewer(0)} accessibilityRole="imagebutton" accessibilityLabel={`${loc(cover.alt, lang)}. ${tr('work.openPhotos')}`}>
             <Image source={{ uri: photoUrl(cover, 'full') }} placeholder={{ uri: photoUrl(cover, 'thumb') }} style={s.heroImg} contentFit="cover" transition={150} accessible={false} />
             <View style={s.shade} pointerEvents="none">
-              {[0.0, 0.12, 0.3, 0.5, 0.66].map((o, i) => (
+              {/* Yumuşak karartma: çok sayıda ince şerit, yazının okunurluğu için (yerel degrade modülü gerektirmez). */}
+              {SHADE.map((o, i) => (
                 <View key={i} style={{ flex: 1, backgroundColor: `rgba(14,12,11,${o})` }} />
               ))}
             </View>
@@ -158,13 +163,8 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
             ) : null}
           </View>
 
-          {showTranscript ? (
-            <View style={[s.panel, { backgroundColor: t.soft }]}>
-              <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.transcript')}</Text>
-              <Text style={[type.body, { color: t.text }]}>{narration}</Text>
-            </View>
-          ) : null}
-
+          {/* Duymayan ve az duyan kullanıcı: sesli anlatımın her cümlesi bu sayfada yazılı olarak zaten var
+              (ad, tür, yer, tarihçe), ayrı bir anlatım metni kutusu gerekmez. */}
           {work.photos.length > 1 ? (
             <Section title={tr('work.photos')} t={t}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm, paddingHorizontal: space.xl }} style={{ marginHorizontal: -space.xl }}>
@@ -233,7 +233,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
             {inv ? (
               <View style={{ gap: space.xs }}>
                 <Text style={[type.itemTitle, { color: t.text }]}>{inv.title}</Text>
-                <Text style={[type.meta, { color: t.textMuted }]}>{[ref, 'Vakıf Katılım', inv.year ? String(inv.year) : null].filter(Boolean).join(' · ')}</Text>
+                <Text style={[type.meta, { color: t.textMuted }]}>{[inv.page ? tr('inv.refPage', { page: inv.page }) : null, 'Vakıf Katılım', inv.year ? String(inv.year) : null].filter(Boolean).join(' · ')}</Text>
                 <View style={s.links}>
                   {inv.url ? <Button compact variant="ghost" label={tr('inv.openBook')} hint={tr('inv.openBookHint')} icon={(c) => <ExternalIcon color={c} />} onPress={() => Linking.openURL(inv.url!)} /> : null}
                   {citation ? <Button compact variant="ghost" label={tr('inv.cite')} onPress={() => Share.share({ message: citation })} /> : null}
@@ -257,6 +257,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
         </View>
       </ScrollView>
 
+      {scrolled ? <View style={[s.topBar, { height: insets.top, backgroundColor: t.background }]} /> : null}
       {/* Yüzen geri düğmesi: üst çubuk yerine (fotoğraf tam ekrana kadar uzanır). */}
       <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={tr('work.back')} style={[s.back, softShadow(t), { top: insets.top + space.sm, backgroundColor: t.surface }]}>
         <View style={{ transform: [{ rotate: '180deg' }] }}>
@@ -268,6 +269,9 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
     </View>
   );
 }
+
+// Karartma şeritlerinin opaklığı: yumuşak (kareli) bir artış, bant görünmesin.
+const SHADE = Array.from({ length: 24 }, (_, i) => Number((0.7 * ((i + 1) / 24) ** 1.6).toFixed(3)));
 
 function Section({ title, t, children }: { title: string; t: ThemeColors; children: ReactNode }) {
   return (
@@ -297,5 +301,6 @@ const makeStyles = (t: ThemeColors) =>
     thumb: { width: 132, height: 132, borderRadius: radius.lg },
     map: { height: 180, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: t.soft },
     links: { flexDirection: 'row', flexWrap: 'wrap', marginLeft: -space.lg },
+    topBar: { position: 'absolute', top: 0, left: 0, right: 0 },
     back: { position: 'absolute', left: space.lg, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
   });

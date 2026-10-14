@@ -10,7 +10,7 @@ import { radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
-import { walkingSpeed } from '@/lib/nav';
+import { formatDistance, walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { planTour, TOURS } from '@/lib/tours';
 import { coverOf, photoUrl, useWorks } from '@/lib/works';
@@ -18,7 +18,7 @@ import { coverOf, photoUrl, useWorks } from '@/lib/works';
 /** Turlar: her tur bir fotoğraf kartı; açıklama ekran okuyucu etiketinde, görünen metin tek satır. */
 export default function Tours() {
   const t = useSeziTheme();
-  const { t: tr } = useT();
+  const { t: tr, lang } = useT();
   const { profile } = useProfile();
   const { data: works } = useWorks('bursa');
   const plans = useMemo(() => (profile ? TOURS.map((d) => planTour(d.id, profile)) : []), [profile]);
@@ -36,7 +36,7 @@ export default function Tours() {
           const title = tr(`tours.${id}.title` as MessageKey);
           const minutes = Math.max(1, Math.round(plan.lengthM / walkingSpeed(profile) / 60));
           const access = plan.stairs === 0 ? tr('tours.stepFree') : tr('tours.stairs', { n: plan.stairs });
-          const meta = [tr('tours.stops', { n: plan.stops.length }), `${Math.round(plan.lengthM)} m`, tr('common.min', { n: minutes })].join(' · ');
+          const meta = [tr('tours.stops', { n: plan.stops.length }), formatDistance(plan.lengthM, lang), tr('common.min', { n: minutes })].join(' · ');
           // Kapak: fotoğrafı olan ilk durak.
           const cover = plan.stops.map((st) => bySlug.get(st.slug)).map((w) => (w ? coverOf(w) : undefined)).find(Boolean);
           return (
@@ -46,15 +46,16 @@ export default function Tours() {
               accessibilityRole="button"
               accessibilityLabel={`${title}. ${tr(`tours.${id}.body` as MessageKey)} ${meta}. ${access}`}
               accessibilityHint={tr('design.tourOpen')}
-              style={({ pressed }) => [s.card, softShadow(t), { backgroundColor: t.surface }, pressed && { opacity: 0.92 }]}>
+              style={({ pressed }) => [s.card, softShadow(t), { backgroundColor: t.surface }, !cover && s.compact, pressed && { opacity: 0.92 }]}>
               {cover ? (
                 <Image source={{ uri: photoUrl(cover, 'full') }} placeholder={{ uri: photoUrl(cover, 'thumb') }} style={s.img} contentFit="cover" transition={150} accessible={false} />
               ) : (
-                <View style={[s.img, { backgroundColor: t.soft, alignItems: 'center', justifyContent: 'center' }]}>
-                  <WorkGlyphInline slug={plan.stops[0]!.type} color={t.primary} size={48} />
+                // Fotoğrafı olmayan tur: büyük boş alan yerine küçük simgeli kare.
+                <View style={[s.tile, { backgroundColor: t.soft }]}>
+                  <WorkGlyphInline slug={plan.stops[0]!.type} color={t.primary} size={32} />
                 </View>
               )}
-              <View style={s.cap}>
+              <View style={[s.cap, !cover && { flex: 1, paddingLeft: 0 }]}>
                 <Text style={[type.title, { color: t.text, fontSize: 22, lineHeight: 28 }]}>{title}</Text>
                 <Text style={[type.meta, { color: t.textMuted }]}>{meta}</Text>
                 <Text style={[type.meta, { color: plan.stairs === 0 ? t.primary : t.accent, fontFamily: type.button.fontFamily }]}>{access}</Text>
@@ -72,4 +73,6 @@ const s = StyleSheet.create({
   card: { borderRadius: radius.xl, overflow: 'hidden' },
   img: { width: '100%', aspectRatio: 16 / 9 },
   cap: { padding: space.lg, gap: 2 },
+  compact: { flexDirection: 'row', alignItems: 'center', paddingLeft: space.lg },
+  tile: { width: 72, height: 72, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', marginRight: space.lg },
 });
