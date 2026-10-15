@@ -59,7 +59,7 @@ Son güncelleme: 15 Ekim 2026. Görevi bitiren, durum sütununu günceller. Anl�
 | 17 | P2 | Konya ve Hatay için pilot alan grafiği (`AREAS` sözlüğüne ekle) | Ediz | Her ilde en az 5 landmark'lı rota | ⬜ |
 | 18 | P2 | Maestro mobil E2E, Playwright admin E2E | Eda | Ana akışlar CI'da | ⬜ |
 | 19 | P2 | iOS build | Eda | Simülatörde açılıyor | ⬜ |
-| 20 | P0 | Okunabilir rota: dönüş cezası, yalnız karar noktalarında talimat, path/district/edge dili; sonra Menzilname şeridi ve rota provası | Ediz | Zafer Plaza → Ulu Cami rotasında ilk 300 m'de en fazla 2 dönüş talimatı; testle korunur | ⬜ |
+| 20 | P0 | Okunabilir rota: önce altın rota (ekibin elle yazdığı onaylı Lynch tarifi) hedef olarak; sonra dönüş cezası, yalnız karar noktalarında talimat, path/district/edge dili; en son Menzilname şeridi ve rota provası | Ediz | Zafer Plaza → Ulu Cami rotasında ilk 300 m'de en fazla 2 dönüş talimatı; motorun Heykel → Koza Hanı tarifi altın rotaya yaklaşıyor (ortak yol payı, manevra eşleşmesi); testle korunur | ⏳ Faz 0 bitti: altın rota Heykel → Koza Hanı (618 m, 12 manevra) uygulamada; motorla ortak yol %54. Sıradaki: Faz 1 dönüş cezası |
 
 Durum işaretleri: ⬜ başlamadı · ⏳ sürüyor · ⏸ bekliyor · ✅ bitti
 
@@ -80,7 +80,7 @@ Durum işaretleri: ⬜ başlamadı · ⏳ sürüyor · ⏸ bekliyor · ✅ bitti
 
 ## Biten işler (özet)
 
-- **15 Ekim:** Lynch buluşma/yer işareti noktaları ve 650 m grafik (897 düğüm, 8 başlangıç); simülasyonda başlangıç seçimi; release APK (arm64); GitHub'a ilk push.
+- **15 Ekim:** Lynch buluşma/yer işareti noktaları ve 650 m grafik (897 düğüm, 8 başlangıç); simülasyonda başlangıç seçimi; release APK (arm64); GitHub'a ilk push. Altın rota: Heykel → Koza Hanı onaylı ekip tarifi (`data/lynch/routes`), atomik manevra + gruplu sunum, geliştirici seçeneklerinde ekip ↔ motor karşılaştırması.
 
 - **14 Ekim (admin paneli):** giriş ve rol; eser listesi/düzenleme/yeni eser; haritada konum; fotoğraf onayı ve fotoğraf kutusu (46 eşleşmeyen arşiv fotoğrafı); bildirim moderasyonu; il yönetimi. Uygulama: bildirimler hesapsız sunucuya gider, onaylı bildirimler rotaya uygulanır (internetsizken son bilinen hâl), Keşfet'te aşağı çekip yenile.
 

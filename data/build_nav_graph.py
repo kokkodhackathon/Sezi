@@ -98,6 +98,40 @@ def parse_width_cm(tags):
         return None
 
 
+def embed_curated_routes(out, area_slug):
+    """Altın rotaları (data/lynch/routes/*.json) grafiğe gömer; güzergâh grafikte yoksa hata verir.
+
+    Her ardışık düğüm çiftinin segmenti bulunur; manevra düğümleri rotada ve sıralı olmalı, son manevra varış.
+    """
+    by_pair = {}
+    for s in out["segments"]:
+        by_pair[(s["from"], s["to"])] = s["id"]
+        by_pair[(s["to"], s["from"])] = s["id"]
+    routes = []
+    for f in sorted((ROOT / "data/lynch/routes").glob("*.json")):
+        r = json.loads(f.read_text(encoding="utf-8"))
+        if r.get("area") != area_slug:
+            continue
+        ids = r["nodeIds"]
+        seg_ids = []
+        for a, b in zip(ids, ids[1:]):
+            if (a, b) not in by_pair:
+                sys.exit(f"altın rota {r['id']}: {a} → {b} arasında segment yok (grafik değişmiş olabilir)")
+            seg_ids.append(by_pair[(a, b)])
+        pos = 0
+        for m in r["maneuvers"]:
+            try:
+                pos = ids.index(m["nodeId"], pos + 1)
+            except ValueError:
+                sys.exit(f"altın rota {r['id']}: manevra düğümü {m['nodeId']} rotada yok ya da sıra dışı")
+        if r["maneuvers"][-1]["kind"] != "arrive" or pos != len(ids) - 1:
+            sys.exit(f"altın rota {r['id']}: son manevra varış düğümünde olmalı")
+        keep = ("id", "name", "status", "verifiedBy", "verifiedAt", "nodeIds", "maneuvers")
+        routes.append({**{k: r[k] for k in keep if k in r}, "segmentIds": seg_ids})
+    out["curatedRoutes"] = routes
+    return len(routes)
+
+
 def build(area_slug):
     area = AREAS[area_slug]
     out_file = ROOT / f"apps/mobile/assets/pilot/{area_slug}-nav.json"
@@ -242,11 +276,26 @@ def build(area_slug):
         "nodes": nodes,
         "segments": segments,
     }
+    n_routes = embed_curated_routes(out, area_slug)
     out_file.parent.mkdir(parents=True, exist_ok=True)
     out_file.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     n_lm = sum(1 for n in nodes if n["lynchType"] == "landmark")
-    print(f"{len(nodes)} düğüm, {len(segments)} segment, {n_lm} landmark, {len(starts)} başlangıç -> {out_file.relative_to(ROOT)}", file=sys.stderr)
+    print(f"{len(nodes)} düğüm, {len(segments)} segment, {n_lm} landmark, {len(starts)} başlangıç, {n_routes} altın rota -> {out_file.relative_to(ROOT)}", file=sys.stderr)
+
+
+def embed_only(area_slug):
+    """Yalnız altın rotaları yeniden gömer (ağ ve OSM gerekmez; grafik aynen kalır)."""
+    out_file = ROOT / f"apps/mobile/assets/pilot/{area_slug}-nav.json"
+    out = json.loads(out_file.read_text(encoding="utf-8"))
+    n = embed_curated_routes(out, area_slug)
+    out_file.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    print(f"{n} altın rota -> {out_file.relative_to(ROOT)}", file=sys.stderr)
 
 
 if __name__ == "__main__":
-    build(sys.argv[1] if len(sys.argv) > 1 else "bursa-hanlar")
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    slug = args[0] if args else "bursa-hanlar"
+    if "--routes-only" in sys.argv:
+        embed_only(slug)
+    else:
+        build(slug)

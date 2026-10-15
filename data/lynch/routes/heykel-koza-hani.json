@@ -1,0 +1,155 @@
+{
+  "id": "heykel-koza-hani",
+  "area": "bursa-hanlar",
+  "name": { "tr": "Heykel'den Koza Hanı'na", "en": "From Heykel to Koza Han" },
+  "about": "Altın rota: ekibin kafasındaki Lynch tarifi. Beş öğe de var: Heykel (buluşma), Atatürk Caddesi (yol ve Hanlar Bölgesi'nin güney kenarı), Koza Parkı ve Ulu Cami (yer işareti), Kapalıçarşı (bölge), Uzunçarşı (yol). Güzergâh OSM grafiğinden (bursa-hanlar-nav.json) düğüm düğüm seçildi. Motorun hedefi bu tarif; fark raporu buna göre ölçülür.",
+  "status": "verified",
+  "verifiedBy": "Ekip onayı (Ediz Keskin), masa başı inceleme: OSM etiketleri ve yer işaretlerinin rotaya göre yanı tek tek kontrol edildi",
+  "verifiedAt": "2026-10-15",
+  "fieldNote": "Saha gezisi yapılmadı; 'fieldChecked: false' bunu kaydeder, onayı geri almaz. Metinler yalnızca OSM'de karşılığı olan olguları anar (sokak adı, merdiven, yer işaretinin yanı). OSM'de merdivenin inişi/çıkışı (incline) ve Koza Hanı'nın kapı noktası (entrance) yok; metin bu yüzden yön ve kapı iddia etmez. Ses ve görsel ipucu varyantları (havuz sesi, çarşı uğultusu, cephe) sahada gözlenince eklenir.",
+  "nodeIds": [
+    "289588564", "6795682243", "3502393693", "289660127", "3502291826", "3499010916", "13690497332",
+    "4735805407", "13690497330", "9225759398", "9901627904", "7161880353", "13690497327", "9727020403",
+    "9727020402", "9727020404", "11809300855", "289929499", "9727020392", "3499155732", "13528156972", "13528156973"
+  ],
+  "maneuvers": [
+    {
+      "nodeId": "6795682243",
+      "kind": "turn",
+      "path": "Atatürk Caddesi",
+      "hazard": "traffic",
+      "text": {
+        "generic": {
+          "tr": "Heykel'den birkaç adım doğuya, Atatürk Caddesi köşesine yürüyün. Köşede keskin sola dönüp batıya, Ulu Cami yönüne ilerleyin. Cadde trafiği yoğun; kaldırımda kalın.",
+          "en": "From Heykel, walk a few steps east to the corner of Atatürk Caddesi. At the corner turn sharp left and head west, towards the Grand Mosque. The street is busy; stay on the pavement."
+        }
+      },
+      "fieldChecked": false
+    },
+    {
+      "nodeId": "289660127",
+      "kind": "confirm",
+      "path": "Atatürk Caddesi",
+      "district": { "id": "hanlar", "name": { "tr": "Hanlar Bölgesi", "en": "Inns District" }, "action": "edge" },
+      "text": {
+        "generic": {
+          "tr": "Atatürk Caddesi boyunca devam edin. Hanlar Bölgesi sağınızda; cadde bölgenin güney kenarı.",
+          "en": "Keep going along Atatürk Caddesi. The Inns District is on your right; this street is its southern edge."
+        }
+      },
+      "fieldChecked": false
+    },
+    {
+      "nodeId": "4735805407",
+      "kind": "turn",
+      "group": "merdiven",
+      "text": {
+        "generic": {
+          "tr": "Sağa, yaya yoluna dönün. Hemen ardından hafifçe sola, merdivene; sonra yine hafifçe sola, Kutucular Boğazı Sokağı'na.",
+          "en": "Turn right onto the footpath. Right after, bear left onto the stairs, then bear left again onto Kutucular Boğazı Sokağı."
+        }
+      },
+      "fieldChecked": false
+    },
+    {
+      "nodeId": "13690497330",
+      "kind": "turn",
+      "group": "merdiven",
+      "hazard": "stairs",
+      "text": {
+        "generic": { "tr": "Hafifçe sola, merdivene.", "en": "Bear left onto the stairs." }
+      },
+      "fieldChecked": false
+    },
+    {
+      "nodeId": "9225759398",
+      "kind": "turn",
+      "group": "merdiven",
+      "path": "Kutucular Boğazı Sokağı",
+      "text": {
+        "generic": { "tr": "Merdivenden sonra hafifçe sola, Kutucular Boğazı Sokağı'na.", "en": "After the stairs, bear left onto Kutucular Boğazı Sokağı." }
+      },
+      "fieldChecked": false
+    },
+    {
+      "nodeId": "7161880353",
+      "kind": "confirm",
+      "landmarkId": "13528156971",
+      "text": {
+        "generic": {
+          "tr": "Düz devam edin. Koza Parkı sağınızda; Ulu Cami ileride, solunuzda kalacak.",
+          "en": "Continue straight. Koza Park is on your right; the Grand Mosque will be ahead on your left."
+        }
+      },
+      "fieldChecked": false
+    },
+    {
+      "nodeId": "9727020403",
+      "kind": "turn",
+      "path": "Kutlucanlar Sokağı",
+      "landmarkId": "7161880357",
+      "text": {
+        "generic": {
+          "tr": "Ulu Cami'nin köşesinde sağa, Kutlucanlar Sokağı'na dönün. Cami solunuzda kalır.",
+          "en": "At the corner of the Grand Mosque, turn right onto Kutlucanlar Sokağı. The mosque stays on your left."
+        }
+      },
+      "fieldChecked": false
+    },
+    {
+      "nodeId": "9727020404",
+      "kind": "confirm",
+      "district": { "id": "kapalicarsi", "name": { "tr": "Kapalıçarşı", "en": "Covered Bazaar" }, "action": "enter" },
+      "landmarkId": "11809300855",
+      "text": {
+        "generic": {
+          "tr": "Kapalıçarşı'ya giriyorsunuz. Eski Aynalı Çarşı sağınızda; düz devam edin.",
+          "en": "You are entering the Covered Bazaar. The Old Mirrored Bazaar is on your right; keep straight."
+        }
+      },
+      "fieldChecked": false
+    },
+    {
+      "nodeId": "289929499",
+      "kind": "turn",
+      "path": "Kapalı Çarşı Caddesi",
+      "landmarkId": "10595738721",
+      "text": {
+        "generic": {
+          "tr": "Sağa, Kapalı Çarşı Caddesi'ne dönün. Geyve Hanı solunuzda.",
+          "en": "Turn right onto Kapalı Çarşı Caddesi. Geyve Han is on your left."
+        }
+      },
+      "fieldChecked": false
+    },
+    {
+      "nodeId": "9727020392",
+      "kind": "confirm",
+      "path": "Uzunçarşı Caddesi",
+      "text": {
+        "generic": {
+          "tr": "Cadde burada Uzunçarşı adını alıyor. Koza Hanı ileride, sağınızda.",
+          "en": "The street becomes Uzunçarşı here. Koza Han is ahead on your right."
+        }
+      },
+      "fieldChecked": false
+    },
+    {
+      "nodeId": "13528156972",
+      "kind": "turn",
+      "landmarkId": "13528156973",
+      "text": {
+        "generic": { "tr": "Sağa dönün; Koza Hanı önünüzde.", "en": "Turn right; Koza Han is ahead of you." }
+      },
+      "fieldChecked": false
+    },
+    {
+      "nodeId": "13528156973",
+      "kind": "arrive",
+      "text": {
+        "generic": { "tr": "Vardınız: Koza Hanı.", "en": "You have arrived: Koza Han." }
+      },
+      "fieldChecked": true
+    }
+  ]
+}

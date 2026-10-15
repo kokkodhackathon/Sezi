@@ -9,13 +9,13 @@ import { DeferredMap } from '@/components/deferred-map';
 import { NavAlertBanner } from '@/components/nav-alert';
 import { ScenarioPanel } from '@/components/scenario-panel';
 import { SoundCaptions } from '@/components/sound-captions';
-import { Button, Chip, Segmented } from '@/components/ui';
+import { Badge, Button, Chip, Segmented } from '@/components/ui';
 import { PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
 import { radius, space, type } from '@/design/type';
 import { colorForType } from '@/design/work-glyph';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
-import { boundsOf, segmentLines, START_POINTS, walkingSpeed } from '@/lib/nav';
+import { boundsOf, hasCuratedRoute, prefersCurated, segmentLines, setPreferCurated, START_POINTS, walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
 import { useNavSession } from '@/lib/sim/session';
@@ -100,9 +100,34 @@ export default function RouteScreen() {
           </Text>
           <Text style={[type.meta, { color: t.textMuted }]}>{summary}</Text>
         </View>
+        {plan.curated ? (
+          <View style={{ gap: space.xs, alignItems: 'flex-start' }}>
+            <Badge label={tr('route.curated')} tone="primary" />
+            <Text style={[type.meta, { color: t.textMuted }]}>{tr('route.curatedHint')}</Text>
+          </View>
+        ) : null}
 
         {dev ? (
           <>
+            {/* Fark raporu: aynı yolculukta ekibin tarifi ile motorun tarifi. */}
+            {hasCuratedRoute(plan.start.id, plan.end.id) && (plan.curated || !prefersCurated()) ? (
+              <View style={{ gap: space.xs }}>
+                <Segmented
+                  label={tr('route.source')}
+                  value={prefersCurated() ? 'curated' : 'engine'}
+                  onChange={(v) => setPreferCurated(v === 'curated')}
+                  options={[
+                    { value: 'curated', label: tr('route.sourceCurated') },
+                    { value: 'engine', label: tr('route.sourceEngine') },
+                  ]}
+                />
+                {plan.engine ? (
+                  <Text style={[type.meta, { color: t.textMuted }]}>
+                    {tr('route.engineDiff', { p: Math.round(plan.engine.overlap * 100), m: Math.round(plan.engine.lengthM), n: plan.engine.turnSteps })}
+                  </Text>
+                ) : null}
+              </View>
+            ) : null}
             {/* Başlangıç: insanların buluştuğu ya da toplu taşımadan indiği yerler (data/lynch). */}
             <View style={{ gap: space.sm }}>
               <Text style={[type.meta, { color: t.textMuted }]}>{tr('sim.start')}</Text>
@@ -141,12 +166,18 @@ export default function RouteScreen() {
           </Text>
           {plan.steps.map((step, i) => {
             const active = dev && i === stepIndex;
+            // Gruplu manevra (ör. art arda iki dönüş): ilk adım tamamını anlatır, devamı altına bağlanır.
+            const grouped = !!step.group && plan.steps[i - 1]?.group === step.group;
+            const meta = [step.path, step.legM ? `${step.legM} m` : null, dev && step.fieldChecked === false ? tr('route.fieldPending') : null].filter(Boolean).join(' · ');
             return (
-              <View key={`${step.nodeId}-${i}`} style={[s.step, { borderTopColor: t.border }, i === 0 && { borderTopWidth: 0 }]} accessible accessibilityLabel={`${step.text} ${Math.round(step.atM)} m`}>
+              <View key={`${step.nodeId}-${i}`} style={[s.step, { borderTopColor: t.border }, (i === 0 || grouped) && { borderTopWidth: 0 }, grouped && s.grouped]} accessible accessibilityLabel={[step.text, meta, `${Math.round(step.atM)} m`].filter(Boolean).join('. ')}>
                 <View style={[s.stepIcon, { backgroundColor: active ? t.primary : t.soft }]}>
                   <TurnIcon turn={step.turn} arrived={i === plan.steps.length - 1} color={active ? t.onPrimary : t.text} size={20} />
                 </View>
-                <Text style={[type.body, { color: t.text, flex: 1 }]}>{step.text}</Text>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={[type.body, { color: t.text }]}>{step.text}</Text>
+                  {meta ? <Text style={[type.meta, { color: t.textMuted }]}>{meta}</Text> : null}
+                </View>
                 <Text style={[type.meta, { color: t.textMuted }]}>{Math.round(step.atM)} m</Text>
               </View>
             );
@@ -185,5 +216,6 @@ const makeStyles = (t: ThemeColors) =>
     fill: { height: 4, backgroundColor: t.primary },
     row: { flexDirection: 'row', gap: space.sm },
     step: { flexDirection: 'row', gap: space.md, alignItems: 'center', paddingVertical: space.md, borderTopWidth: StyleSheet.hairlineWidth },
+    grouped: { paddingTop: 0, paddingLeft: space.xl },
     stepIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   });

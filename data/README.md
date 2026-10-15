@@ -84,6 +84,8 @@ python -I data/build_nav_graph.py bursa-hanlar   # → apps/mobile/assets/pilot/
 
 **Lynch noktaları (`data/lynch/<alan>.json`):** grafik yalnızca kavşaklardan oluşmaz. Ekip, insanların **buluştuğu ya da indiği** yerleri (Heykel, tramvay durakları, Koza Parkı, Tophane…) ve eser dışı **yer işaretlerini** (saat kulesi, çarşı, müze binası) bu dosyada seçer. Her noktanın OSM kimliği, rolü (`gathering` / `landmark`), görsel–yapısal–anlamsal belirginlik puanı (1–3), varsa ortam sesi ve gerekçesi vardır. `verified: false` olanlar saha gözlemiyle doğrulanır. Grafik üretici noktaları en yakın yaya düğümüne bağlar; buluşma noktaları uygulamada başlangıç seçenekleri olur.
 
+**Altın rotalar (`data/lynch/routes/<id>.json`):** ekibin kafasındaki tarif, düğüm düğüm (`nodeIds`: OSM düğüm kimlikleri) ve manevra manevra yazılır: dönüş, girilen yol (`path`), bölge (`district`), anılan yer işareti, tehlike, ipucu türüne göre TR/EN metin (`generic` zorunlu; `sound` / `visual` / `tactile` yalnız sahada gözlenmişse). `status: verified` olan rota uygulamada motorun yerine geçer; `fieldChecked: false` manevralar saha gezisinde doğrulanır. Grafik değişmeden yalnız rotaları gömmek için: `python -I data/build_nav_graph.py --routes-only` (güzergâh grafikte kopuksa hata verir).
+
 **3. Doğrulayın:** `pnpm test` (`pilot-graph.test.ts`) her landmark çifti arasında rota olduğunu ve tekerlekli sandalye rotasının basamaksız olduğunu kontrol eder.
 
 **Değerlerin kaynağı**

@@ -60,10 +60,21 @@ export interface GuidanceStep {
   kind?: StepKind;
   /** Önümüzdeki segmentte dikkat gerektiren durum (ekranda simge, titreşimde uyarı). */
   hazard?: Hazard;
+  /**
+   * Birlikte sunulan manevralar (ör. art arda iki dönüş). Grubun ilk adımı tamamını anlatır;
+   * her manevra yine kendi `atM` değerinde ayrı tetiklenir (görsel ve haptik karşılık kaybolmaz).
+   */
+  group?: string;
+  /** Bu adımdan sonra yürünen yol (Lynch "path"): "Uzunçarşı Caddesi". */
+  path?: string;
+  /** Sonraki adıma kadar yürünecek mesafe (m). */
+  legM?: number;
+  /** Elle yazılmış tarifte manevra sahada yürünerek doğrulandı mı. */
+  fieldChecked?: boolean;
 }
 
 /** Profile göre ipucu tipi tercih sırası. */
-function cuePreference(p: UserProfile): CueType[] {
+export function cuePreference(p: UserProfile): CueType[] {
   // Duymayan kullanıcıya ses ipucu verilmez; görsel ve dokunsal ipuçları öne geçer.
   if (p.hearing === "deaf") return p.vision === "blind" ? ["tactile", "generic"] : ["visual", "tactile", "generic"];
   if (p.vision === "blind") return ["sound", "tactile", "generic", "visual"];
@@ -129,6 +140,19 @@ function nearestLandmark(nodes: Map<string, NavNode>, p: LngLat, maxM: number, l
   return best;
 }
 
+/** Rotanın `k`. düğümündeki dönüş (gelen ve giden kolun ilk 10 m'sinden); son düğümde düz. */
+export function turnAt(route: Route, k: number, nodes: Map<string, NavNode>, geometry?: RouteGeometry): Turn {
+  const ids = route.nodeIds;
+  const nextId = ids[k + 1];
+  if (k <= 0 || !nextId) return "straight";
+  const node = nodes.get(ids[k]!)!;
+  const legIn = geometry?.legs[k - 1];
+  const legOut = geometry?.legs[k];
+  const inBearing = legIn && legOut ? bearingDeg(pointAway([...legIn].reverse(), 10), node.location) : bearingDeg(nodes.get(ids[k - 1]!)!.location, node.location);
+  const outBearing = legIn && legOut ? bearingDeg(node.location, pointAway(legOut, 10)) : bearingDeg(node.location, nodes.get(nextId)!.location);
+  return classifyTurn(relativeBearing(inBearing, outBearing));
+}
+
 /** Göreli açıyı (+ sağ) yan bilgisine çevirir. */
 export function sideText(rel: number, lang: "tr" | "en"): string {
   const a = Math.abs(rel);
@@ -172,21 +196,7 @@ export function buildGuidance(
     const nextId = ids[k + 1];
     const node = nodes.get(id)!;
 
-    let turn: Turn = "straight";
-    if (nextId) {
-      let inBearing: number;
-      let outBearing: number;
-      const legIn = geometry?.legs[k - 1];
-      const legOut = geometry?.legs[k];
-      if (legIn && legOut) {
-        inBearing = bearingDeg(pointAway([...legIn].reverse(), 10), node.location);
-        outBearing = bearingDeg(node.location, pointAway(legOut, 10));
-      } else {
-        inBearing = bearingDeg(nodes.get(prevId)!.location, node.location);
-        outBearing = bearingDeg(node.location, nodes.get(nextId)!.location);
-      }
-      turn = classifyTurn(relativeBearing(inBearing, outBearing));
-    }
+    const turn = turnAt(route, k, nodes, geometry);
     const atM = geometry?.nodeAtM[k] ?? cumulative(k);
     const lmName = node.lynchType === "landmark" ? (node.name?.[lang] ?? node.name?.tr) : undefined;
     const landmark = lmName ? { name: lmName, location: node.location } : undefined;

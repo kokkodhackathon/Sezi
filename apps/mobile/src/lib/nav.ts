@@ -1,14 +1,19 @@
 import {
   buildDetour,
   buildGuidance,
+  CuratedRoute,
+  curatedGuidance,
   distanceM,
   findRoute,
+  matchCurated,
   NavSegment,
   routeGeometry,
+  routeOverlap,
   segmentAhead,
   withLeadIn,
   type GuidanceStep,
   type LngLat,
+  type LocalizedText,
   type NavNode,
   type Route,
   type RouteGeometry,
@@ -16,6 +21,7 @@ import {
 } from '@sezi/shared';
 
 import { useSyncExternalStore } from 'react';
+import { z } from 'zod';
 
 // Pilot grafiği uygulamaya gömülü: rota hesabı ve rehberlik internetsiz çalışır.
 import raw from '../../assets/pilot/bursa-hanlar-nav.json';
@@ -86,6 +92,25 @@ export function useNavVersion(): number {
 }
 export const navVersion = () => version;
 
+// ---------- Altın rotalar ----------
+// Ekibin elle yazdığı onaylı Lynch tarifleri (data/lynch/routes): başlangıç ve varış eşleşirse motorun yerine geçer.
+const curatedRoutes = z.object({ curatedRoutes: z.array(CuratedRoute).default([]) }).parse(raw).curatedRoutes;
+let preferCurated = true;
+
+/** Geliştirici karşılaştırması: altın rota yerine motorun tarifini göster (oturumlar yeniden açılır). */
+export function setPreferCurated(v: boolean) {
+  if (v === preferCurated) return;
+  preferCurated = v;
+  version++;
+  versionListeners.forEach((l) => l());
+}
+export const prefersCurated = () => preferCurated;
+
+/** Bu başlangıç ve varış için onaylı altın rota var mı (profil kısıtına bakmadan). */
+export function hasCuratedRoute(startId: string, endId: string): boolean {
+  return curatedRoutes.some((r) => r.status === 'verified' && r.nodeIds[0] === startId && r.nodeIds.at(-1) === endId);
+}
+
 /** Pilot alanın başlangıç seçenekleri (data/lynch'te seçilmiş buluşma/varış noktaları). */
 export const START_POINTS: StartPoint[] = (raw as unknown as { starts?: StartPoint[] }).starts ?? [];
 /** Varsayılan başlangıç: T1 Ulucami tramvay durağı (bölgeye en yaygın varış); yoksa listedeki ilk nokta. */
@@ -129,6 +154,10 @@ export interface PlannedRoute {
   stairSegments: number;
   /** Rota boyunca geçilen landmark'lar (başlangıç ve varış hariç). */
   passedLandmarks: PilotNode[];
+  /** Tarif ekibin onaylı altın rotasından geliyorsa kimliği ve onay bilgisi. */
+  curated?: { id: string; name: LocalizedText; verifiedBy?: string; verifiedAt?: string };
+  /** Altın rota kullanıldıysa motorun aynı yolculuk için ürettiği rota (fark raporu). */
+  engine?: { overlap: number; lengthM: number; turnSteps: number };
 }
 
 export interface PlanOptions {
@@ -148,10 +177,19 @@ export function planRoute(destSlug: string, profile: UserProfile, from: LngLat =
   const end = landmarkNodeForWork(destSlug);
   if (!end) return null;
   const start = nearestNode(from);
-  const route = findRoute(segmentsWith(opts.blocked), profile, start.id, end.id);
+  const segs = segmentsWith(opts.blocked);
+  // Altın rota profile uymuyorsa ya da yolu kapalıysa motor devralır.
+  const match = preferCurated ? matchCurated(curatedRoutes, segs === effective ? effMap : new Map(segs.map((s) => [s.id, s])), profile, start.id, end.id) : null;
+  const engineRoute = findRoute(segs, profile, start.id, end.id);
+  const route = match?.route ?? engineRoute;
   if (!route) return null;
   let geometry = routeGeometry(route, nodes, segMap);
-  let steps = buildGuidance(route, nodes, [], profile, geometry, segMap);
+  let steps = match ? curatedGuidance(match.def, route, nodes, profile, geometry) : buildGuidance(route, nodes, [], profile, geometry, segMap);
+  let engine: PlannedRoute['engine'];
+  if (match && engineRoute) {
+    const engineSteps = buildGuidance(engineRoute, nodes, [], profile, routeGeometry(engineRoute, nodes, segMap), segMap);
+    engine = { overlap: routeOverlap(route, engineRoute, segMap), lengthM: engineRoute.lengthM, turnSteps: engineSteps.filter((s) => s.kind === 'turn').length };
+  }
   if (opts.leadIn) ({ geometry, steps } = withLeadIn(geometry, steps, from));
   return {
     route,
@@ -161,6 +199,8 @@ export function planRoute(destSlug: string, profile: UserProfile, from: LngLat =
     end,
     stairSegments: route.segmentIds.filter((id) => (effMap.get(id)?.steps ?? 0) > 0).length,
     passedLandmarks: route.nodeIds.slice(1, -1).map((id) => nodes.get(id)!).filter((n) => n.lynchType === 'landmark'),
+    curated: match ? { id: match.def.id, name: match.def.name, verifiedBy: match.def.verifiedBy, verifiedAt: match.def.verifiedAt } : undefined,
+    engine,
   };
 }
 

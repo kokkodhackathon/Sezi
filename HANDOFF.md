@@ -4,15 +4,28 @@ Son güncelleme: 15 Ekim 2026 (Ediz + Claude oturumu). Yeni oturum önce [AGENTS
 
 ## Şu an neredeyiz
 
-- **Dal:** `main`, temiz. GitHub: `https://github.com/kokkodhackathon/Sezi` (remote `origin`). Son commit `2150913`.
-- **Testler:** `pnpm test` → 6 dosya, 39 test geçiyor. `pnpm typecheck` temiz.
+- **Dal:** `main`. GitHub: `https://github.com/kokkodhackathon/Sezi` (remote `origin`). Son commit: altın rota ("Rota: Heykel → Koza Hanı…"); push edilmedi.
+- **Testler:** `pnpm test` → 7 dosya, 47 test geçiyor. `pnpm typecheck` ve `expo lint` temiz.
+- **Bağımlılık:** `859a09a` (Zehra) `expo-build-properties` ekledi; yeni klonda Metro'dan önce `pnpm install` şart (yoksa "Failed to resolve plugin").
 - **Release APK hazır** ama telefona **kurulmadı** (telefon bağlı değildi):
   `apps/mobile/android/app/build/outputs/apk/release/app-release.apk` (arm64-v8a, ~72 MB, debug anahtarıyla imzalı, JS gömülü, Metro gerektirmez).
   ```bash
   adb -s BYWKBEQOZD8XB6NB install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
   ```
   Aynı paket adı ve imza: telefondaki dev build'in yerine geçer. Metro ile geliştirmeye dönülecekse dev build yeniden kurulur.
-- **Cihazda denenmemiş özellikler:** simülasyon başlangıç seçimi, Lynch noktaları, admin bağlantısı (bildirim → onay → rota), pull-to-refresh. İlk iş bunları telefonda gezmek.
+- **Telefonda (Xiaomi) artık dev build var** (13 Ekim APK, `install -r`); Metro ile çalışır. Altın rota cihazda görüldü (15 Ekim): 618 m, "Ekip tarifi" rozeti, ekip/motor seçimi, ilk adım sol ok, teyitler düz ok, merdiven grubunun ilk ve son adımı kendi yerinde. Görülmedi: adım listesi, 262 m'deki ara adım (kareler arasında kaldı; testte var), titreşim.
+- **Cihazda denenmemiş özellikler:** simülasyon başlangıç seçimi (Heykel dışı), Lynch noktaları, admin bağlantısı (bildirim → onay → rota), pull-to-refresh.
+
+## Okunabilir rota (ROADMAP #20) — plan ve durum
+
+Tespit: motor Lynch'e göre rota seçmiyor (yalnız mesafe), sokak adlarını (1220 segmentin 1009'unda var) hiç kullanmıyor, karar noktası ayırt etmiyor, district/edge yok. Zafer Plaza → Ulu Cami: 641 m'de 12 dönüş talimatı.
+
+- **Faz 0 ✅ Altın rota:** `data/lynch/routes/heykel-koza-hani.json` — Heykel → Atatürk Cd. → Koza Parkı → Ulu Cami → Kapalıçarşı → Uzunçarşı → Koza Hanı, 618 m, 12 manevra, `verified`. Onay masa başı (saha gezisi yok, ekip kararı): her yer işaretinin rotaya göre yanı geometriden, merdiven ve yol adları OSM etiketlerinden kontrol edildi. OSM'de merdiven yönü (incline) ve Koza Hanı kapısı (entrance) yok; metin bunları iddia etmez. Heykel düğümü grafikte kavşağın 6 m batısında: ilk manevra bu kısa erişimi ve köşedeki keskin sol dönüşü birlikte anlatır (yürüyüşün başında duyurulur). Dönüşler her zaman geometriden; `pilot-graph.test.ts` sessiz dönüş olmadığını ve ok/haptik/metin tutarlılığını denetler. Motor aynı yolculukta 497 m, 8 dönüş talimatı, ortak yol %54.
+- **Faz 1:** dönüş cezası (kenar durumlu Dijkstra; yalnız bağlantı ≥ 3 kavşakta), sokak değişim cezası.
+- **Faz 2:** karar noktası ve yol parçaları; zikzak sunumda birleşir, manevra atomik kalır.
+- **Faz 3:** yol dili ("X boyunca N m"), teyitte yol adı.
+- **Faz 4:** salience düğüme, `pathClass`, district çokgenleri ve edge (veri, `verified: false`).
+- **Faz 5–6:** mobil rötuş, kabul testleri. Her fazda ölçüt: ekip ↔ motor fark raporu (rota ekranında, geliştirici seçenekleri).
 
 ## Bu oturumda ne yapıldı (14–15 Ekim)
 

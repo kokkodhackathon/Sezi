@@ -88,6 +88,10 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 3. **Yönlendirme** (`shared/guidance.ts › buildGuidance`)
    - Dönüş açısı ve en yakın landmark'tan Lynch tarzı talimat üretir.
    - İpucu türü profile göre seçilir (`cuePreference`): duymayan kullanıcıya sesli ipucu verilmez.
+   - **Altın rota** (`shared/curated.ts`): ekibin elle yazdığı onaylı Lynch tarifi (`data/lynch/routes/*.json`, grafiğe `curatedRoutes` olarak gömülür).
+     Başlangıç ve varış eşleşirse ve her segment profile uyuyorsa (`matchCurated`) güzergâh ve metinler onunkidir; kapalı yol ya da profil kısıtında motor devralır.
+     Her manevra atomik bir adımdır (kendi `atM`, dönüş, haptik); `group` yalnızca sunumu birleştirir (art arda dönüşler tek cümlede anlatılır, her biri yine kendi yerinde tetiklenir).
+     Geliştirici seçeneklerinde rota ekranı ekip ↔ motor tarifini değiştirir ve ortak yol payını gösterir (`routeOverlap`): motor iyileştirmelerinin ölçütü.
 4. **Simülasyon** (`mobile/lib/simulation.ts`)
    - Sanal yürüyüşçü rota geometrisinde ilerler. Adım noktalarında TTS, haptik desen ve stereo panlanmış ton çalınır.
    - Duymayan kullanıcıda bunların yerine `CueFlash`: ekran kenarı parlaması ve titreşim.
