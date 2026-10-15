@@ -1,6 +1,6 @@
 # AGENTS.md — Sezi'de çalışan her oturum ve ajan için
 
-Bu dosyayı işe başlamadan önce okuyun. Ayrıntılar: [ARCHITECTURE.md](ARCHITECTURE.md) (sistem), [ROADMAP.md](ROADMAP.md) (ne yapılacak, kim yapıyor), [ENVANTER.md](ENVANTER.md) (veri kaynağı ve telif), [PRODUCT.md](PRODUCT.md) (ürün ilkeleri).
+Bu dosyayı işe başlamadan önce okuyun. Son durum ve sıradaki işler: [HANDOFF.md](HANDOFF.md). Ayrıntılar: [ARCHITECTURE.md](ARCHITECTURE.md) (sistem), [ROADMAP.md](ROADMAP.md) (ne yapılacak, kim yapıyor), [ENVANTER.md](ENVANTER.md) (veri kaynağı ve telif), [PRODUCT.md](PRODUCT.md) (ürün ilkeleri).
 
 ## Proje bir bakışta
 
@@ -41,6 +41,40 @@ cd apps/mobile && npx expo run:android          # native modül eklendiyse yenid
    - **Her ses ipucunun görsel ve haptik karşılığı olur** (işitme profili `deaf` / `hard`).
 6. **Yeni il veya eser için kod yazılmaz.** Veri eklenir: `cities` satırı, pipeline girdisi, admin paneli.
 7. **`impeccable` skill'i ve `.impeccable/` klasörü kullanılmaz** (kullanıcı kararı). Tasarım kuralları [DESIGN.md](DESIGN.md) dosyasında.
+
+## Geliştirme alışkanlıkları
+
+Ekibin ve önceki oturumların çalışma biçimi. Bunlara uyulmazsa süreç bozulur.
+
+**İletişim**
+- Kullanıcıya her zaman **Türkçe** yanıt verilir. Kısa, önce yapılacak iş, sonra açıklama.
+- Kullanıcı "devam et, sonra test ederim" dediyse soru sormadan ilerlenir; cihazda bakılamayanlar sonunda açıkça listelenir.
+- Geri dönüşü zor işlerde (silme, force push, migration) önce sorulur.
+
+**Commit ve push**
+- Yazar: `Ediz Keskin <edizkeskin@gmail.com>` (git config'te tanımlı). Yapay zekâ imzası yok (kural 1).
+- Mesaj Türkçe, tek satır başlık, işin özü: `Admin: rol sonradan verilince oturum anahtarı yenilenir`. Alan öneki kullanılabilir (`Admin:`, `Mobil:`, `ROADMAP:`).
+- Bir iş = bir commit. Typecheck ve test geçmeden commit atılmaz.
+- Push öncesi: `git log --format='%an %ae%n%B' origin/main..HEAD | grep -i -E 'co-authored|claude|generated'` boş dönmeli (CLAUDE.md dosya adı hariç). `git status` ile `.env`, `docs/`, `data/raw/` girmediği kontrol edilir.
+- Remote: `origin` = `https://github.com/kokkodhackathon/Sezi.git`, dal `main`.
+
+**Test ve doğrulama sırası**
+1. Motor değişikliği (`packages/shared`) önce testle: yeni davranış için Vitest testi yazılır. Testler grafiğin o anki şekline bağlanmaz (ör. merdiven testi kendi küçük grafiğini kurar), çünkü pilot grafik yeniden üretilebilir.
+2. `pnpm typecheck` ve `pnpm test` (39+ test). Mobil lint: `cd apps/mobile && npx expo lint`.
+3. Veritabanı değişikliğinden sonra MCP `get_advisors` (security). SQL/REST ile uçtan uca deneme yapılır, deneme satırları silinir.
+4. Ekran değiştiyse telefonda bakılır (`adb exec-out screencap -p > scratchpad/x.png`). Xiaomi, güvenlik ayarı açılmadan `adb input tap` kabul etmiyor; dokunma testini kullanıcı yapar.
+5. Admin paneli: `.claude/launch.json` içindeki "admin" ile tarayıcı panelinde açılır; konsol hataları okunur.
+
+**Kodlarken dikkat edilenler**
+- Metin önce `messages-app.ts`'e TR + EN; ekranda sabit metin yok.
+- Simülasyon ve geliştirici araçları `settings.devSimulation` arkasında; normal kullanıcı görmez.
+- Az yazı, önce fotoğraf (DESIGN.md "Çini"). Yeni renk değil token; gölge için `softShadow()`.
+- Rota grafiği değişince: `python -I data/build_nav_graph.py` → `assets/pilot/*.json` yeniden üretilir → `pnpm test` (pilot-graph testleri) → uygulamada başlangıç noktaları (`START_POINTS`) kontrol.
+- Yeni Lynch noktası kod değil veridir: `data/lynch/<alan>.json` (OSM kimliği, rol, salience, `why`, `verified: false`).
+- Sunucu yazmaları security-definer RPC ile değil **RLS + trigger** ile yapılır (advisor uyarısı vermemesi için).
+- Uygulama sunucudan gelen veriyi kv-store'da önbelleğe alır; internet yokken son bilinen hâlle çalışmalı.
+- Git Bash'te kaçış karakterleri (`\n`, `\u…`, kesme işareti) heredoc'ta bozulabiliyor: çok satırlı içerik Write/Edit aracıyla ya da script dosyasıyla yazılır.
+- Uzun işler (Gradle build, geocoder, Overpass) arka planda çalıştırılır, çıktı log dosyasından okunur.
 
 ## Mobil uygulama kuralları (apps/mobile)
 
@@ -100,7 +134,13 @@ cd apps/mobile && npx expo run:android          # native modül eklendiyse yenid
   `exp+sezi://expo-development-client/?url=http%3A%2F%2F127.0.0.1%3A8081`
 - **Git Bash'te `adb shell` yolları** bozulur: `MSYS_NO_PATHCONV=1` verin.
 - **Emülatör depolaması dolu** (%93). Kurulumdan önce `adb uninstall com.lahmacun.sezi` çalıştırın.
-- **Hazır APK:** `apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk` (13 Ekim, react-native-svg dahil).
+- **Hazır APK'lar:**
+  - Dev build (Metro ister): `apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk`.
+  - Release (bağımsız, telefona normal uygulama gibi kurulur): `.../apk/release/app-release.apk`. Üretimi (~11 dk, yalnız arm64):
+    ```bash
+    cd apps/mobile/android && ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a
+    ```
+    Debug anahtarıyla imzalı (Play Store için ayrı anahtar gerekir). Dev build ile aynı paket adını taşır, birbirinin yerine kurulur.
 - **Native modül eklenirse** (`npx expo install …`) yeniden `expo run:android` gerekir. Eski build'de "Can't find ViewManager" hatası alırsınız.
 
 ## Görev alırken
