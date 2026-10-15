@@ -2,6 +2,8 @@ import Storage from 'expo-sqlite/kv-store';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { z } from 'zod';
 
+import { setPreferCurated } from './nav';
+
 /** v2: birincil tema açık tema oldu; eski kayıttan yalnızca konuşma hızı ve il taşınır. */
 const KEY = 'sezi.settings.v2';
 const LEGACY_KEY = 'sezi.settings.v1';
@@ -51,6 +53,8 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   const [visited, setVisited] = useState<string[]>(() => loadJson(VISITED_KEY, z.array(z.string()), []));
 
   const update = useCallback((patch: Partial<Settings>) => {
+    // Ekip/Motor karşılaştırması geliştirici aracıdır: mod kapanınca normal kullanıcı yine ekip tarifini alır.
+    if (patch.devSimulation === false) setPreferCurated(true);
     setSettings((prev) => {
       const next = SettingsSchema.parse({ ...prev, ...patch });
       Storage.setItemSync(KEY, JSON.stringify(next));
