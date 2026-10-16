@@ -165,7 +165,8 @@ export default function Navigate() {
         </ScrollView>
       </View>
 
-      {popupPoint && state.phase !== 'arrived' ? (
+      {/* Varış ekranında eserin bilgisi kartta; gezintinin son noktası ise pop-up'ta açılır. */}
+      {popupPoint && (state.phase !== 'arrived' || !state.arrived) ? (
         <PointPopup
           point={popupPoint}
           order={order.get(popupPoint.id)}
@@ -450,7 +451,7 @@ function ArrivalPanel({ state, points, canHear, t }: { state: NavState; points: 
 
   if (!slug) {
     // Hedefsiz gezinti bitti: görülen noktalar.
-    const seen = points.filter((p) => state.fired.includes(p.id));
+    const seen = state.fired.map((id) => points.find((p) => p.id === id)).filter((p): p is NavPoint => !!p);
     return (
       <>
         <Text style={[type.title, { color: t.text }]} accessibilityRole="header">

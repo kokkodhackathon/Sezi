@@ -223,8 +223,8 @@ export interface PlannedRoute {
   stairSegments: number;
   /** Rota boyunca geçilen yer işaretleri (başlangıç ve varış hariç). */
   passedLandmarks: PilotNode[];
-  /** Rotanın uğradığı anlatım/varış noktaları (rotadaki sırayla) ve uğramanın getirdiği uzama (m). */
-  via: { pointIds: string[]; extraM: number };
+  /** Rotanın uğradığı anlatım/varış noktaları (rotadaki sırayla), uğramanın getirdiği uzama (m) ve her noktanın bağlandığı düğümün rota başından uzaklığı (`atM`, m). */
+  via: { pointIds: string[]; extraM: number; atM: number[] };
   /** Hedef eserin varış bilgisi (admin panelinde girildiyse). */
   arrival?: NavPoint;
 }
@@ -344,7 +344,7 @@ function finish(
   profile: UserProfile,
   from: LngLat,
   leadIn: boolean | undefined,
-  via: PlannedRoute['via'],
+  via: Omit<PlannedRoute['via'], 'atM'>,
   arrival: NavPoint | undefined,
 ): PlannedRoute {
   let geometry = routeGeometry(route, routeNodes, baseSegMap);
@@ -359,7 +359,8 @@ function finish(
     end: routeNodes.get(route.nodeIds.at(-1)!)!,
     stairSegments: route.segmentIds.filter((id) => (effMap.get(id)?.steps ?? 0) > 0).length,
     passedLandmarks: [...new Set(route.nodeIds.slice(1, -1))].map((id) => routeNodes.get(id)!).filter((n) => n.lynchType === 'landmark'),
-    via,
+    // Uğrama noktasının rota üzerindeki yeri: yürüyüş oraya varınca nokta açılır (yarıçapın dışında kalsa da).
+    via: { ...via, atM: via.pointIds.map((id) => geometry.nodeAtM[Math.max(0, route.nodeIds.indexOf(viaNode.get(id)!))]!) },
     arrival,
   };
 }

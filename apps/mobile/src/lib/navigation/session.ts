@@ -459,6 +459,13 @@ function onFix(fix: LocationFix, truthAt: LngLat, walkerAtEnd: boolean) {
     cueCount++;
   }
   emit({ fix, position, heading, sounds, track: { ...track, alongM: distance }, distance, stepIndex: index, cueCount });
+  // Rotanın uğradığı noktaya varıldı: yarıçapın dışında kalsa da (düğüm noktadan biraz uzak olabilir) açılır.
+  const reached = plan.via.pointIds.filter((id, i) => !state.fired.includes(id) && plan.via.atM[i]! <= distance + 3);
+  if (reached.length) emit({ fired: [...state.fired, ...reached] });
+  for (const id of reached) {
+    if (state.popup) emit({ queue: [...state.queue, id] });
+    else present(id);
+  }
   if (index === last) arrive();
 }
 
