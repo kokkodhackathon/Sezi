@@ -10,6 +10,8 @@ interface Utterance {
   text: string;
   language: string;
   rate: number;
+  /** Konuşma sonuna kadar okununca (kesilmeden) çağrılır. */
+  onDone?: () => void;
 }
 
 let speaking = false;
@@ -22,6 +24,7 @@ function speakNow(u: Utterance) {
   speaking = true;
   const done = () => {
     if (id !== token) return;
+    u.onDone?.();
     speaking = false;
     const next = pending;
     pending = null;
@@ -30,8 +33,8 @@ function speakNow(u: Utterance) {
   Speech.speak(u.text, { language: u.language, rate: u.rate, onDone: done, onStopped: done, onError: done });
 }
 
-export function say(text: string, opts: { lang: 'tr' | 'en'; rate: number; interrupt?: boolean }) {
-  const u: Utterance = { text, language: opts.lang === 'tr' ? 'tr-TR' : 'en-US', rate: opts.rate };
+export function say(text: string, opts: { lang: 'tr' | 'en'; rate: number; interrupt?: boolean; onDone?: () => void }) {
+  const u: Utterance = { text, language: opts.lang === 'tr' ? 'tr-TR' : 'en-US', rate: opts.rate, onDone: opts.onDone };
   if (opts.interrupt) {
     pending = null;
     token++;

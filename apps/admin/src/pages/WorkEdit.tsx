@@ -4,15 +4,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 
 import { LocationMap } from '../components/LocationMap';
-import { CONDITION_LABEL, mediaUrl, STATUS_LABEL, tr, useLookups, useWork, type Condition, type MediaRow, type Precision, type Status, type WorkRecord } from '../lib/data';
+import { CITY_CENTER, CONDITION_LABEL, localized, mediaUrl, STATUS_LABEL, tr, useLookups, useWork, type Condition, type MediaRow, type Precision, type Status, type WorkRecord } from '../lib/data';
 import { supabase } from '../lib/supabase';
-
-/** İl merkezleri: konumu olmayan eser için harita buradan açılır. */
-const CITY_CENTER: Record<string, [number, number]> = {
-  bursa: [29.0613, 40.1842],
-  konya: [32.4932, 37.8714],
-  hatay: [36.1612, 36.2021],
-};
 
 type Lang = 'tr' | 'en';
 type TextKey = 'name' | 'period' | 'history' | 'architecture' | 'address' | 'condition_note';
@@ -35,8 +28,6 @@ interface Form {
 }
 
 const text = (t: LocalizedText | null | undefined) => ({ tr: t?.tr ?? '', en: t?.en ?? '' });
-/** Boş metin veritabanında null olur; yalnızca İngilizcesi olan metin kabul edilmez (TR zorunlu). */
-const localized = (v: { tr: string; en: string }): LocalizedText | null => (v.tr.trim() ? { tr: v.tr.trim(), ...(v.en.trim() ? { en: v.en.trim() } : {}) } : null);
 
 function toForm(w: WorkRecord, lng: number | null, lat: number | null): Form {
   return {

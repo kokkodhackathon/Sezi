@@ -49,7 +49,7 @@ Son güncelleme: 15 Ekim 2026. Görevi bitiren, durum sütununu günceller. Anl�
 | 7 | P0 | Uygulama ikonu, açılış ekranı, ekran tasarımlarının gözden geçirilmesi | İnci | `app.json` ikon ve splash; tasarım notları uygulanmış | ⏳ Sade tasarım dili mobil ekranlara uygulandı; DESIGN.md yazıldı. Android emülatöründe temel akış kontrol edildi; gerçek telefon, ikon/splash ve kapsamlı erişilebilirlik kontrolü bekliyor |
 | 8 | P0 | Demo senaryosu ve provası; yedek video | Hepsi | Uçak modunda baştan sona 5 dakikalık akış | ⬜ |
 | 9 | P1 | Erişilebilirlik bildirimi gönderimi: oturum kalıcı, kuyruktaki bildirim `a11y_reports` tablosuna gider, admin onaylayınca segment `blocked` / ağırlık güncellenir | Ediz | Merdiven bildirimi onaylanınca rota o segmentten kaçınır (test) | ✅ Hesapsız gönderim (RLS), admin onayı → segment_overrides → uygulama rotası |
-| 10 | P1 | Gerçek GPS modu: konuma göre başlangıç, canlı takip, pusula ile panlama | Eda | Sahada konum en yakın kenara eşleniyor; sapmada uyarı | ⬜ |
+| 10 | P1 | Gerçek GPS modu: konuma göre başlangıç, canlı takip, pusula ile panlama | Eda | Sahada konum en yakın kenara eşleniyor; sapmada uyarı | ⏳ Yürüyüş ekranında (#21) GPS takibi, konumdan rota ve sapmada yeniden rota var; sahada denenmedi |
 | 11 | P1 | Sezi'ye Sor (RAG): `LLMProvider` arayüzü, `doc_chunks` embedding'leri, alıntılı cevap, kaynak yoksa "bilmiyorum" | Ediz | 10 soruluk test seti: kaynaklıya alıntılı cevap, kaynaksıza red | ⏸ sağlayıcı kararı |
 | 12 | P1 | TalkBack denetimi: onboarding → Keşfet → eser → tur → rehberlik | Eda + İnci | Ekrana bakmadan tamamlanıyor; bulgular düzeltilmiş | ⬜ |
 | 13 | P1 | CI (GitHub Actions): `pnpm typecheck` + `pnpm test` her push'ta; pipeline için pytest (`type_of`, `tr_title`) | Ediz | Kırmızı/yeşil rozet; tür sınıflandırma testleri | ⬜ |
@@ -60,6 +60,7 @@ Son güncelleme: 15 Ekim 2026. Görevi bitiren, durum sütununu günceller. Anl�
 | 18 | P2 | Maestro mobil E2E, Playwright admin E2E | Eda | Ana akışlar CI'da | ⬜ |
 | 19 | P2 | iOS build | Eda | Simülatörde açılıyor | ⬜ |
 | 20 | P0 | Okunabilir rota: önce altın rota (ekibin elle yazdığı onaylı Lynch tarifi) hedef olarak; sonra dönüş cezası, yalnız karar noktalarında talimat, path/district/edge dili; en son Menzilname şeridi ve rota provası | Ediz | Zafer Plaza → Ulu Cami rotasında ilk 300 m'de en fazla 2 dönüş talimatı; motorun Heykel → Koza Hanı tarifi altın rotaya yaklaşıyor (ortak yol payı, manevra eşleşmesi); testle korunur | ⏳ Faz 0 bitti: altın rota Heykel → Koza Hanı (618 m, 12 manevra) uygulamada; motorla ortak yol %54. Sıradaki: Faz 1 dönüş cezası |
+| 21 | P0 | Yürüyüş modu: admin panelinde anlatım noktaları (metin TR/EN, ses kaydı, yarıçap); yaklaşınca pop-up + ses (otomatik / dokununca, kayıt yoksa TTS); hedef seçilirse rota noktalara uğrar (≤ %25, ≤ +300 m) | Ediz | Admin noktayı ekler, uygulama yarıçapa girince açar; işitme `deaf`'te metin + titreşim; internetsiz son bilinen noktalar ve indirilmiş sesler | ⏳ Emülatörde doğrulandı (16 Ekim): admin ekle/ses değiştir/sil, MP3 çevrimiçi ve uçak modunda, dokununca oynat, `deaf`, simülasyonla uğrayan rota ve varış. Sahada gerçek GPS ve Xiaomi'de dokunma testi bekliyor |
 
 Durum işaretleri: ⬜ başlamadı · ⏳ sürüyor · ⏸ bekliyor · ✅ bitti
 
@@ -79,6 +80,8 @@ Durum işaretleri: ⬜ başlamadı · ⏳ sürüyor · ⏸ bekliyor · ✅ bitti
 - **Final günü internet olmaz.** Görev #4 (çevrimdışı önbellek) P0.
 
 ## Biten işler (özet)
+
+- **16 Ekim (yürüyüş modu):** `story_points` tablosu + `story_points_view` (RLS); admin "Anlatım noktaları" editörü (harita, yarıçap, TR/EN ses yükleme); mobil "Yürüyüşü başlat" (GPS ya da simülasyon, ekran açık kalır), anlatım pop-up'ı, ses ayarı; uğrayan rota motoru (`shared/via.ts`).
 
 - **15 Ekim:** Lynch buluşma/yer işareti noktaları ve 650 m grafik (897 düğüm, 8 başlangıç); simülasyonda başlangıç seçimi; release APK (arm64); GitHub'a ilk push. Altın rota: Heykel → Koza Hanı onaylı ekip tarifi (`data/lynch/routes`), atomik manevra + gruplu sunum, geliştirici seçeneklerinde ekip ↔ motor karşılaştırması.
 

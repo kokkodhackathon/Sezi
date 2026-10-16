@@ -10,6 +10,7 @@ import { useSeziTheme , useIsDark } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
 import { ProfileProvider, useProfile } from '@/lib/profile';
 import { SettingsProvider } from '@/lib/settings';
+import { useStorySync } from '@/lib/story';
 import { useServerSync } from '@/lib/sync';
 
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
@@ -43,6 +44,7 @@ export default function RootLayout() {
 
 function AppStack() {
   useServerSync();
+  useStorySync();
   const reducedMotion = useReducedMotion();
   const dark = useIsDark();
   const t = useSeziTheme();
@@ -83,6 +85,7 @@ function AppStack() {
           <Stack.Screen name="settings" options={{ title: tr('settings.title') }} />
           <Stack.Screen name="about" options={{ title: tr('about.title') }} />
           <Stack.Screen name="lab" options={{ title: tr('settings.device') }} />
+          <Stack.Screen name="walk" options={{ title: tr('walk.title'), headerBackTitle: tr('onb.back') }} />
         </Stack.Protected>
         <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: profile !== null }} />
       </Stack>

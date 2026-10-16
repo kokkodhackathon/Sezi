@@ -95,7 +95,12 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 4. **Simülasyon** (`mobile/lib/simulation.ts`)
    - Sanal yürüyüşçü rota geometrisinde ilerler. Adım noktalarında TTS, haptik desen ve stereo panlanmış ton çalınır.
    - Duymayan kullanıcıda bunların yerine `CueFlash`: ekran kenarı parlaması ve titreşim.
-5. **Başlangıç noktası:** T1 Ulucami tramvay durağı (`nav.ts › DEFAULT_START`). Gerçek GPS modu henüz yok.
+5. **Başlangıç noktası:** T1 Ulucami tramvay durağı (`nav.ts › DEFAULT_START`). Yürüyüş ekranında başlangıç gerçek GPS konumudur.
+6. **Yürüyüş ve anlatım noktaları** (`mobile/lib/walk/session.ts`)
+   - `story_points` (admin girer: metin TR/EN, ses kaydı TR/EN, yarıçap) → `story_points_view` → `lib/story.ts` (kv önbellek, sesler `Paths.cache/story-audio`'ya iner).
+   - Konum kaynağı GPS (`expo-location`, ön planda; ekran `expo-keep-awake` ile açık) ya da simülasyon modunda sanal yürüyüşçü. Yarıçapa girilen nokta yürüyüş başına bir kez açılır (`shared/story.ts › dueStoryPoints`, doğruluk > 50 m ise tetiklemez).
+   - Ses sırası (`storyVoice`): kendi dilinde kayıt → kendi dilinde metin (TTS) → TR kayıt → TR metin. Kayıt çalarken talimatlar bekler, bitince okunur.
+   - Hedef seçilirse (yalnız pilot grafik) `shared/via.ts › routeVia` rotayı yol üstündeki noktalara uğratır: açgözlü ekleme, en çok %25 ve +300 m. Uğrayan rotada altın rota kullanılmaz.
 
 ## Mobil ekranlar
 
@@ -110,6 +115,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 | `city/[slug]` | İl: envanter istatistikleri, kitaplar, sergiler, ilçeler | `cities`, `sources`, `exhibitions` |
 | `route/[slug]` | Rota özeti, profil açıklaması, simülasyon | gömülü grafik |
 | `guide/[slug]` | Tam ekran canlı rehberlik (koyu tema) | gömülü grafik |
+| `walk` | Yürüyüş: canlı konum, anlatım noktası pop-up'ı ve sesi, isteğe bağlı hedefe uğrayan rota | `story_points_view`, gömülü grafik |
 | `exhibitions` | Envanter fotoğraf sergileri | `exhibitions` |
 | `search` | Ad, tür, ilçe ve il araması | `works_view` |
 | `report/new`, `reports` | Erişilebilirlik bildirimi: cihazda kuyruk → sunucu (hesapsız, RLS); onaylanınca "onaylandı" | `a11y_reports`, `segment_overrides` |

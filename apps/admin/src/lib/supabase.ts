@@ -13,3 +13,4 @@ export const supabase = createClient(url, key, {
 });
 
 export const MEDIA_BASE = `${url}/storage/v1/object/public/media/`;
+export const AUDIO_BASE = `${url}/storage/v1/object/public/audio/`;

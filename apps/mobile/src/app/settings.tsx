@@ -66,6 +66,18 @@ export default function SettingsScreen() {
           }}
         />
       </View>
+      <View style={{ gap: space.sm }}>
+        <Text style={[type.itemTitle, { color: t.text, fontSize: 16 }]}>{tr('settings.storyPlayback')}</Text>
+        <Segmented
+          label={tr('settings.storyPlayback')}
+          value={settings.storyPlayback}
+          onChange={(v) => update({ storyPlayback: v })}
+          options={[
+            { value: 'auto', label: tr('settings.storyAuto') },
+            { value: 'tap', label: tr('settings.storyTap') },
+          ]}
+        />
+      </View>
 
       <Card padded={false}>
         <ListRow first title={tr('profile.edit')} onPress={() => router.push('/onboarding')} />

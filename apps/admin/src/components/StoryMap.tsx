@@ -1,0 +1,118 @@
+import * as maplibregl from 'maplibre-gl';
+import { useEffect, useRef } from 'react';
+
+import type { StoryRow } from '../lib/data';
+
+const STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+type Pt = [number, number];
+
+/** Merkez ve yarıçaptan (m) 48 köşeli daire poligonu. */
+function circlePolygon(center: Pt, radiusM: number): GeoJSON.Feature<GeoJSON.Polygon> {
+  const dLat = radiusM / 110540;
+  const dLng = radiusM / (111320 * Math.cos((center[1] * Math.PI) / 180));
+  const ring: Pt[] = [];
+  for (let i = 0; i <= 48; i++) {
+    const a = (i / 48) * 2 * Math.PI;
+    ring.push([center[0] + dLng * Math.cos(a), center[1] + dLat * Math.sin(a)]);
+  }
+  return { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } };
+}
+
+const round = (p: { lng: number; lat: number }): Pt => [Number(p.lng.toFixed(7)), Number(p.lat.toFixed(7))];
+
+interface Props {
+  points: StoryRow[];
+  selectedId: string | null;
+  draft: Pt | null;
+  draftRadius: number;
+  center: Pt;
+  onSelect: (id: string) => void;
+  onPick: (p: Pt) => void;
+}
+
+/** Anlatım noktaları haritası: noktaya tık seçer, boşluğa tık taslak konumu belirler; daire tetikleme yarıçapıdır. */
+export function StoryMap({ points, selectedId, draft, draftRadius, center, onSelect, onPick }: Props) {
+  const box = useRef<HTMLDivElement>(null);
+  const map = useRef<maplibregl.Map | null>(null);
+  const marker = useRef<maplibregl.Marker | null>(null);
+  const ready = useRef(false);
+  const select = useRef(onSelect);
+  const pick = useRef(onPick);
+  select.current = onSelect;
+  pick.current = onPick;
+  const latest = useRef({ points, selectedId, draft, draftRadius });
+  latest.current = { points, selectedId, draft, draftRadius };
+
+  const sync = () => {
+    const m = map.current;
+    if (!m || !ready.current) return;
+    const { points: ps, selectedId: sel, draft: d, draftRadius: r } = latest.current;
+    (m.getSource('points') as maplibregl.GeoJSONSource).setData({
+      type: 'FeatureCollection',
+      features: ps.map((p) => ({ type: 'Feature', properties: { id: p.id, selected: p.id === sel }, geometry: { type: 'Point', coordinates: [p.lng, p.lat] } })),
+    });
+    const circles = ps.filter((p) => p.id !== sel).map((p) => circlePolygon([p.lng, p.lat], p.radius_m));
+    if (d) circles.push(circlePolygon(d, r));
+    (m.getSource('radius') as maplibregl.GeoJSONSource).setData({ type: 'FeatureCollection', features: circles });
+  };
+
+  useEffect(() => {
+    if (!box.current) return;
+    const m = new maplibregl.Map({ container: box.current, style: STYLE, center, zoom: 15 });
+    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    m.on('load', () => {
+      m.addSource('radius', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      m.addSource('points', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      m.addLayer({ id: 'radius-fill', type: 'fill', source: 'radius', paint: { 'fill-color': '#B8321F', 'fill-opacity': 0.15 } });
+      m.addLayer({
+        id: 'points-circle',
+        type: 'circle',
+        source: 'points',
+        paint: { 'circle-radius': 7, 'circle-color': ['case', ['get', 'selected'], '#B8321F', '#0B6E72'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 },
+      });
+      ready.current = true;
+      sync();
+    });
+    m.on('click', (e: maplibregl.MapMouseEvent) => {
+      // Stil henüz yüklenmediyse (yavaş ağ) noktalar çizilmemiştir: tık doğrudan konum seçer.
+      const hit = ready.current ? m.queryRenderedFeatures(e.point, { layers: ['points-circle'] })[0] : undefined;
+      const id = hit?.properties?.id as string | undefined;
+      if (id) select.current(id);
+      else pick.current(round(e.lngLat));
+    });
+    map.current = m;
+    return () => {
+      m.remove();
+      map.current = null;
+      marker.current = null;
+      ready.current = false;
+    };
+    // Harita bir kez kurulur; veri değişimi aşağıdaki etkilerde işlenir.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(sync, [points, selectedId, draft, draftRadius]);
+
+  // Merkez (il) değişince ya da nokta seçilince oraya git.
+  useEffect(() => {
+    map.current?.jumpTo({ center });
+  }, [center[0], center[1]]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const m = map.current;
+    if (!m) return;
+    if (!draft) {
+      marker.current?.remove();
+      marker.current = null;
+      return;
+    }
+    if (!marker.current) {
+      marker.current = new maplibregl.Marker({ color: '#B8321F', draggable: true }).setLngLat(draft).addTo(m);
+      marker.current.on('dragend', () => pick.current(round(marker.current!.getLngLat())));
+    } else {
+      marker.current.setLngLat(draft);
+    }
+  }, [draft]);
+
+  return <div ref={box} className="map" style={{ height: 520 }} role="application" aria-label="Anlatım noktaları haritası: noktaya tıklayarak seçin, boş yere tıklayarak konum belirleyin" />;
+}

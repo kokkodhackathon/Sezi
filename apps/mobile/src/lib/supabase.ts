@@ -1,7 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
-const key = process.env.EXPO_PUBLIC_SUPABASE_KEY ?? process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+// Boş bırakılan publishable satırı (.env.example kopyası) anon anahtarına düşer: `??` değil `||`.
+const key = process.env.EXPO_PUBLIC_SUPABASE_KEY || process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!url || !key) {
   throw new Error('EXPO_PUBLIC_SUPABASE_URL ve EXPO_PUBLIC_SUPABASE_KEY apps/mobile/.env içinde tanımlı olmalı');

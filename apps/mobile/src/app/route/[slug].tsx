@@ -100,6 +100,7 @@ export default function RouteScreen() {
           </Text>
           <Text style={[type.meta, { color: t.textMuted }]}>{summary}</Text>
         </View>
+        <Button variant="outline" label={tr('walk.fromRoute')} hint={tr('walk.startHint')} onPress={() => router.push({ pathname: '/walk', params: { dest: slug } })} />
         {plan.curated ? (
           <View style={{ gap: space.xs, alignItems: 'flex-start' }}>
             <Badge label={tr('route.curated')} tone="primary" />

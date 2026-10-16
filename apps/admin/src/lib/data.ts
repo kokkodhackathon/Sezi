@@ -162,6 +162,47 @@ export const STATUS_LABEL: Record<Status, string> = { draft: 'Taslak', verified:
 export const PRECISION_LABEL: Record<Precision, string> = { exact: 'Kesin', approximate: 'Yaklaşık', unknown: 'Yok' };
 export const CONDITION_LABEL: Record<Condition, string> = { intact: 'Ayakta', restored: 'Restore edildi', damaged: 'Hasarlı', destroyed: 'Yıkıldı', unknown: 'Bilinmiyor' };
 
+/** İl merkezleri: konumu olmayan eser/nokta için harita buradan açılır. */
+export const CITY_CENTER: Record<string, [number, number]> = {
+  bursa: [29.0613, 40.1842],
+  konya: [32.4932, 37.8714],
+  hatay: [36.1612, 36.2021],
+};
+
+/** Boş metin veritabanında null olur; yalnızca İngilizcesi olan metin kabul edilmez (TR zorunlu). */
+export const localized = (v: { tr: string; en: string }): LocalizedText | null => (v.tr.trim() ? { tr: v.tr.trim(), ...(v.en.trim() ? { en: v.en.trim() } : {}) } : null);
+
+// ---------- Anlatım noktaları ----------
+
+/** story_points_view satırı (security_invoker; admin taslakları da görür). */
+export interface StoryRow {
+  id: string;
+  city_id: string;
+  city_slug: string;
+  title: LocalizedText;
+  body: LocalizedText | null;
+  radius_m: number;
+  source_note: string | null;
+  status: Status;
+  lng: number;
+  lat: number;
+  audio_tr_id: string | null;
+  audio_tr: string | null;
+  audio_en_id: string | null;
+  audio_en: string | null;
+}
+
+export function useStoryPoints(citySlug: string) {
+  return useQuery({
+    queryKey: ['story_points', citySlug],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('story_points_view').select('*').eq('city_slug', citySlug).order('updated_at', { ascending: false });
+      if (error) throw error;
+      return data as StoryRow[];
+    },
+  });
+}
+
 // ---------- Fotoğraf kutusu ----------
 
 export interface InboxPhoto {

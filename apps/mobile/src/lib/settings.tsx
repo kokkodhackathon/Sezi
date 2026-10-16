@@ -19,6 +19,8 @@ const SettingsSchema = z.object({
   devSimulation: z.boolean().default(false),
   /** Simülasyonda rotanın başlayacağı buluşma/varış noktası (nav.ts › START_POINTS). */
   simStart: z.string().default('t1-ulucami'),
+  /** Anlatım noktası sesi: otomatik ya da dokununca. */
+  storyPlayback: z.enum(['auto', 'tap']).default('auto'),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 

@@ -9,6 +9,7 @@ import {
   NavSegment,
   routeGeometry,
   routeOverlap,
+  routeVia,
   segmentAhead,
   withLeadIn,
   type GuidanceStep,
@@ -158,6 +159,8 @@ export interface PlannedRoute {
   curated?: { id: string; name: LocalizedText; verifiedBy?: string; verifiedAt?: string };
   /** Altın rota kullanıldıysa motorun aynı yolculuk için ürettiği rota (fark raporu). */
   engine?: { overlap: number; lengthM: number; turnSteps: number };
+  /** Rota anlatım noktalarından geçiyorsa: geçilen nokta kimlikleri ve uzama (m). */
+  via?: { storyIds: string[]; extraM: number };
 }
 
 export interface PlanOptions {
@@ -165,7 +168,21 @@ export interface PlanOptions {
   blocked?: ReadonlySet<string>;
   /** Rotayı tam bu noktadan başlat: noktadan en yakın düğüme bağlantı eklenir (yeniden rota). */
   leadIn?: boolean;
+  /** Yol üstünde uğranabilecek anlatım noktaları. */
+  via?: readonly { id: string; location: LngLat }[];
 }
+
+/** Anlatım noktasının grafiğe bağlanacağı en uzak düğüm (m). */
+const STORY_SNAP_M = 40;
+/** Konum en yakın düğüme bundan yakınsa pilot alanın içinde sayılır (m). */
+export const PILOT_REACH_M = 150;
+
+/** Konum pilot grafiğin kapsadığı alanda mı (rota yalnızca burada çizilir). */
+export function inPilotArea(p: LngLat): boolean {
+  return distanceM(p, nearestNode(p).location) <= PILOT_REACH_M;
+}
+
+const nodeLocations = new Map([...nodes.values()].map((n) => [n.id, n.location]));
 
 /** Kapalı segmentler işaretlenmiş graf (onaylı bildirimler zaten uygulanmış). */
 function segmentsWith(blocked?: ReadonlySet<string>): NavSegment[] {
@@ -178,9 +195,23 @@ export function planRoute(destSlug: string, profile: UserProfile, from: LngLat =
   if (!end) return null;
   const start = nearestNode(from);
   const segs = segmentsWith(opts.blocked);
-  // Altın rota profile uymuyorsa ya da yolu kapalıysa motor devralır.
-  const match = preferCurated ? matchCurated(curatedRoutes, segs === effective ? effMap : new Map(segs.map((s) => [s.id, s])), profile, start.id, end.id) : null;
-  const engineRoute = findRoute(segs, profile, start.id, end.id);
+  // Uğrayan rota: yol üstündeki anlatım noktaları en yakın düğümlerine bağlanır, rota sınırlı bütçeyle uzatılır.
+  let viaRoute: { route: Route; storyIds: string[]; extraM: number } | null = null;
+  if (opts.via?.length) {
+    const nodeToStories = new Map<string, string[]>();
+    for (const p of opts.via) {
+      const n = nearestNode(p.location);
+      if (n.id === start.id || n.id === end.id || distanceM(n.location, p.location) > STORY_SNAP_M) continue;
+      nodeToStories.set(n.id, [...(nodeToStories.get(n.id) ?? []), p.id]);
+    }
+    const v = nodeToStories.size > 0 ? routeVia(segs, profile, start.id, end.id, [...nodeToStories.keys()], nodeLocations) : null;
+    if (v && v.via.length > 0) {
+      viaRoute = { route: v.route, storyIds: v.via.flatMap((id) => nodeToStories.get(id)!), extraM: Math.round(v.route.lengthM - v.baseLengthM) };
+    }
+  }
+  // Altın rota profile uymuyorsa ya da yolu kapalıysa motor devralır. Uğrayan rotada altın rota kullanılmaz.
+  const match = preferCurated && !viaRoute ? matchCurated(curatedRoutes, segs === effective ? effMap : new Map(segs.map((s) => [s.id, s])), profile, start.id, end.id) : null;
+  const engineRoute = viaRoute ? viaRoute.route : findRoute(segs, profile, start.id, end.id);
   const route = match?.route ?? engineRoute;
   if (!route) return null;
   let geometry = routeGeometry(route, nodes, segMap);
@@ -198,13 +229,12 @@ export function planRoute(destSlug: string, profile: UserProfile, from: LngLat =
     start,
     end,
     stairSegments: route.segmentIds.filter((id) => (effMap.get(id)?.steps ?? 0) > 0).length,
-    passedLandmarks: route.nodeIds.slice(1, -1).map((id) => nodes.get(id)!).filter((n) => n.lynchType === 'landmark'),
+    passedLandmarks: [...new Set(route.nodeIds.slice(1, -1))].map((id) => nodes.get(id)!).filter((n) => n.lynchType === 'landmark'),
     curated: match ? { id: match.def.id, name: match.def.name, verifiedBy: match.def.verifiedBy, verifiedAt: match.def.verifiedAt } : undefined,
     engine,
+    via: viaRoute ? { storyIds: viaRoute.storyIds, extraM: viaRoute.extraM } : undefined,
   };
 }
-
-const nodeLocations = new Map([...nodes.values()].map((n) => [n.id, n.location]));
 
 /** Yanlış dönüş senaryosu: önümüzdeki ilk kavşakta rotadan ayrılan yürüyüş çizgisi. */
 export function detourFrom(plan: PlannedRoute, alongM: number, blocked?: ReadonlySet<string>) {
