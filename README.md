@@ -7,6 +7,7 @@ Vakıf eserlerine Kevin Lynch'in bilişsel haritalama yaklaşımıyla (landmark 
 | Dosya | İçerik |
 |---|---|
 | [AGENTS.md](AGENTS.md) | Geliştirici ve yapay zekâ ajanları için kurallar, komutlar, tuzaklar. **Önce bunu okuyun** |
+| [KURULUM.md](KURULUM.md) | Yeni bilgisayarda adım adım kurulum: gerekenler, .env, admin, mobil build, APK, sık sorunlar |
 | [ROADMAP.md](ROADMAP.md) | Kilometre taşları, sahipli backlog, kabul ölçütleri, açık kararlar |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Bileşenler, veri modeli, rota motoru, ekranlar, kararlar |
 | [PRODUCT.md](PRODUCT.md) | Kullanıcılar, ilkeler, marka |
@@ -27,14 +28,14 @@ docs/            yarışma belgeleri ve moodboard (yalnızca yerel, git'e girmez
 
 ## Kurulum
 
-Gereken: Node 22, pnpm 10.
+Gereken: Node 22, pnpm 10. Adım adım anlatım: [KURULUM.md](KURULUM.md).
 
 ```bash
 pnpm install
 pnpm test        # shared testleri
 pnpm typecheck   # tüm paketler
 pnpm dev:mobile  # Expo dev server
-pnpm dev:admin   # admin paneli (http://localhost:5173)
+pnpm dev:admin   # admin paneli (http://localhost:3000)
 ```
 
 Mobil uygulama native modüller (harita, mekânsal ses) eklendikten sonra Expo Go ile değil development build ile çalışır: `cd apps/mobile && npx expo run:android`.
