@@ -172,13 +172,31 @@ export const CITY_CENTER: Record<string, [number, number]> = {
 /** Boş metin veritabanında null olur; yalnızca İngilizcesi olan metin kabul edilmez (TR zorunlu). */
 export const localized = (v: { tr: string; en: string }): LocalizedText | null => (v.tr.trim() ? { tr: v.tr.trim(), ...(v.en.trim() ? { en: v.en.trim() } : {}) } : null);
 
-// ---------- Anlatım noktaları ----------
+// ---------- Noktalar (rotaların uğradığı ve kullandığı yerler) ----------
 
-/** story_points_view satırı (security_invoker; admin taslakları da görür). */
-export interface StoryRow {
+export type PointRole = 'start' | 'landmark' | 'story' | 'arrival';
+export type Ambient = 'water' | 'market' | 'chime';
+
+export const ROLE_LABEL: Record<PointRole, string> = {
+  start: 'Başlangıç',
+  landmark: 'Yer işareti',
+  story: 'Anlatım',
+  arrival: 'Eser varışı',
+};
+export const ROLE_HINT: Record<PointRole, string> = {
+  start: 'Buluşma ya da varış yeri (durak, meydan). Kullanıcı rotayı buradan başlatabilir.',
+  landmark: 'Talimatlarda anılır ("Heykel hizasında sağa"); rota görünen yer işaretlerinin yanından geçmeyi tercih eder.',
+  story: 'Yarıçapa girilince metin ve ses açılır. Rotalar yakındaki anlatım noktalarına uğrar.',
+  arrival: 'Esere varınca açılan metin ve ses. Bir esere bağlanır.',
+};
+export const AMBIENT_LABEL: Record<Ambient, string> = { water: 'Su', market: 'Çarşı uğultusu', chime: 'Çan / saat' };
+
+/** nav_points_view satırı (security_invoker; admin taslakları da görür). */
+export interface PointRow {
   id: string;
   city_id: string;
   city_slug: string;
+  roles: PointRole[];
   title: LocalizedText;
   body: LocalizedText | null;
   radius_m: number;
@@ -186,19 +204,25 @@ export interface StoryRow {
   status: Status;
   lng: number;
   lat: number;
+  work_id: string | null;
+  work_slug: string | null;
+  salience: number | null;
+  ambient: Ambient | null;
+  field_checked: boolean;
+  sort_order: number;
   audio_tr_id: string | null;
   audio_tr: string | null;
   audio_en_id: string | null;
   audio_en: string | null;
 }
 
-export function useStoryPoints(citySlug: string) {
+export function usePoints(citySlug: string) {
   return useQuery({
-    queryKey: ['story_points', citySlug],
+    queryKey: ['nav_points', citySlug],
     queryFn: async () => {
-      const { data, error } = await supabase.from('story_points_view').select('*').eq('city_slug', citySlug).order('updated_at', { ascending: false });
+      const { data, error } = await supabase.from('nav_points_view').select('*').eq('city_slug', citySlug).order('updated_at', { ascending: false });
       if (error) throw error;
-      return data as StoryRow[];
+      return data as PointRow[];
     },
   });
 }

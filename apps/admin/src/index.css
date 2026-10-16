@@ -86,6 +86,15 @@ input:focus, select:focus, textarea:focus { border-color: var(--primary); outlin
 .toast { position: fixed; bottom: 24px; right: 24px; background: var(--text); color: var(--bg); padding: 12px 18px; border-radius: 12px; box-shadow: var(--shadow); }
 .error { color: var(--danger); }
 
+/* Nokta editörü */
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; vertical-align: middle; }
+.label { font-weight: 600; font-size: 13px; color: var(--muted); padding: 0; }
+label.check { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-size: 14px; }
+label.check input { margin-top: 3px; width: 18px; height: 18px; accent-color: var(--primary); }
+.picklist { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; max-height: 220px; overflow: auto; }
+.picklist button { all: unset; display: block; width: 100%; box-sizing: border-box; padding: 8px 10px; border-radius: 8px; cursor: pointer; }
+.picklist button:hover, .picklist button:focus-visible { background: var(--soft); }
+
 /* Giriş */
 .center { min-height: 100%; display: grid; place-items: center; padding: 24px; }
 .login { width: min(420px, 100%); display: grid; gap: 16px; }

@@ -11,7 +11,7 @@ import { Cities } from './pages/Cities';
 import { Inbox } from './pages/Inbox';
 import { NewWork } from './pages/NewWork';
 import { Reports } from './pages/Reports';
-import { StoryPoints } from './pages/StoryPoints';
+import { Points } from './pages/Points';
 import { WorkEdit } from './pages/WorkEdit';
 import { Works } from './pages/Works';
 
@@ -38,7 +38,7 @@ const router = createBrowserRouter([
       { path: 'eserler/:slug', element: <WorkEdit /> },
       { path: 'fotograflar', element: <Inbox /> },
       { path: 'bildirimler', element: <Reports /> },
-      { path: 'anlatim', element: <StoryPoints /> },
+      { path: 'noktalar', element: <Points /> },
       { path: 'iller', element: <Cities /> },
     ],
   },

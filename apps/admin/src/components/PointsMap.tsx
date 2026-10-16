@@ -1,10 +1,24 @@
 import * as maplibregl from 'maplibre-gl';
 import { useEffect, useRef } from 'react';
 
-import type { StoryRow } from '../lib/data';
+import type { PointRole, PointRow } from '../lib/data';
 
 const STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 type Pt = [number, number];
+
+/** Rol renkleri (index.css token'ları). Haritada renk tek başına anlam taşımaz: yanında ad etiketi, sayfada liste ve lejant var. */
+export const ROLE_COLOR: Record<PointRole, string> = {
+  start: '#0B6E73',
+  landmark: '#3A2A1E',
+  story: '#B8321F',
+  arrival: '#B07A12',
+};
+/** Birden çok rolü olan noktanın rengi bu sıradaki ilk rolden gelir. */
+const ROLE_ORDER: PointRole[] = ['arrival', 'story', 'start', 'landmark'];
+export const primaryRole = (roles: PointRole[]) => ROLE_ORDER.find((r) => roles.includes(r)) ?? roles[0]!;
+
+/** Yarıçapı tetikleme için kullanılan roller. */
+export const hasRadius = (roles: PointRole[]) => roles.includes('story') || roles.includes('arrival');
 
 /** Merkez ve yarıçaptan (m) 48 köşeli daire poligonu. */
 function circlePolygon(center: Pt, radiusM: number): GeoJSON.Feature<GeoJSON.Polygon> {
@@ -21,17 +35,18 @@ function circlePolygon(center: Pt, radiusM: number): GeoJSON.Feature<GeoJSON.Pol
 const round = (p: { lng: number; lat: number }): Pt => [Number(p.lng.toFixed(7)), Number(p.lat.toFixed(7))];
 
 interface Props {
-  points: StoryRow[];
+  points: PointRow[];
   selectedId: string | null;
   draft: Pt | null;
-  draftRadius: number;
+  /** Taslağın tetikleme yarıçapı (anlatım/varış değilse null). */
+  draftRadius: number | null;
   center: Pt;
   onSelect: (id: string) => void;
   onPick: (p: Pt) => void;
 }
 
-/** Anlatım noktaları haritası: noktaya tık seçer, boşluğa tık taslak konumu belirler; daire tetikleme yarıçapıdır. */
-export function StoryMap({ points, selectedId, draft, draftRadius, center, onSelect, onPick }: Props) {
+/** Nokta haritası: noktaya tık seçer, boşluğa tık taslak konumu belirler; daire anlatım/varış yarıçapıdır. */
+export function PointsMap({ points, selectedId, draft, draftRadius, center, onSelect, onPick }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
   const marker = useRef<maplibregl.Marker | null>(null);
@@ -49,26 +64,44 @@ export function StoryMap({ points, selectedId, draft, draftRadius, center, onSel
     const { points: ps, selectedId: sel, draft: d, draftRadius: r } = latest.current;
     (m.getSource('points') as maplibregl.GeoJSONSource).setData({
       type: 'FeatureCollection',
-      features: ps.map((p) => ({ type: 'Feature', properties: { id: p.id, selected: p.id === sel }, geometry: { type: 'Point', coordinates: [p.lng, p.lat] } })),
+      features: ps.map((p) => ({
+        type: 'Feature',
+        properties: { id: p.id, selected: p.id === sel, color: ROLE_COLOR[primaryRole(p.roles)], name: p.title.tr, draft: p.status !== 'verified' },
+        geometry: { type: 'Point', coordinates: [p.lng, p.lat] },
+      })),
     });
-    const circles = ps.filter((p) => p.id !== sel).map((p) => circlePolygon([p.lng, p.lat], p.radius_m));
-    if (d) circles.push(circlePolygon(d, r));
+    const circles = ps.filter((p) => p.id !== sel && hasRadius(p.roles)).map((p) => circlePolygon([p.lng, p.lat], p.radius_m));
+    if (d && r) circles.push(circlePolygon(d, r));
     (m.getSource('radius') as maplibregl.GeoJSONSource).setData({ type: 'FeatureCollection', features: circles });
   };
 
   useEffect(() => {
     if (!box.current) return;
-    const m = new maplibregl.Map({ container: box.current, style: STYLE, center, zoom: 15 });
+    const m = new maplibregl.Map({ container: box.current, style: STYLE, center, zoom: 16 });
     m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
     m.on('load', () => {
       m.addSource('radius', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
       m.addSource('points', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-      m.addLayer({ id: 'radius-fill', type: 'fill', source: 'radius', paint: { 'fill-color': '#B8321F', 'fill-opacity': 0.15 } });
+      m.addLayer({ id: 'radius-fill', type: 'fill', source: 'radius', paint: { 'fill-color': '#B8321F', 'fill-opacity': 0.12 } });
       m.addLayer({
         id: 'points-circle',
         type: 'circle',
         source: 'points',
-        paint: { 'circle-radius': 7, 'circle-color': ['case', ['get', 'selected'], '#B8321F', '#0B6E72'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 },
+        paint: {
+          'circle-radius': ['case', ['get', 'selected'], 10, 7],
+          'circle-color': ['get', 'color'],
+          'circle-stroke-color': '#fff',
+          'circle-stroke-width': ['case', ['get', 'selected'], 3, 2],
+          // Taslak noktalar soluk: yayında olmadığı bir bakışta anlaşılsın.
+          'circle-opacity': ['case', ['get', 'draft'], 0.5, 1],
+        },
+      });
+      m.addLayer({
+        id: 'points-label',
+        type: 'symbol',
+        source: 'points',
+        layout: { 'text-field': ['get', 'name'], 'text-size': 12, 'text-offset': [0, 1.2], 'text-anchor': 'top', 'text-font': ['Noto Sans Regular'] },
+        paint: { 'text-color': '#3A2A1E', 'text-halo-color': '#fff', 'text-halo-width': 1.5 },
       });
       ready.current = true;
       sync();
@@ -114,5 +147,5 @@ export function StoryMap({ points, selectedId, draft, draftRadius, center, onSel
     }
   }, [draft]);
 
-  return <div ref={box} className="map" style={{ height: 520 }} role="application" aria-label="Anlatım noktaları haritası: noktaya tıklayarak seçin, boş yere tıklayarak konum belirleyin" />;
+  return <div ref={box} className="map" style={{ height: 560 }} role="application" aria-label="Nokta haritası: noktaya tıklayarak seçin, boş yere tıklayarak konum belirleyin" />;
 }
