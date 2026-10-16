@@ -61,7 +61,9 @@ Doldurulacak alanlar:
 | | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Eski anon key (publishable yoksa) |
 | `apps/admin/.env` | `VITE_SUPABASE_URL` | Aynı URL |
 | | `VITE_SUPABASE_ANON_KEY` | Publishable ya da anon key |
+| her ikisi | `EXPO_PUBLIC_MAPBOX_TOKEN` (mobil), `VITE_MAPBOX_TOKEN` (admin) | Mapbox public token (`pk.…`), account.mapbox.com → Tokens. Ücretsiz plan: mobilde ayda 25.000 aktif kullanıcı, webde 50.000 harita açılışı |
 
+Mapbox token'ı için: yayına çıkarken mobil ve admin için **ayrı** token kullanın. URL kısıtı yalnızca web isteklerinde işe yarar; mobil token'a URL kısıtı eklemeyin (mobil haritada 403 verir). Android derlemesi için gizli indirme token'ı (`sk.…`) gerekmez.
 `service_role` anahtarı ve veritabanı parolası **hiçbir .env'e konmaz, hiçbir yere commit'lenmez**.
 
 Kontrol:

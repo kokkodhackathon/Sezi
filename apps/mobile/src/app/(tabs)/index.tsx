@@ -1,4 +1,3 @@
-import { Camera, GeoJSONSource, Layer } from '@maplibre/maplibre-react-native';
 import type { ThemeColors } from '@sezi/shared';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
@@ -6,14 +5,13 @@ import { useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DeferredMap } from '@/components/deferred-map';
+import { SeziMap, WorkClusters } from '@/components/map';
 import { Button, Chip, EmptyState, ListRow, SectionTitle, softShadow } from '@/components/ui';
 import { ChevronIcon, CloseIcon, FilterIcon, ListIcon, MapIcon, SearchIcon, TurnIcon } from '@/design/icons';
 import { radius, space, type } from '@/design/type';
-import { colorForType, typeColor, WorkGlyphInline } from '@/design/work-glyph';
+import { colorForType, WorkGlyphInline } from '@/design/work-glyph';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT, type Lang } from '@/lib/i18n';
-import { boundsOf } from '@/lib/nav';
 import { useSettings } from '@/lib/settings';
 import { coverOf, hasLocation, loc, photoUrl, useCities, useWorks, type WorkRow } from '@/lib/works';
 
@@ -54,12 +52,6 @@ export default function Explore() {
   );
   const mapped = visible.filter(hasLocation);
   const selectedWork = visible.find((w) => w.slug === selected);
-  const bounds = mapped.length > 1 ? boundsOf(mapped.map((w) => [w.lng, w.lat])) : null;
-  const geojson: GeoJSON.FeatureCollection = {
-    type: 'FeatureCollection',
-    features: mapped.map((w) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [w.lng, w.lat] }, properties: { slug: w.slug, type: w.type_slug } })),
-  };
-  const colors = ['match', ['get', 'type'], ...Object.entries(typeColor).flat(), t.text];
   const open = (slug: string) => router.push({ pathname: '/work/[slug]', params: { slug } });
   const chooseCity = (slug: string) => {
     update({ city: slug });
@@ -138,26 +130,14 @@ export default function Explore() {
       ) : null}
 
       {view === 'map' && mapped.length > 0 ? (
-        <View style={s.map} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-          <DeferredMap key={`${citySlug}:${kind}:${district}`}>
-            <Camera initialViewState={bounds ? { bounds, padding: { top: 40, bottom: 40, left: 40, right: 40 } } : { center: [mapped[0]!.lng, mapped[0]!.lat], zoom: 15 }} />
-            <GeoJSONSource
-              id="works"
-              data={geojson}
-              cluster
-              clusterRadius={42}
-              clusterMaxZoom={15}
-              onPress={(e) => {
-                const slug = e.nativeEvent.features[0]?.properties?.slug;
-                if (typeof slug === 'string') setSelected(slug);
-              }}>
-              <Layer id="works-clusters" type="circle" filter={['has', 'point_count']} paint={{ 'circle-radius': ['step', ['get', 'point_count'], 18, 10, 22, 40, 28] as never, 'circle-color': t.primary, 'circle-stroke-width': 3, 'circle-stroke-color': t.surface }} />
-              <Layer id="works-cluster-label" type="symbol" filter={['has', 'point_count']} layout={{ 'text-field': ['get', 'point_count_abbreviated'] as never, 'text-size': 14, 'text-font': ['Noto Sans Bold'] }} paint={{ 'text-color': t.onPrimary }} />
-              <Layer id="works-circle" type="circle" filter={['!', ['has', 'point_count']] as never} paint={{ 'circle-radius': 9, 'circle-color': colors as never, 'circle-stroke-width': 3, 'circle-stroke-color': t.surface }} />
-              <Layer id="selected-work" type="circle" filter={['==', ['get', 'slug'], selected ?? '']} paint={{ 'circle-radius': 15, 'circle-color': t.accent, 'circle-stroke-width': 3, 'circle-stroke-color': t.surface }} />
-            </GeoJSONSource>
-          </DeferredMap>
-        </View>
+        <SeziMap
+          key={`${citySlug}:${kind}:${district}`}
+          style={s.map}
+          initial={mapped.map((w) => [w.lng, w.lat])}
+          initialZoom={15}
+          accessibilityLabel={tr('design.mapHelp', { n: mapped.length })}>
+          <WorkClusters works={mapped.map((w) => ({ slug: w.slug, location: [w.lng, w.lat], color: colorForType(w.type_slug) }))} selected={selected} onPress={setSelected} />
+        </SeziMap>
       ) : null}
       <Text style={[type.meta, { color: t.textMuted }]} accessibilityLiveRegion="polite">
         {isLoading ? tr('explore.loading') : view === 'map' ? tr('design.mapHelp', { n: mapped.length }) : tr('search.results', { n: visible.length })}

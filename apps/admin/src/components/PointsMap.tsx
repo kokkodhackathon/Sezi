@@ -1,9 +1,8 @@
-import * as maplibregl from 'maplibre-gl';
 import { useEffect, useRef } from 'react';
 
 import type { PointRole, PointRow } from '../lib/data';
+import { createMap, MAP_FONT, mapboxgl } from '../lib/mapbox';
 
-const STYLE = 'https://tiles.openfreemap.org/styles/liberty';
 type Pt = [number, number];
 
 /** Rol renkleri (index.css token'ları). Haritada renk tek başına anlam taşımaz: yanında ad etiketi, sayfada liste ve lejant var. */
@@ -48,8 +47,8 @@ interface Props {
 /** Nokta haritası: noktaya tık seçer, boşluğa tık taslak konumu belirler; daire anlatım/varış yarıçapıdır. */
 export function PointsMap({ points, selectedId, draft, draftRadius, center, onSelect, onPick }: Props) {
   const box = useRef<HTMLDivElement>(null);
-  const map = useRef<maplibregl.Map | null>(null);
-  const marker = useRef<maplibregl.Marker | null>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const marker = useRef<mapboxgl.Marker | null>(null);
   const ready = useRef(false);
   const select = useRef(onSelect);
   const pick = useRef(onPick);
@@ -62,7 +61,7 @@ export function PointsMap({ points, selectedId, draft, draftRadius, center, onSe
     const m = map.current;
     if (!m || !ready.current) return;
     const { points: ps, selectedId: sel, draft: d, draftRadius: r } = latest.current;
-    (m.getSource('points') as maplibregl.GeoJSONSource).setData({
+    (m.getSource('points') as mapboxgl.GeoJSONSource).setData({
       type: 'FeatureCollection',
       features: ps.map((p) => ({
         type: 'Feature',
@@ -72,20 +71,20 @@ export function PointsMap({ points, selectedId, draft, draftRadius, center, onSe
     });
     const circles = ps.filter((p) => p.id !== sel && hasRadius(p.roles)).map((p) => circlePolygon([p.lng, p.lat], p.radius_m));
     if (d && r) circles.push(circlePolygon(d, r));
-    (m.getSource('radius') as maplibregl.GeoJSONSource).setData({ type: 'FeatureCollection', features: circles });
+    (m.getSource('radius') as mapboxgl.GeoJSONSource).setData({ type: 'FeatureCollection', features: circles });
   };
 
   useEffect(() => {
     if (!box.current) return;
-    const m = new maplibregl.Map({ container: box.current, style: STYLE, center, zoom: 16 });
-    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+    const m = createMap(box.current, center, 16);
     m.on('load', () => {
       m.addSource('radius', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
       m.addSource('points', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-      m.addLayer({ id: 'radius-fill', type: 'fill', source: 'radius', paint: { 'fill-color': '#B8321F', 'fill-opacity': 0.12 } });
+      m.addLayer({ id: 'radius-fill', type: 'fill', slot: 'top', source: 'radius', paint: { 'fill-color': '#B8321F', 'fill-opacity': 0.12 } });
       m.addLayer({
         id: 'points-circle',
         type: 'circle',
+        slot: 'top',
         source: 'points',
         paint: {
           'circle-radius': ['case', ['get', 'selected'], 10, 7],
@@ -99,14 +98,15 @@ export function PointsMap({ points, selectedId, draft, draftRadius, center, onSe
       m.addLayer({
         id: 'points-label',
         type: 'symbol',
+        slot: 'top',
         source: 'points',
-        layout: { 'text-field': ['get', 'name'], 'text-size': 12, 'text-offset': [0, 1.2], 'text-anchor': 'top', 'text-font': ['Noto Sans Regular'] },
+        layout: { 'text-field': ['get', 'name'], 'text-size': 12, 'text-offset': [0, 1.2], 'text-anchor': 'top', 'text-font': MAP_FONT },
         paint: { 'text-color': '#3A2A1E', 'text-halo-color': '#fff', 'text-halo-width': 1.5 },
       });
       ready.current = true;
       sync();
     });
-    m.on('click', (e: maplibregl.MapMouseEvent) => {
+    m.on('click', (e: mapboxgl.MapMouseEvent) => {
       // Stil henüz yüklenmediyse (yavaş ağ) noktalar çizilmemiştir: tık doğrudan konum seçer.
       const hit = ready.current ? m.queryRenderedFeatures(e.point, { layers: ['points-circle'] })[0] : undefined;
       const id = hit?.properties?.id as string | undefined;
@@ -140,7 +140,7 @@ export function PointsMap({ points, selectedId, draft, draftRadius, center, onSe
       return;
     }
     if (!marker.current) {
-      marker.current = new maplibregl.Marker({ color: '#B8321F', draggable: true }).setLngLat(draft).addTo(m);
+      marker.current = new mapboxgl.Marker({ color: '#B8321F', draggable: true }).setLngLat(draft).addTo(m);
       marker.current.on('dragend', () => pick.current(round(marker.current!.getLngLat())));
     } else {
       marker.current.setLngLat(draft);

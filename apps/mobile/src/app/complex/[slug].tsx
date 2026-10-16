@@ -1,4 +1,3 @@
-import { Camera, GeoJSONSource, Layer } from '@maplibre/maplibre-react-native';
 import type { ThemeColors } from '@sezi/shared';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
@@ -7,15 +6,12 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-nat
 import { Button, Card, Eyebrow, ListRow, SectionTitle } from '@/components/ui';
 import { TurnIcon } from '@/design/icons';
 import { radius, space, type } from '@/design/type';
-import { colorForType, typeColor, WorkGlyph } from '@/design/work-glyph';
-import { DeferredMap } from '@/components/deferred-map';
+import { colorForType, WorkGlyph } from '@/design/work-glyph';
+import { PointsLayer, SeziMap } from '@/components/map';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
-import { boundsOf } from '@/lib/nav';
 import { useSettings } from '@/lib/settings';
 import { hasLocation, loc, useWorks } from '@/lib/works';
-
-const circleColor = ['match', ['get', 'type'], ...Object.entries(typeColor).flat(), '#3A1A10'];
 
 export default function ComplexScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -40,11 +36,6 @@ export default function ComplexScreen() {
   for (const w of parts) groups.set(w.type_slug, [...(groups.get(w.type_slug) ?? []), w]);
 
   const mapped = parts.filter(hasLocation);
-  const geojson: GeoJSON.FeatureCollection = {
-    type: 'FeatureCollection',
-    features: mapped.map((w) => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [w.lng, w.lat] }, properties: { type: w.type_slug } })),
-  };
-  const bounds = mapped.length ? boundsOf(mapped.map((w) => [w.lng, w.lat])) : undefined;
   const visitedCount = parts.filter((w) => visited.includes(w.slug)).length;
 
   return (
@@ -65,14 +56,9 @@ export default function ComplexScreen() {
 
       <Text style={[type.lead, { color: t.text }]}>{tr('complex.lead')}</Text>
 
-      <View style={s.map} accessible accessibilityLabel={tr('explore.mapLabel', { n: parts.length })} importantForAccessibility="no-hide-descendants">
-        <DeferredMap>
-          {bounds ? <Camera initialViewState={{ bounds, padding: { top: 40, bottom: 40, left: 40, right: 40 } }} /> : null}
-          <GeoJSONSource id="parts" data={geojson}>
-            <Layer id="parts-circle" type="circle" paint={{ 'circle-radius': 9, 'circle-color': circleColor as never, 'circle-stroke-width': 2, 'circle-stroke-color': t.surface }} />
-          </GeoJSONSource>
-        </DeferredMap>
-      </View>
+      <SeziMap style={s.map} initial={mapped.map((w) => [w.lng, w.lat])} accessibilityLabel={tr('explore.mapLabel', { n: parts.length })}>
+        <PointsLayer points={mapped.map((w) => ({ id: w.slug, location: [w.lng, w.lat], kind: 'work', color: colorForType(w.type_slug) }))} />
+      </SeziMap>
 
       <Button
         label={tr('complex.tour')}

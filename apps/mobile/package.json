@@ -6,7 +6,7 @@
     "@expo-google-fonts/atkinson-hyperlegible-next": "^0.4.1",
     "@expo-google-fonts/fraunces": "^0.4.1",
     "@expo/ui": "~57.0.23",
-    "@maplibre/maplibre-react-native": "^11.5.0",
+    "@rnmapbox/maps": "^10.3.8",
     "@sezi/shared": "workspace:*",
     "@supabase/supabase-js": "^2.117.3",
     "@tanstack/react-query": "^5.104.2",

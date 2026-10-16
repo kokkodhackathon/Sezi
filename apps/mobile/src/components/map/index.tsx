@@ -1,93 +1,167 @@
-import { Camera, GeoJSONSource, Layer, type CameraRef } from '@maplibre/maplibre-react-native';
-import type { LngLat } from '@sezi/shared';
-import { forwardRef, useImperativeHandle, useRef, type ReactNode } from 'react';
-import { View, type ViewStyle } from 'react-native';
+import Mapbox, { Camera, CircleLayer, LineLayer, MapView, ShapeSource, StyleImport, SymbolLayer } from '@rnmapbox/maps';
+import { palette, type LngLat } from '@sezi/shared';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ComponentRef, type ReactNode } from 'react';
+import { InteractionManager, StyleSheet, View, type ViewStyle } from 'react-native';
 
-import { DeferredMap } from '@/components/deferred-map';
-import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { useIsDark, useSeziTheme } from '@/hooks/use-sezi-theme';
 import { boundsOf } from '@/lib/nav';
+import { useProfile } from '@/lib/profile';
 
 /**
- * Uygulamanın harita katmanı. Ekranlar harita kütüphanesini doğrudan kullanmaz: rota, nokta ve
- * konum çizimleri buradaki bileşenlerle yapılır; kütüphane değişince yalnızca bu dosya değişir.
- * Noktalar GeoJSON katmanıyla çizilir (MapLibre Marker RN 0.86'da çöküyor).
+ * Uygulamanın harita katmanı (Mapbox). Ekranlar harita kütüphanesini doğrudan kullanmaz:
+ * rota, nokta ve konum çizimleri buradaki bileşenlerle yapılır; kütüphane değişince yalnızca bu dosya değişir.
  */
+void Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? null);
 
-/** Harita yazı tipleri (stil glifleri). */
-const FONT = ['Noto Sans Regular'];
+/** Harita yazı tipi (Mapbox glif servisi). */
+const FONT = ['DIN Pro Medium', 'Arial Unicode MS Regular'];
+
+/**
+ * Mapbox Standard: düz (3B kapalı), dükkân etiketleri kapalı; zemin ve yeşil alan Çini paletine yakın.
+ * Koyu temada gece ışığı, az gören profilinde tek renkli (monochrome) sade harita.
+ */
+function useStandardConfig() {
+  const dark = useIsDark();
+  const { profile } = useProfile();
+  const low = profile?.vision === 'low';
+  return {
+    lightPreset: dark ? 'night' : 'day',
+    theme: low ? 'monochrome' : 'faded',
+    show3dObjects: false,
+    showPointOfInterestLabels: false,
+    showTransitLabels: true,
+    showPlaceLabels: true,
+    showRoadLabels: true,
+    showPedestrianRoads: true,
+    ...(dark || low ? {} : { colorLand: palette.ivory, colorRoads: '#E8DFD3', colorGreenspaces: '#DDE8D3', colorWater: '#BFDCDD' }),
+  } as const;
+}
+
+type Padding = { top?: number; bottom?: number; left?: number; right?: number };
+const pad = (p?: Padding) => ({ paddingTop: p?.top ?? 48, paddingBottom: p?.bottom ?? 48, paddingLeft: p?.left ?? 40, paddingRight: p?.right ?? 40 });
 
 export interface SeziMapHandle {
-  /** Çizgiyi ya da noktaları ekrana sığdırır (alt panel için `bottom` boşluğu). */
-  fit(points: LngLat[], padding?: { top?: number; bottom?: number; left?: number; right?: number }): void;
+  /** Noktaları ekrana sığdırır (tek nokta ise ona yakınlaşır). */
+  fit(points: LngLat[], padding?: Padding): void;
   centerOn(p: LngLat, zoom?: number): void;
 }
 
 interface SeziMapProps {
   /** İlk görünüm: noktalar sığdırılır (tek nokta ise ona yakınlaşılır). */
   initial: LngLat[];
-  initialPadding?: { top?: number; bottom?: number; left?: number; right?: number };
+  initialPadding?: Padding;
+  /** Tek nokta açılışındaki yakınlık. */
+  initialZoom?: number;
   onPress?: (p: LngLat) => void;
+  /** false: harita yalnızca gösterir (kaydırma, yakınlaştırma yok). */
+  interactive?: boolean;
   accessibilityLabel: string;
   style?: ViewStyle;
   children?: ReactNode;
 }
 
-const pad = (p?: { top?: number; bottom?: number; left?: number; right?: number }) => ({ top: p?.top ?? 48, bottom: p?.bottom ?? 48, left: p?.left ?? 40, right: p?.right ?? 40 });
+/**
+ * Harita, ekranın ilk çizimi ve geçiş animasyonu bittikten sonra yüklenir:
+ * ilk açılışta ekran akıcı kalır, harita hemen ardından gelir.
+ */
+function useDeferred() {
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const task = InteractionManager.runAfterInteractions(() => {
+      timer = setTimeout(() => setReady(true), 120);
+    });
+    return () => {
+      task.cancel();
+      clearTimeout(timer);
+    };
+  }, []);
+  return ready;
+}
 
-export const SeziMap = forwardRef<SeziMapHandle, SeziMapProps>(function SeziMap({ initial, initialPadding, onPress, accessibilityLabel, style, children }, ref) {
-  const camera = useRef<CameraRef>(null);
+export const SeziMap = forwardRef<SeziMapHandle, SeziMapProps>(function SeziMap(
+  { initial, initialPadding, initialZoom = 16.5, onPress, interactive = true, accessibilityLabel, style, children },
+  ref,
+) {
+  const t = useSeziTheme();
+  const camera = useRef<ComponentRef<typeof Camera>>(null);
+  const ready = useDeferred();
+  const config = useStandardConfig();
   useImperativeHandle(ref, () => ({
     fit(points, padding) {
       if (points.length === 0) return;
-      if (points.length === 1) camera.current?.easeTo({ center: points[0]!, zoom: 17, duration: 500 });
-      else camera.current?.fitBounds(boundsOf(points), { padding: pad(padding), duration: 600 });
+      if (points.length === 1) {
+        camera.current?.setCamera({ centerCoordinate: points[0]!, zoomLevel: 17, animationDuration: 500 });
+        return;
+      }
+      const [w, s, e, n] = boundsOf(points);
+      camera.current?.setCamera({ bounds: { ne: [e, n], sw: [w, s] }, padding: pad(padding), animationDuration: 600 });
     },
     centerOn(p, zoom) {
-      camera.current?.easeTo({ center: p, ...(zoom ? { zoom } : {}), duration: 500 });
+      camera.current?.setCamera({ centerCoordinate: p, ...(zoom ? { zoomLevel: zoom } : {}), animationDuration: 500, animationMode: 'easeTo' });
     },
   }));
-  const initialView = initial.length > 1 ? { bounds: boundsOf(initial), padding: pad(initialPadding) } : { center: initial[0] ?? ([29.0613, 40.1842] as LngLat), zoom: 16.5 };
+  const [w, s, e, n] = initial.length > 1 ? boundsOf(initial) : [0, 0, 0, 0];
+  // İlk görünüm: noktaların ortası; sığdırma harita yüklenince yapılır.
+  const defaultSettings = { centerCoordinate: initial.length > 1 ? ([(w + e) / 2, (s + n) / 2] as LngLat) : (initial[0] ?? ([29.0613, 40.1842] as LngLat)), zoomLevel: initial.length > 1 ? 15 : initialZoom };
   return (
     // Harita ekran okuyucuya tek öğe olarak sunulur; içerik ekrandaki listelerde yazılı olarak var.
-    <View style={style} accessible accessibilityLabel={accessibilityLabel} importantForAccessibility="no-hide-descendants">
-      <DeferredMap onPress={onPress ? (e) => onPress(e.nativeEvent.lngLat as LngLat) : undefined} logo={false} attributionPosition={{ bottom: 8, left: 8 }}>
-        <Camera ref={camera} initialViewState={initialView} />
-        {children}
-      </DeferredMap>
+    <View style={[{ backgroundColor: t.soft, overflow: 'hidden' }, style]} accessible accessibilityLabel={accessibilityLabel} importantForAccessibility="no-hide-descendants">
+      {ready ? (
+        <MapView
+          style={StyleSheet.absoluteFill}
+          styleURL="mapbox://styles/mapbox/standard"
+          scaleBarEnabled={false}
+          compassEnabled={false}
+          pitchEnabled={false}
+          scrollEnabled={interactive}
+          zoomEnabled={interactive}
+          rotateEnabled={interactive}
+          logoPosition={{ bottom: 8, left: 8 }}
+          attributionPosition={{ bottom: 8, right: 8 }}
+          onPress={onPress ? (f) => onPress(f.geometry.coordinates as LngLat) : undefined}
+          // Harita boyutu belli olunca ilk noktalar sığdırılır (ilk çizimde harita henüz yerleşmemiş olabilir).
+          onDidFinishLoadingMap={() => {
+            if (initial.length > 1) camera.current?.setCamera({ bounds: { ne: [e, n], sw: [w, s] }, padding: pad(initialPadding), animationDuration: 0 });
+          }}>
+          <StyleImport id="basemap" existing config={config} />
+          <Camera ref={camera} defaultSettings={defaultSettings} />
+          {children}
+        </MapView>
+      ) : null}
     </View>
   );
 });
 
-/** Rota çizgisi: yürünen kısım soluk, kalan kısım vurgulu. */
+/** Rota çizgisi: yürünen kısım soluk, kalan kısım vurgulu. Etiketlerin altında, yolların üstünde. */
 export function RouteLine({ id = 'route', line, walked }: { id?: string; line: LngLat[]; walked?: LngLat[] }) {
   const t = useSeziTheme();
   if (line.length < 2) return null;
   return (
     <>
-      <GeoJSONSource id={`${id}-src`} data={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: line } }}>
-        <Layer id={`${id}-casing`} type="line" layout={{ 'line-cap': 'round', 'line-join': 'round' }} paint={{ 'line-color': t.surface, 'line-width': 11 }} />
-        <Layer id={`${id}-line`} type="line" layout={{ 'line-cap': 'round', 'line-join': 'round' }} paint={{ 'line-color': t.primary, 'line-width': 6 }} />
-      </GeoJSONSource>
+      <ShapeSource id={`${id}-src`} shape={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: line } }}>
+        <LineLayer id={`${id}-casing`} slot="middle" style={{ lineCap: 'round', lineJoin: 'round', lineColor: t.surface, lineWidth: 11 }} />
+        <LineLayer id={`${id}-line`} slot="middle" style={{ lineCap: 'round', lineJoin: 'round', lineColor: t.primary, lineWidth: 6 }} />
+      </ShapeSource>
       {walked && walked.length >= 2 ? (
-        <GeoJSONSource id={`${id}-walked-src`} data={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: walked } }}>
-          <Layer id={`${id}-walked`} type="line" layout={{ 'line-cap': 'round', 'line-join': 'round' }} paint={{ 'line-color': t.textMuted, 'line-width': 6, 'line-opacity': 0.7 }} />
-        </GeoJSONSource>
+        <ShapeSource id={`${id}-walked-src`} shape={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: walked } }}>
+          <LineLayer id={`${id}-walked`} slot="middle" style={{ lineCap: 'round', lineJoin: 'round', lineColor: t.textMuted, lineWidth: 6, lineOpacity: 0.7 }} />
+        </ShapeSource>
       ) : null}
     </>
   );
 }
 
-/** Ek çizgiler: kapalı yollar (kesikli, tehlike rengi) ya da karşılaştırmadaki diğer rotalar. */
+/** Ek çizgiler: kapalı yollar (kesikli) ya da karşılaştırmadaki diğer rotalar. */
 export function ExtraLines({ id, data, color, width = 5, dashed, opacity = 1 }: { id: string; data: GeoJSON.FeatureCollection | GeoJSON.Feature; color: string; width?: number; dashed?: boolean; opacity?: number }) {
   return (
-    <GeoJSONSource id={`${id}-src`} data={data}>
-      <Layer
+    <ShapeSource id={`${id}-src`} shape={data}>
+      <LineLayer
         id={`${id}-line`}
-        type="line"
-        layout={{ 'line-cap': dashed ? 'butt' : 'round', 'line-join': 'round' }}
-        paint={{ 'line-color': color, 'line-width': width, 'line-opacity': opacity, ...(dashed ? { 'line-dasharray': [1.4, 1] as never } : {}) }}
+        slot="middle"
+        style={{ lineCap: dashed ? 'butt' : 'round', lineJoin: 'round', lineColor: color, lineWidth: width, lineOpacity: opacity, ...(dashed ? { lineDasharray: [1.4, 1] } : {}) }}
       />
-    </GeoJSONSource>
+    </ShapeSource>
   );
 }
 
@@ -103,51 +177,89 @@ export interface MapPoint {
   /** Açılmış / geçilmiş nokta: soluk. */
   done?: boolean;
   selected?: boolean;
+  /** Türe özel renk (ör. külliye parçalarında eser türü). */
+  color?: string;
 }
 
 /** Noktalar: sıra numaralı anlatım noktaları, yer işaretleri, başlangıçlar, eserler. Basılınca `onPress(id)`. */
 export function PointsLayer({ id = 'points', points, onPress }: { id?: string; points: MapPoint[]; onPress?: (pointId: string) => void }) {
   const t = useSeziTheme();
   const color: Record<MapPointKind, string> = { story: t.accent, arrival: t.accent, landmark: t.text, start: t.primary, work: t.primary };
-  const data: GeoJSON.FeatureCollection = {
+  const shape: GeoJSON.FeatureCollection = {
     type: 'FeatureCollection',
     features: points.map((p) => ({
       type: 'Feature',
       properties: {
         id: p.id,
-        color: p.done ? t.textMuted : color[p.kind],
-        r: p.order ? 12 : p.kind === 'landmark' || p.kind === 'work' ? 5 : 7,
+        color: p.done ? t.textMuted : (p.color ?? color[p.kind]),
+        r: (p.order ? 12 : p.kind === 'landmark' || p.kind === 'work' ? 5 : 8) + (p.selected ? 3 : 0),
         order: p.order ? String(p.order) : '',
         label: p.label ?? '',
-        selected: !!p.selected,
       },
       geometry: { type: 'Point', coordinates: p.location },
     })),
   };
   return (
-    <GeoJSONSource id={`${id}-src`} data={data} onPress={onPress ? (e) => {
-      const hit = e.nativeEvent.features[0]?.properties?.id;
-      if (typeof hit === 'string') onPress(hit);
-    } : undefined}>
-      <Layer
-        id={`${id}-circle`}
-        type="circle"
-        paint={{
-          'circle-radius': ['case', ['get', 'selected'], ['+', ['get', 'r'], 3], ['get', 'r']] as never,
-          'circle-color': ['get', 'color'] as never,
-          'circle-stroke-width': 2.5,
-          'circle-stroke-color': t.surface,
-        }}
-      />
-      <Layer id={`${id}-order`} type="symbol" layout={{ 'text-field': ['get', 'order'] as never, 'text-font': FONT, 'text-size': 13, 'text-allow-overlap': true, 'text-ignore-placement': true }} paint={{ 'text-color': t.onAccent }} />
-      <Layer
+    <ShapeSource
+      id={`${id}-src`}
+      shape={shape}
+      hitbox={{ width: 24, height: 24 }}
+      onPress={
+        onPress
+          ? (e) => {
+              const hit = e.features[0]?.properties?.id;
+              if (typeof hit === 'string') onPress(hit);
+            }
+          : undefined
+      }>
+      <CircleLayer id={`${id}-circle`} slot="top" style={{ circleRadius: ['get', 'r'], circleColor: ['get', 'color'], circleStrokeWidth: 2.5, circleStrokeColor: t.surface }} />
+      <SymbolLayer id={`${id}-order`} slot="top" style={{ textField: ['get', 'order'], textFont: FONT, textSize: 13, textColor: t.onAccent, textAllowOverlap: true, textIgnorePlacement: true }} />
+      <SymbolLayer
         id={`${id}-label`}
-        type="symbol"
-        minzoom={14.5}
-        layout={{ 'text-field': ['get', 'label'] as never, 'text-font': FONT, 'text-size': 12, 'text-offset': [0, 1.3], 'text-anchor': 'top', 'text-max-width': 9, 'text-optional': true }}
-        paint={{ 'text-color': t.text, 'text-halo-color': t.surface, 'text-halo-width': 1.5 }}
+        slot="top"
+        minZoomLevel={14.5}
+        style={{ textField: ['get', 'label'], textFont: FONT, textSize: 12, textOffset: [0, 1.3], textAnchor: 'top', textMaxWidth: 9, textOptional: true, textColor: t.text, textHaloColor: t.surface, textHaloWidth: 1.5 }}
       />
-    </GeoJSONSource>
+    </ShapeSource>
+  );
+}
+
+/** Eser haritası: kümelenmiş eserler; seçili eser vurgulu. Basılınca `onPress(slug)`. */
+export function WorkClusters({ works, selected, onPress }: { works: { slug: string; location: LngLat; color: string }[]; selected: string | null; onPress: (slug: string) => void }) {
+  const t = useSeziTheme();
+  const shape: GeoJSON.FeatureCollection = {
+    type: 'FeatureCollection',
+    features: works.map((w) => ({ type: 'Feature', properties: { slug: w.slug, color: w.color }, geometry: { type: 'Point', coordinates: w.location } })),
+  };
+  return (
+    <ShapeSource
+      id="works-src"
+      shape={shape}
+      cluster
+      clusterRadius={40}
+      clusterMaxZoomLevel={15}
+      hitbox={{ width: 24, height: 24 }}
+      onPress={(e) => {
+        const slug = e.features[0]?.properties?.slug;
+        if (typeof slug === 'string') onPress(slug);
+      }}>
+      <CircleLayer id="works-clusters" slot="top" filter={['has', 'point_count']} style={{ circleRadius: ['step', ['get', 'point_count'], 18, 10, 22, 40, 28], circleColor: t.primary, circleStrokeWidth: 3, circleStrokeColor: t.surface }} />
+      <SymbolLayer id="works-cluster-label" slot="top" filter={['has', 'point_count']} style={{ textField: ['get', 'point_count_abbreviated'], textSize: 14, textFont: FONT, textColor: t.onPrimary, textAllowOverlap: true }} />
+      <CircleLayer id="works-circle" slot="top" filter={['!', ['has', 'point_count']]} style={{ circleRadius: 9, circleColor: ['get', 'color'], circleStrokeWidth: 3, circleStrokeColor: t.surface }} />
+      <CircleLayer id="works-selected" slot="top" filter={['==', ['get', 'slug'], selected ?? '']} style={{ circleRadius: 15, circleColor: t.accent, circleStrokeWidth: 3, circleStrokeColor: t.surface }} />
+    </ShapeSource>
+  );
+}
+
+/** Tek eser işareti; konumu kesin değilse çevresinde yaklaşık alan. */
+export function WorkPin({ location, approximate }: { location: LngLat; approximate?: boolean }) {
+  const t = useSeziTheme();
+  return (
+    <ShapeSource id="work-src" shape={{ type: 'Point', coordinates: location }}>
+      {approximate ? <CircleLayer id="work-area" slot="top" style={{ circleRadius: 46, circleColor: t.primary, circleOpacity: 0.14, circleStrokeWidth: 2, circleStrokeColor: t.primary }} /> : <></>}
+      <CircleLayer id="work-halo" slot="top" style={{ circleRadius: 16, circleColor: t.surface }} />
+      <CircleLayer id="work-circle" slot="top" style={{ circleRadius: 9, circleColor: t.accent, circleStrokeWidth: 3, circleStrokeColor: t.surface }} />
+    </ShapeSource>
   );
 }
 
@@ -155,10 +267,10 @@ export function PointsLayer({ id = 'points', points, onPress }: { id?: string; p
 export function UserDot({ location }: { location: LngLat }) {
   const t = useSeziTheme();
   return (
-    <GeoJSONSource id="me-src" data={{ type: 'Point', coordinates: location }}>
-      <Layer id="me-halo" type="circle" paint={{ 'circle-radius': 18, 'circle-color': t.primary, 'circle-opacity': 0.18 }} />
-      <Layer id="me-dot" type="circle" paint={{ 'circle-radius': 8, 'circle-color': t.primary, 'circle-stroke-width': 3, 'circle-stroke-color': t.surface }} />
-    </GeoJSONSource>
+    <ShapeSource id="me-src" shape={{ type: 'Point', coordinates: location }}>
+      <CircleLayer id="me-halo" slot="top" style={{ circleRadius: 18, circleColor: t.primary, circleOpacity: 0.18 }} />
+      <CircleLayer id="me-dot" slot="top" style={{ circleRadius: 8, circleColor: t.primary, circleStrokeWidth: 3, circleStrokeColor: t.surface }} />
+    </ShapeSource>
   );
 }
 
@@ -168,8 +280,8 @@ export function EndPin({ id, location, kind }: { id: string; location: LngLat; k
   const fill = kind === 'end' ? t.accent : t.surface;
   const stroke = kind === 'end' ? t.surface : t.primary;
   return (
-    <GeoJSONSource id={`${id}-src`} data={{ type: 'Point', coordinates: location }}>
-      <Layer id={`${id}-pin`} type="circle" paint={{ 'circle-radius': kind === 'end' ? 10 : 8, 'circle-color': fill, 'circle-stroke-width': 3.5, 'circle-stroke-color': stroke }} />
-    </GeoJSONSource>
+    <ShapeSource id={`${id}-src`} shape={{ type: 'Point', coordinates: location }}>
+      <CircleLayer id={`${id}-pin`} slot="top" style={{ circleRadius: kind === 'end' ? 10 : 8, circleColor: fill, circleStrokeWidth: 3.5, circleStrokeColor: stroke }} />
+    </ShapeSource>
   );
 }

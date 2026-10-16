@@ -2,12 +2,11 @@
  * Lab: native modül risk testi (harita, mekânsal ses, pusula, haptik, TTS).
  * Demo ekranı değildir; özellikler gerçek ekranlara taşındıkça sadeleşecek.
  */
-import { Camera, GeoJSONSource, Layer } from '@maplibre/maplibre-react-native';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { Button } from '@/components/ui';
 import { useT } from '@/lib/i18n';
 import { type } from '@/design/type';
-import { DeferredMap } from '@/components/deferred-map';
+import { EndPin, SeziMap } from '@/components/map';
 import { bearingDeg, stereoPan, type LngLat } from '@sezi/shared';
 import * as Haptics from 'expo-haptics';
 import * as Location from 'expo-location';
@@ -78,19 +77,9 @@ export default function Lab() {
 
   return (
     <ScrollView style={{ backgroundColor: t.background }} contentContainerStyle={styles.body}>
-      <View style={styles.map}>
-        <DeferredMap>
-          <Camera initialViewState={{ center: ULU_CAMI, zoom: 16 }} />
-          {/* Marker (ViewAnnotation) RN 0.86 Fabric ile çöküyor; noktalar GeoJSON katmanıyla çizilir. */}
-          <GeoJSONSource id="works" data={{ type: 'Point', coordinates: ULU_CAMI }}>
-            <Layer
-              id="works-circle"
-              type="circle"
-              paint={{ 'circle-radius': 9, 'circle-color': t.accent, 'circle-stroke-width': 2, 'circle-stroke-color': t.surface }}
-            />
-          </GeoJSONSource>
-        </DeferredMap>
-      </View>
+      <SeziMap style={styles.map} initial={[ULU_CAMI]} initialZoom={16} accessibilityLabel={tr('lab.heading')}>
+        <EndPin id="lab" location={ULU_CAMI} kind="end" />
+      </SeziMap>
 
       <Text style={[styles.h, { color: t.text }]}>{tr("lab.heading")}</Text>
       <Text style={[type.meta, { color: t.textMuted }]}>

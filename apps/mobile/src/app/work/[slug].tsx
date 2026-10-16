@@ -1,4 +1,3 @@
-import { Camera, GeoJSONSource, Layer } from '@maplibre/maplibre-react-native';
 import type { ThemeColors } from '@sezi/shared';
 import { Image } from 'expo-image';
 import * as Speech from 'expo-speech';
@@ -8,7 +7,7 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DeferredMap } from '@/components/deferred-map';
+import { SeziMap, WorkPin } from '@/components/map';
 import { PhotoViewer } from '@/components/photo-viewer';
 import { Badge, Button, EmptyState, ListRow, softShadow } from '@/components/ui';
 import { ChevronIcon, ExternalIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
@@ -190,18 +189,14 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
           <Section title={tr('design.location')} t={t}>
             {address ? <Text style={[type.body, { color: t.text }]}>{address}</Text> : null}
             {hasLocation(work) ? (
-              <View style={s.map} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-                <DeferredMap dragPan={false} touchZoom={false} touchRotate={false}>
-                  <Camera initialViewState={{ center: [work.lng, work.lat], zoom: work.location_precision === 'exact' ? 16.5 : 15 }} />
-                  <GeoJSONSource id="work" data={{ type: 'Point', coordinates: [work.lng, work.lat] }}>
-                    {work.location_precision !== 'exact' ? (
-                      <Layer id="work-area" type="circle" paint={{ 'circle-radius': 46, 'circle-color': t.primary, 'circle-opacity': 0.14, 'circle-stroke-width': 2, 'circle-stroke-color': t.primary }} />
-                    ) : null}
-                    <Layer id="work-halo" type="circle" paint={{ 'circle-radius': 16, 'circle-color': t.surface }} />
-                    <Layer id="work-circle" type="circle" paint={{ 'circle-radius': 9, 'circle-color': t.accent, 'circle-stroke-width': 3, 'circle-stroke-color': t.surface }} />
-                  </GeoJSONSource>
-                </DeferredMap>
-              </View>
+              <SeziMap
+                style={s.map}
+                interactive={false}
+                initial={[[work.lng, work.lat]]}
+                initialZoom={work.location_precision === 'exact' ? 16.5 : 15}
+                accessibilityLabel={address ?? loc(work.name, 'tr')}>
+                <WorkPin location={[work.lng, work.lat]} approximate={work.location_precision !== 'exact'} />
+              </SeziMap>
             ) : (
               <Text style={[type.body, { color: t.textMuted }]}>{tr('inv.unlocated')}</Text>
             )}

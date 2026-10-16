@@ -1,7 +1,6 @@
-import * as maplibregl from 'maplibre-gl';
 import { useEffect, useRef } from 'react';
 
-const STYLE = 'https://tiles.openfreemap.org/styles/liberty';
+import { createMap, mapboxgl } from '../lib/mapbox';
 
 /**
  * Konum iğnesi: haritaya tıklamak ya da iğneyi sürüklemek konumu belirler.
@@ -9,16 +8,15 @@ const STYLE = 'https://tiles.openfreemap.org/styles/liberty';
  */
 export function LocationMap({ value, fallbackCenter, onChange }: { value: [number, number] | null; fallbackCenter: [number, number]; onChange: (p: [number, number]) => void }) {
   const box = useRef<HTMLDivElement>(null);
-  const map = useRef<maplibregl.Map | null>(null);
-  const marker = useRef<maplibregl.Marker | null>(null);
+  const map = useRef<mapboxgl.Map | null>(null);
+  const marker = useRef<mapboxgl.Marker | null>(null);
   const change = useRef(onChange);
   change.current = onChange;
 
   useEffect(() => {
     if (!box.current) return;
-    const m = new maplibregl.Map({ container: box.current, style: STYLE, center: value ?? fallbackCenter, zoom: value ? 17 : 12 });
-    m.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
-    m.on('click', (e: maplibregl.MapMouseEvent) => change.current([Number(e.lngLat.lng.toFixed(7)), Number(e.lngLat.lat.toFixed(7))]));
+    const m = createMap(box.current, value ?? fallbackCenter, value ? 17 : 12);
+    m.on('click', (e: mapboxgl.MapMouseEvent) => change.current([Number(e.lngLat.lng.toFixed(7)), Number(e.lngLat.lat.toFixed(7))]));
     map.current = m;
     return () => {
       m.remove();
@@ -38,7 +36,7 @@ export function LocationMap({ value, fallbackCenter, onChange }: { value: [numbe
       return;
     }
     if (!marker.current) {
-      marker.current = new maplibregl.Marker({ color: '#B8321F', draggable: true }).setLngLat(value).addTo(m);
+      marker.current = new mapboxgl.Marker({ color: '#B8321F', draggable: true }).setLngLat(value).addTo(m);
       marker.current.on('dragend', () => {
         const p = marker.current!.getLngLat();
         change.current([Number(p.lng.toFixed(7)), Number(p.lat.toFixed(7))]);

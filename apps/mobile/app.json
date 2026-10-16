@@ -35,7 +35,6 @@
           "imageWidth": 76
         }
       ],
-      "@maplibre/maplibre-react-native",
       [
         "expo-location",
         {
@@ -59,7 +58,8 @@
           }
         }
       ],
-      "expo-audio"
+      "expo-audio",
+      "@rnmapbox/maps"
     ],
     "experiments": {
       "typedRoutes": true,

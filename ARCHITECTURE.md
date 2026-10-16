@@ -102,7 +102,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
    - Ses sırası (`pointVoice`): kendi dilinde kayıt → kendi dilinde metin (TTS) → TR kayıt → TR metin. Kayıt çalarken talimatlar bekler, bitince okunur.
    - Sapma, yol kapatma ve yanlış dönüşte bulunulan yerden yeniden rota (açılmış noktalar atlanır). Varışta eser kartı ve varış bilgisinin sesi.
    - Duymayan kullanıcıda ses yerine `CueFlash` (ekran kenarı parlaması) ve titreşim.
-7. **Harita** (`components/map`): ekranlar harita kütüphanesini doğrudan kullanmaz; rota, nokta ve konum çizimleri buradaki bileşenlerledir.
+7. **Harita** (Mapbox): mobilde `@rnmapbox/maps` yalnızca `components/map` içinde (ekranlar `SeziMap`, `RouteLine`, `PointsLayer`, `WorkClusters`… kullanır); adminde `mapbox-gl` yalnızca `lib/mapbox.ts` üzerinden. Stil Mapbox Standard: düz, dükkân etiketleri kapalı, Çini zemin renkleri; koyu temada gece, az gören profilinde tek renkli.
 
 ## Mobil ekranlar
 

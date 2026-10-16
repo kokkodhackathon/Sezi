@@ -90,8 +90,8 @@ Ekibin ve önceki oturumların çalışma biçimi. Bunlara uyulmazsa süreç boz
   - `components/ui.tsx`: Button, Card, ListRow, Badge, Note, Chip, Segmented, ToggleRow, EmptyState, Field, SectionTitle, Eyebrow.
   - Yeni ekran bunlarla kurulur. Motifler `design/motif.tsx`, ikonlar `design/icons.tsx` içinde.
 - **Harita:**
-  - Her zaman `components/deferred-map.tsx` (`DeferredMap`) kullanın; gecikmeli açılış Fabric çökmesini önler.
-  - Noktalar `GeoJSONSource` + `Layer` ile çizilir. **MapLibre `Marker` kullanmayın**, RN 0.86'da çöküyor.
+  - Ekranlar Mapbox'ı doğrudan kullanmaz: harita, rota, nokta ve konum çizimleri `components/map` (`SeziMap`, `RouteLine`, `PointsLayer`…) üzerinden yapılır; kütüphaneye ait kod yalnızca orada.
+  - Token: `EXPO_PUBLIC_MAPBOX_TOKEN` (mobil), `VITE_MAPBOX_TOKEN` (admin). Stil Mapbox Standard (düz, dükkân etiketleri kapalı); eklenen katmanlar `slot` ile (rota `middle`, noktalar `top`).
 - **Veri:** `src/lib/works.ts` (TanStack Query + `works_view`).
   - `lng/lat` null olabilir: önce `hasLocation(w)` ile kontrol edin.
   - Konum kesinliği (`location_precision`) arayüzde gösterilir.

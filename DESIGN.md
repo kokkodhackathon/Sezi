@@ -272,4 +272,4 @@ Yön işareti ve 32/40 Atkinson talimat ana odağı oluşturur. Kalan mesafe, si
 - **Don't** ana arayüze dekoratif bantlar veya tekrar eden üst başlıklar ekle.
 - **Don't** Fraunces'i kontrollerde veya yön talimatlarında kullan.
 - **Don't** renkleri tek başına durum göstergesi yap.
-- **Don't** yeni harita ekranında MapLibre Marker kullan; DeferredMap ve GeoJSON katmanlarını koru.
+- **Don't** ekranda harita kütüphanesini doğrudan kullan; harita çizimleri `components/map` bileşenleriyle yapılır.
