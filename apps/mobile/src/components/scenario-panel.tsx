@@ -4,7 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { radius, space, type } from '@/design/type';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
-import type { NavState } from '@/lib/sim/session';
+import type { NavState } from '@/lib/navigation/session';
 
 /**
  * Jüri paneli: simülasyon sırasında gerçek hayat durumlarını canlı tetikler.
@@ -25,7 +25,7 @@ export function ScenarioPanel({
   const { t: tr } = useT();
   const [failed, setFailed] = useState(false);
   const run = (fn: () => boolean) => setFailed(!fn());
-  const disabled = state.finished;
+  const disabled = state.phase !== 'active';
 
   const items = [
     { key: 'block', label: tr('sim.block'), hint: tr('sim.blockHint'), onPress: () => run(onBlock), active: false },

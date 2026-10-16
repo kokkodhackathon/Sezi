@@ -158,7 +158,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
                 variant={canHear ? 'outline' : 'primary'}
                 label={tr('work.directions')}
                 icon={(c) => <TurnIcon turn="slight_right" color={c} />}
-                onPress={() => router.push({ pathname: '/route/[slug]', params: { slug: work.slug } })}
+                onPress={() => router.push({ pathname: '/navigate', params: { dest: work.slug } })}
               />
             ) : null}
           </View>

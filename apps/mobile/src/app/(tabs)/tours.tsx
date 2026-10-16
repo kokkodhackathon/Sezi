@@ -11,10 +11,9 @@ import { SoundIcon } from '@/design/icons';
 import { WorkGlyphInline } from '@/design/work-glyph';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
-import { formatDistance, startLocation, useNavVersion, walkingSpeed } from '@/lib/nav';
-import { useSettings } from '@/lib/settings';
+import { defaultStart, formatDistance, useNavVersion, walkingSpeed } from '@/lib/nav';
+import { useNavPoints } from '@/lib/points';
 import { useProfile } from '@/lib/profile';
-import { useStoryPoints } from '@/lib/story';
 import { planTour, TOURS } from '@/lib/tours';
 import { photoUrl, useWorks } from '@/lib/works';
 
@@ -25,13 +24,12 @@ export default function Tours() {
   const { profile } = useProfile();
   const { data: works } = useWorks('bursa');
   const navVersion = useNavVersion();
-  const { settings } = useSettings();
-  const stories = useStoryPoints();
+  const stories = useNavPoints().filter((p) => p.roles.includes('story')).length;
   const plans = useMemo(
-    () => (profile ? TOURS.map((d) => planTour(d.id, profile, startLocation(settings.simStart))) : []),
-    // navVersion: grafik modül düzeyinde değişir (onaylı bildirim); sürüm değişince plan yeniden hesaplanmalı.
+    () => (profile ? TOURS.map((d) => planTour(d.id, profile, defaultStart())) : []),
+    // navVersion: başlangıç noktaları ve onaylı bildirimler değişince turlar yeniden hesaplanır.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [profile, navVersion, settings.simStart],
+    [profile, navVersion],
   );
   const bySlug = useMemo(() => new Map((works ?? []).map((w) => [w.slug, w])), [works]);
   // Her tur kapak olarak, önceki turlarda kullanılmamış ilk fotoğrafı alır (aynı kare tekrarlanmasın).
@@ -52,18 +50,18 @@ export default function Tours() {
         <ScreenHeader title={tr('tours.title')} subtitle={tr('design.pilotSubtitle')} />
         {/* Canlı yürüyüş: anlatım noktaları her ilde çalışır; tur kartlarıyla aynı kapaksız düzen. */}
         <Pressable
-          onPress={() => router.push('/walk')}
+          onPress={() => router.push('/navigate')}
           accessibilityRole="button"
-          accessibilityLabel={`${tr('walk.start')}. ${tr('walk.cardBody')}. ${tr('walk.points', { n: stories.length })}`}
-          accessibilityHint={tr('walk.startHint')}
+          accessibilityLabel={`${tr('nav.walkCard')}. ${tr('nav.walkCardBody')}. ${tr('nav.storyCount', { n: stories })}`}
+          accessibilityHint={tr('nav.beginHint')}
           style={({ pressed }) => [s.card, softShadow(t), { backgroundColor: t.surface }, s.compact, pressed && { opacity: 0.92 }]}>
           <View style={[s.tile, { backgroundColor: t.soft }]}>
             <SoundIcon color={t.primary} size={32} />
           </View>
           <View style={[s.cap, { flex: 1, paddingLeft: 0 }]}>
-            <Text style={[type.title, { color: t.text, fontSize: 22, lineHeight: 28 }]}>{tr('walk.start')}</Text>
-            <Text style={[type.meta, { color: t.textMuted }]}>{tr('walk.cardBody')}</Text>
-            <Text style={[type.meta, { color: t.primary, fontFamily: type.button.fontFamily }]}>{tr('walk.points', { n: stories.length })}</Text>
+            <Text style={[type.title, { color: t.text, fontSize: 22, lineHeight: 28 }]}>{tr('nav.walkCard')}</Text>
+            <Text style={[type.meta, { color: t.textMuted }]}>{tr('nav.walkCardBody')}</Text>
+            <Text style={[type.meta, { color: t.primary, fontFamily: type.button.fontFamily }]}>{tr('nav.storyCount', { n: stories })}</Text>
           </View>
         </Pressable>
         {!plans.some((plan) => plan?.stops.length) ? <EmptyState title={tr('tours.none')} /> : null}

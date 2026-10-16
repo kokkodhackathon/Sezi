@@ -60,17 +60,6 @@ export interface GuidanceStep {
   kind?: StepKind;
   /** Önümüzdeki segmentte dikkat gerektiren durum (ekranda simge, titreşimde uyarı). */
   hazard?: Hazard;
-  /**
-   * Birlikte sunulan manevralar (ör. art arda iki dönüş). Grubun ilk adımı tamamını anlatır;
-   * her manevra yine kendi `atM` değerinde ayrı tetiklenir (görsel ve haptik karşılık kaybolmaz).
-   */
-  group?: string;
-  /** Bu adımdan sonra yürünen yol (Lynch "path"): "Uzunçarşı Caddesi". */
-  path?: string;
-  /** Sonraki adıma kadar yürünecek mesafe (m). */
-  legM?: number;
-  /** Elle yazılmış tarifte manevra sahada yürünerek doğrulandı mı. */
-  fieldChecked?: boolean;
 }
 
 /** Profile göre ipucu tipi tercih sırası. */

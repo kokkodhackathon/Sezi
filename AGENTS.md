@@ -69,8 +69,8 @@ Ekibin ve önceki oturumların çalışma biçimi. Bunlara uyulmazsa süreç boz
 - Metin önce `messages-app.ts`'e TR + EN; ekranda sabit metin yok.
 - Simülasyon ve geliştirici araçları `settings.devSimulation` arkasında; normal kullanıcı görmez.
 - Az yazı, önce fotoğraf (DESIGN.md "Çini"). Yeni renk değil token; gölge için `softShadow()`.
-- Rota grafiği değişince: `python -I data/build_nav_graph.py` → `assets/pilot/*.json` yeniden üretilir → `pnpm test` (pilot-graph testleri) → uygulamada başlangıç noktaları (`START_POINTS`) kontrol.
-- Yeni Lynch noktası kod değil veridir: `data/lynch/<alan>.json` (OSM kimliği, rol, salience, `why`, `verified: false`).
+- Rota grafiği değişince: `python -I data/build_nav_graph.py` → `assets/pilot/*.json` yeniden üretilir → `pnpm test` (pilot-graph testleri).
+- Başlangıç noktası, yer işareti, anlatım ve eser varış bilgisi kod değil veridir: admin panelinde **Noktalar** (`nav_points`). Kodda sabit nokta ya da rota yazılmaz.
 - Sunucu yazmaları security-definer RPC ile değil **RLS + trigger** ile yapılır (advisor uyarısı vermemesi için).
 - Uygulama sunucudan gelen veriyi kv-store'da önbelleğe alır; internet yokken son bilinen hâlle çalışmalı.
 - Git Bash'te kaçış karakterleri (`\n`, `\u…`, kesme işareti) heredoc'ta bozulabiliyor: çok satırlı içerik Write/Edit aracıyla ya da script dosyasıyla yazılır.

@@ -10,7 +10,7 @@ import { useSeziTheme , useIsDark } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
 import { ProfileProvider, useProfile } from '@/lib/profile';
 import { SettingsProvider } from '@/lib/settings';
-import { useStorySync } from '@/lib/story';
+import { usePointsSync } from '@/lib/points';
 import { useServerSync } from '@/lib/sync';
 
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
@@ -44,7 +44,7 @@ export default function RootLayout() {
 
 function AppStack() {
   useServerSync();
-  useStorySync();
+  usePointsSync();
   const reducedMotion = useReducedMotion();
   const dark = useIsDark();
   const t = useSeziTheme();
@@ -71,9 +71,8 @@ function AppStack() {
         <Stack.Protected guard={profile !== null}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen name="work/[slug]" options={{ title: '', headerBackTitle: tr('onb.back') }} />
-          <Stack.Screen name="route/[slug]" options={{ title: '', headerBackTitle: tr('onb.back') }} />
-          <Stack.Screen name="compare/[slug]" options={{ title: tr('compare.title') }} />
-          <Stack.Screen name="guide/[slug]" options={{ headerShown: false, presentation: 'fullScreenModal', animation: reducedMotion ? 'none' : 'fade' }} />
+          <Stack.Screen name="navigate" options={{ headerShown: false, animation: reducedMotion ? 'none' : 'fade_from_bottom' }} />
+          <Stack.Screen name="compare/[slug]" options={{ headerShown: false }} />
           <Stack.Screen name="complex/[slug]" options={{ title: '' }} />
           <Stack.Screen name="tour/[id]" options={{ title: '' }} />
           <Stack.Screen name="city/[slug]" options={{ title: '' }} />
@@ -85,7 +84,6 @@ function AppStack() {
           <Stack.Screen name="settings" options={{ title: tr('settings.title') }} />
           <Stack.Screen name="about" options={{ title: tr('about.title') }} />
           <Stack.Screen name="lab" options={{ title: tr('settings.device') }} />
-          <Stack.Screen name="walk" options={{ title: tr('walk.title'), headerBackTitle: tr('onb.back') }} />
         </Stack.Protected>
         <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: profile !== null }} />
       </Stack>

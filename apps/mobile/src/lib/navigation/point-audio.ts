@@ -1,14 +1,14 @@
 import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-audio';
 
 /**
- * Anlatım noktası ses kaydı oynatıcısı: aynı anda tek kayıt çalar.
+ * Nokta (anlatım / eser varışı) ses kaydı oynatıcısı: aynı anda tek kayıt çalar.
  * Bitince `onEnd`, çalınamazsa (dosya yok, internet yok) `onError` çağrılır; durdurmada hiçbiri çağrılmaz.
  */
 let player: AudioPlayer | null = null;
 let sub: { remove: () => void } | null = null;
 let modeSet = false;
 
-export function stopStoryFile() {
+export function stopPointFile() {
   const p = player;
   player = null;
   sub?.remove();
@@ -24,8 +24,8 @@ export function stopStoryFile() {
   }
 }
 
-export function playStoryFile(uri: string, cb: { onEnd: () => void; onError: () => void }) {
-  stopStoryFile();
+export function playPointFile(uri: string, cb: { onEnd: () => void; onError: () => void }) {
+  stopPointFile();
   if (!modeSet) {
     modeSet = true;
     // Sessiz modda da çalsın; başka uygulamanın sesi kısılsın (anlatım öne çıkar).
@@ -41,7 +41,7 @@ export function playStoryFile(uri: string, cb: { onEnd: () => void; onError: () 
   player = p;
   const finish = (fn: () => void) => {
     if (player !== p) return;
-    stopStoryFile();
+    stopPointFile();
     fn();
   };
   sub = p.addListener('playbackStatusUpdate', (s) => {

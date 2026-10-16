@@ -10,7 +10,7 @@ import { colorForType, WorkGlyphInline } from '@/design/work-glyph';
 import { Image } from 'expo-image';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
-import { startLocation, useNavVersion, walkingSpeed } from '@/lib/nav';
+import { defaultStart, useNavVersion, walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
 import { planTour } from '@/lib/tours';
@@ -22,13 +22,13 @@ export default function TourDetail() {
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
   const { profile } = useProfile();
-  const { visited, settings } = useSettings();
+  const { visited } = useSettings();
   const navVersion = useNavVersion();
   const plan = useMemo(
-    () => (profile ? planTour(id, profile, startLocation(settings.simStart)) : null),
-    // navVersion: grafik modül düzeyinde değişir (onaylı bildirim); sürüm değişince plan yeniden hesaplanmalı.
+    () => (profile ? planTour(id, profile, defaultStart()) : null),
+    // navVersion: başlangıç noktaları ve onaylı bildirimler değişince tur yeniden hesaplanır.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [id, profile, navVersion, settings.simStart],
+    [id, profile, navVersion],
   );
   const { data: works } = useWorks('bursa');
   const bySlug = useMemo(() => new Map((works ?? []).map((w) => [w.slug, w])), [works]);
@@ -43,7 +43,6 @@ export default function TourDetail() {
 
   const title = tr(`tours.${id}.title` as MessageKey);
   const minutes = Math.max(1, Math.round(plan.lengthM / walkingSpeed(profile) / 60));
-  const first = plan.stops[0]!;
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
@@ -63,11 +62,9 @@ export default function TourDetail() {
 
       <Button
         label={tr('tours.start')}
-        onPress={() => router.push({ pathname: '/route/[slug]', params: { slug: first.slug } })}
+        onPress={() => router.push({ pathname: '/navigate', params: { tour: plan.stops.map((x) => x.slug).join(',') } })}
         icon={(c) => <TurnIcon turn="slight_right" color={c} size={22} />}
       />
-
-
 
       <SectionTitle title={tr('tours.stopsTitle')} />
       <View>

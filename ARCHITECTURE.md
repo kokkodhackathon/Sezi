@@ -79,28 +79,30 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 
 1. **Grafik**
    - `data/build_nav_graph.py <alan>`, OSM yaya ağını ve `works_view` içindeki kesin konumlu eserleri birleştirir.
-   - Çıktı: `nodes` (landmark'larda `workSlug`) ve `segments` (uzunluk, basamak, eğim, zemin, gürültü, landmark görünürlüğü).
-   - Bursa Hanlar: 507 düğüm, 669 segment, 17 landmark.
-2. **Maliyet** (`shared/routing.ts › segmentCost`)
+   - Çıktı: `nodes` (eserlerde `workSlug`) ve `segments` (uzunluk, basamak, eğim, zemin, gürültü).
+   - Bursa Hanlar (650 m): 892 düğüm, 1215 segment, 20 eser.
+2. **Noktalar** (`nav_points`, admin panelinde "Noktalar"; kodda sabit nokta ya da rota yok)
+   - Roller: `start` (başlangıç/buluşma, `sort_order` ile sıralı; ilki varsayılan), `landmark` (yer işareti, belirginlik 1–3, ortam sesi), `story` (anlatım: metin + ses, yarıçap), `arrival` (eser varış bilgisi, `work_id`). Bir yer birden çok rol taşır.
+   - Uygulama `nav_points_view`'u çeker, kv'de saklar, sesleri `Paths.cache/point-audio`'ya indirir (`lib/points.ts`) ve grafiğe çalışırken uygular (`nav.ts › setNavPoints`): yer işareti en yakın düğüme (≤ 60 m) bağlanıp talimatta anılır; 40 m içindeki segmentlerin görünürlüğü belirginliğe göre artar; anlatım/varış noktaları uğrama adayı olur (≤ 40 m).
+   - Onaylı erişilebilirlik bildirimleri (`segment_overrides`) aynı çalışma grafiğine uygulanır; nokta ya da bildirim değişince `useNavVersion` artar ve ekranlar yeniden hesaplar.
+3. **Maliyet** (`shared/routing.ts › segmentCost`)
    - Profile göre değişir: tekerlekli sandalye basamağı hiç kullanmaz; görme kısıtlı kullanıcı gürültü ve kaldırımdan kaçınır.
-   - Landmark görünürlüğü maliyeti düşürür.
+   - Yer işareti görünürlüğü maliyeti düşürür.
    - Arama algoritması Dijkstra (`findRoute`).
-3. **Yönlendirme** (`shared/guidance.ts › buildGuidance`)
-   - Dönüş açısı ve en yakın landmark'tan Lynch tarzı talimat üretir.
+4. **Rota** (`nav.ts`)
+   - `planRoute(eser, profil, başlangıç)`: `shared/via.ts › routeVia` rotayı yakındaki anlatım/varış noktalarına uğratır (açgözlü ekleme, en çok %25 ve +300 m). Haritada seçilen başlangıç ya da yeniden rotada `withLeadIn` kullanıcının tam konumundan bağlar.
+   - `planStroll` (hedefsiz gezinti): en yakın açılmamış noktaya, oradan bir sonrakine; en çok 5 nokta, bacak ≤ 500 m, toplam ≤ 1,2 km.
+   - Turlar (`lib/tours.ts`): eser türüne göre havuz, en yakın komşu sırası; "Başla" durakları sırayla aynı navigasyon ekranında yürütür.
+5. **Yönlendirme** (`shared/guidance.ts › buildGuidance`)
+   - Dönüş açısı ve en yakın yer işaretinden Lynch tarzı talimat; merdiven, zemin, cadde uyarısı; uzun düzlükte teyit.
    - İpucu türü profile göre seçilir (`cuePreference`): duymayan kullanıcıya sesli ipucu verilmez.
-   - **Altın rota** (`shared/curated.ts`): ekibin elle yazdığı onaylı Lynch tarifi (`data/lynch/routes/*.json`, grafiğe `curatedRoutes` olarak gömülür).
-     Başlangıç ve varış eşleşirse ve her segment profile uyuyorsa (`matchCurated`) güzergâh ve metinler onunkidir; kapalı yol ya da profil kısıtında motor devralır.
-     Her manevra atomik bir adımdır (kendi `atM`, dönüş, haptik); `group` yalnızca sunumu birleştirir (art arda dönüşler tek cümlede anlatılır, her biri yine kendi yerinde tetiklenir).
-     Geliştirici seçeneklerinde rota ekranı ekip ↔ motor tarifini değiştirir ve ortak yol payını gösterir (`routeOverlap`): motor iyileştirmelerinin ölçütü.
-4. **Simülasyon** (`mobile/lib/simulation.ts`)
-   - Sanal yürüyüşçü rota geometrisinde ilerler. Adım noktalarında TTS, haptik desen ve stereo panlanmış ton çalınır.
-   - Duymayan kullanıcıda bunların yerine `CueFlash`: ekran kenarı parlaması ve titreşim.
-5. **Başlangıç noktası:** T1 Ulucami tramvay durağı (`nav.ts › DEFAULT_START`). Yürüyüş ekranında başlangıç gerçek GPS konumudur.
-6. **Yürüyüş ve anlatım noktaları** (`mobile/lib/walk/session.ts`)
-   - `story_points` (admin girer: metin TR/EN, ses kaydı TR/EN, yarıçap) → `story_points_view` → `lib/story.ts` (kv önbellek, sesler `Paths.cache/story-audio`'ya iner).
-   - Konum kaynağı GPS (`expo-location`, ön planda; ekran `expo-keep-awake` ile açık) ya da simülasyon modunda sanal yürüyüşçü. Yarıçapa girilen nokta yürüyüş başına bir kez açılır (`shared/story.ts › dueStoryPoints`, doğruluk > 50 m ise tetiklemez).
-   - Ses sırası (`storyVoice`): kendi dilinde kayıt → kendi dilinde metin (TTS) → TR kayıt → TR metin. Kayıt çalarken talimatlar bekler, bitince okunur.
-   - Hedef seçilirse (yalnız pilot grafik) `shared/via.ts › routeVia` rotayı yol üstündeki noktalara uğratır: açgözlü ekleme, en çok %25 ve +300 m. Uğrayan rotada altın rota kullanılmaz.
+6. **Navigasyon oturumu** (`mobile/lib/navigation/session.ts`)
+   - Aşamalar: plan → yürüyüş → varış. Konum kaynağı GPS (`expo-location`, ön planda; ekran `expo-keep-awake` ile açık) ya da geliştirici simülasyon modunda sanal yürüyüşçü (başlangıç "Konumum" değilse). İkisi de aynı takip hattından geçer (`trackFix`, `dueStep`).
+   - Yarıçapa girilen anlatım/varış noktası yürüyüş başına bir kez açılır (`shared/points.ts › duePoints`, doğruluk > 50 m ise tetiklemez); sanal yürüyüş nokta okunurken bekler.
+   - Ses sırası (`pointVoice`): kendi dilinde kayıt → kendi dilinde metin (TTS) → TR kayıt → TR metin. Kayıt çalarken talimatlar bekler, bitince okunur.
+   - Sapma, yol kapatma ve yanlış dönüşte bulunulan yerden yeniden rota (açılmış noktalar atlanır). Varışta eser kartı ve varış bilgisinin sesi.
+   - Duymayan kullanıcıda ses yerine `CueFlash` (ekran kenarı parlaması) ve titreşim.
+7. **Harita** (`components/map`): ekranlar harita kütüphanesini doğrudan kullanmaz; rota, nokta ve konum çizimleri buradaki bileşenlerledir.
 
 ## Mobil ekranlar
 
@@ -113,9 +115,8 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 | `(tabs)/profile` | Profil, ayarlar, bildirimler, sergiler, hakkında | cihaz |
 | `work/[slug]` | Eser: envanter atfı (cilt/sayfa + PDF), durum, UNESCO, konum kesinliği, anlatım metni | `works_view` |
 | `city/[slug]` | İl: envanter istatistikleri, kitaplar, sergiler, ilçeler | `cities`, `sources`, `exhibitions` |
-| `route/[slug]` | Rota özeti, profil açıklaması, simülasyon | gömülü grafik |
-| `guide/[slug]` | Tam ekran canlı rehberlik (koyu tema) | gömülü grafik |
-| `walk` | Yürüyüş: canlı konum, anlatım noktası pop-up'ı ve sesi, isteğe bağlı hedefe uğrayan rota | `story_points_view`, gömülü grafik |
+| `navigate` | Tek navigasyon ekranı: nereden (konumum / başlangıç noktası / haritada seçilen yer) → nereye (eser, tur ya da gezinti) → yol üstündeki noktalara uğrayan rota → canlı rehberlik (GPS ya da simülasyon) → varış kartı ve sesi | `nav_points_view`, gömülü grafik |
+| `compare/[slug]` | Aynı başlangıç ve hedef için üç profilin rotası; başlangıç ve hedef seçilebilir | gömülü grafik |
 | `exhibitions` | Envanter fotoğraf sergileri | `exhibitions` |
 | `search` | Ad, tür, ilçe ve il araması | `works_view` |
 | `report/new`, `reports` | Erişilebilirlik bildirimi: cihazda kuyruk → sunucu (hesapsız, RLS); onaylanınca "onaylandı" | `a11y_reports`, `segment_overrides` |

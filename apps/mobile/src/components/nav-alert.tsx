@@ -4,7 +4,7 @@ import { CloseIcon } from '@/design/icons';
 import { radius, space, type } from '@/design/type';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
-import type { NavAlert } from '@/lib/sim/session';
+import type { NavAlert } from '@/lib/navigation/session';
 
 /**
  * Rehberlik uyarı şeridi: rotadan çıkma, yol kapanması, kalabalık modu.

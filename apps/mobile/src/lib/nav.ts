@@ -1,66 +1,101 @@
 import {
+  arrivalFor,
   buildDetour,
   buildGuidance,
-  CuratedRoute,
-  curatedGuidance,
   distanceM,
   findRoute,
-  matchCurated,
+  joinRoutes,
   NavSegment,
+  opensOnApproach,
   routeGeometry,
-  routeOverlap,
   routeVia,
   segmentAhead,
+  startPointsOf,
   withLeadIn,
+  type Ambient,
   type GuidanceStep,
   type LngLat,
   type LocalizedText,
   type NavNode,
+  type NavPoint,
   type Route,
   type RouteGeometry,
   type UserProfile,
 } from '@sezi/shared';
 
 import { useSyncExternalStore } from 'react';
-import { z } from 'zod';
 
 // Pilot grafiği uygulamaya gömülü: rota hesabı ve rehberlik internetsiz çalışır.
+// Grafik yalnızca yol ağı ve eserlerdir; başlangıç, yer işareti ve anlatım noktaları admin panelinden gelir (setNavPoints).
 import raw from '../../assets/pilot/bursa-hanlar-nav.json';
 
-type PilotNode = NavNode & {
+export type PilotNode = NavNode & {
   workSlug?: string;
   workType?: string;
-  /** Ekibin seçtiği Lynch noktası (data/lynch): buluşma/varış ya da eser dışı yer işareti. */
+  /** Bu düğüme bağlanan yer işareti noktası (nav_points). */
   pointId?: string;
-  roles?: ('gathering' | 'landmark')[];
   /** Ortam sesi (ses manzarası): su, çarşı uğultusu… */
-  sound?: 'water' | 'market' | 'chime';
+  sound?: Ambient;
 };
 
 /** Başlangıç seçeneği: insanların buluştuğu ya da toplu taşımadan indiği yer ("Neredesiniz?"). */
 export interface StartPoint {
   id: string;
   nodeId: string;
-  name: { tr: string; en?: string };
+  name: LocalizedText;
   location: LngLat;
 }
 
-const nodes = new Map<string, PilotNode>((raw.nodes as PilotNode[]).map((n) => [n.id, n]));
-const segments = (raw.segments as unknown[]).map((s) => NavSegment.parse(s));
-const segMap = new Map(segments.map((s) => [s.id, s]));
+const baseNodes = new Map<string, PilotNode>((raw.nodes as PilotNode[]).map((n) => [n.id, n]));
+const baseSegments = (raw.segments as unknown[]).map((s) => NavSegment.parse(s));
+const baseSegMap = new Map(baseSegments.map((s) => [s.id, s]));
+const CENTER = raw.center as LngLat;
 
 /** Pilot alanın kimliği (bildirimler ve onaylı etkiler bununla eşleşir). */
 export const PILOT_AREA: string = raw.area;
 
-// ---------- Onaylı erişilebilirlik bildirimleri ----------
-// Admin panelinde onaylanan bildirim (segment_overrides) yol parçasının özelliğini değiştirir;
-// rota motoru değişmez, yalnızca grafiğin o parçası güncellenir. Kural veritabanı tetikleyicisiyle aynı.
+/** Eserler (varış düğümleri): hedef seçenekleri ve turlar. Grafikle birlikte üretilir. */
+export const pilotWorks = [...baseNodes.values()].filter((n) => n.workSlug);
+
+/** Yer işareti noktası en yakın düğüme en çok bu uzaklıktan bağlanır (m). */
+const LANDMARK_SNAP_M = 60;
+/** Anlatım/varış noktası rotaya uğramak için en yakın düğüme en çok bu uzaklıktan bağlanır (m). */
+const VIA_SNAP_M = 40;
+/** Yer işaretine bu kadar yakın segmentlerden yer işareti görünür sayılır (m). */
+const VISIBLE_M = 40;
+/** Konum en yakın düğüme bundan yakınsa pilot alanın içinde sayılır (m). */
+export const PILOT_REACH_M = 150;
+
+// ---------- Çalışan grafik ----------
+// Taban grafik + admin noktaları (yer işareti adı, görünürlük, ortam sesi) + onaylı erişilebilirlik bildirimleri.
+// Herhangi biri değişince sürüm artar; rota çizen ekranlar useNavVersion ile yeniden hesaplar.
+
 export type OverrideType = 'stairs' | 'ramp_blocked' | 'narrow_path' | 'surface_damage' | 'construction' | 'other';
 
-let effective: NavSegment[] = segments;
-let effMap = segMap;
+let navPoints: NavPoint[] = [];
+let overrideTypes = new Map<string, Set<OverrideType>>();
+
+let nodes = baseNodes;
+let effective: NavSegment[] = baseSegments;
+let effMap = baseSegMap;
+let starts: StartPoint[] = [];
+/** Anlatım/varış noktası → bağlandığı düğüm (rotaya uğramak için). */
+let viaNode = new Map<string, string>();
 let version = 0;
 const versionListeners = new Set<() => void>();
+
+function nearestIn(map: Map<string, PilotNode>, p: LngLat): PilotNode {
+  let best: PilotNode | undefined;
+  let bestD = Infinity;
+  for (const n of map.values()) {
+    const d = distanceM(p, n.location);
+    if (d < bestD) {
+      bestD = d;
+      best = n;
+    }
+  }
+  return best!;
+}
 
 function applyOverride(s: NavSegment, types: Set<OverrideType>): NavSegment {
   let next = s;
@@ -71,17 +106,63 @@ function applyOverride(s: NavSegment, types: Set<OverrideType>): NavSegment {
   return next;
 }
 
-/** Sunucudan gelen onaylı etkileri grafiğe uygular; değişiklik varsa rotalar yeniden hesaplanır. */
-export function setOverrides(list: { segment_key: string; type: OverrideType }[]) {
-  const by = new Map<string, Set<OverrideType>>();
-  for (const o of list) by.set(o.segment_key, (by.get(o.segment_key) ?? new Set()).add(o.type));
-  effective = by.size ? segments.map((s) => (by.has(s.id) ? applyOverride(s, by.get(s.id)!) : s)) : segments;
+const midOf = (s: NavSegment): LngLat => (s.geometry && s.geometry.length ? s.geometry[Math.floor(s.geometry.length / 2)]! : baseNodes.get(s.from)!.location);
+
+function rebuild() {
+  // 1. Yer işareti noktaları en yakın düğüme bağlanır: talimatta anılır, ses manzarasına katılır.
+  const next = new Map(baseNodes);
+  /** Görünürlük kaynakları: konum ve ağırlık (eser 0.5; yer işareti belirginliğe göre 0.25–0.75). */
+  const visible: { at: LngLat; weight: number }[] = pilotWorks.map((n) => ({ at: n.location, weight: 0.5 }));
+  for (const p of navPoints) {
+    if (!p.roles.includes('landmark')) continue;
+    const n = nearestIn(baseNodes, p.location);
+    if (distanceM(n.location, p.location) > LANDMARK_SNAP_M) continue;
+    const cur = next.get(n.id)!;
+    // Eser düğümü eser adını korur; yer işareti yalnızca ortam sesini ekler.
+    next.set(n.id, { ...cur, lynchType: 'landmark', name: cur.workSlug ? cur.name : p.title, pointId: p.id, sound: p.ambient ?? cur.sound });
+    visible.push({ at: p.location, weight: 0.25 * (p.salience ?? 2) });
+  }
+  nodes = next;
+
+  // 2. Segment görünürlüğü ve onaylı bildirimler.
+  effective = baseSegments.map((s) => {
+    const mid = midOf(s);
+    let vis = 0;
+    for (const v of visible) if (v.weight > vis && distanceM(mid, v.at) < VISIBLE_M) vis = v.weight;
+    const types = overrideTypes.get(s.id);
+    const seg = vis > 0 ? { ...s, landmarkVisibility: vis } : s;
+    return types ? applyOverride(seg, types) : seg;
+  });
   effMap = new Map(effective.map((s) => [s.id, s]));
+
+  // 3. Başlangıçlar ve rotaya uğranacak noktalar.
+  starts = startPointsOf(navPoints).map((p) => ({ id: p.id, nodeId: nearestIn(baseNodes, p.location).id, name: p.title, location: p.location }));
+  viaNode = new Map();
+  for (const p of navPoints) {
+    if (!opensOnApproach(p)) continue;
+    const n = nearestIn(baseNodes, p.location);
+    if (distanceM(n.location, p.location) <= VIA_SNAP_M) viaNode.set(p.id, n.id);
+  }
+
   version++;
   versionListeners.forEach((l) => l());
 }
 
-/** Rota hesaplayan ekranlar bu sürümü useMemo bağımlılığına ekler: onay gelince plan yenilenir. */
+/** Sunucudan gelen (ya da önbellekteki) noktaları grafiğe uygular. */
+export function setNavPoints(list: NavPoint[]) {
+  navPoints = list;
+  rebuild();
+}
+
+/** Sunucudan gelen onaylı bildirim etkilerini grafiğe uygular. */
+export function setOverrides(list: { segment_key: string; type: OverrideType }[]) {
+  const by = new Map<string, Set<OverrideType>>();
+  for (const o of list) by.set(o.segment_key, (by.get(o.segment_key) ?? new Set()).add(o.type));
+  overrideTypes = by;
+  rebuild();
+}
+
+/** Rota hesaplayan ekranlar bu sürümü useMemo bağımlılığına ekler: nokta ya da bildirim değişince plan yenilenir. */
 export function useNavVersion(): number {
   return useSyncExternalStore(
     (l) => {
@@ -93,59 +174,46 @@ export function useNavVersion(): number {
 }
 export const navVersion = () => version;
 
-// ---------- Altın rotalar ----------
-// Ekibin elle yazdığı onaylı Lynch tarifleri (data/lynch/routes): başlangıç ve varış eşleşirse motorun yerine geçer.
-const curatedRoutes = z.object({ curatedRoutes: z.array(CuratedRoute).default([]) }).parse(raw).curatedRoutes;
-let preferCurated = true;
+// ---------- Başlangıç ----------
 
-/** Geliştirici karşılaştırması: altın rota yerine motorun tarifini göster (oturumlar yeniden açılır). */
-export function setPreferCurated(v: boolean) {
-  if (v === preferCurated) return;
-  preferCurated = v;
-  version++;
-  versionListeners.forEach((l) => l());
-}
-export const prefersCurated = () => preferCurated;
+/** Admin panelinde girilmiş başlangıç noktaları (sıralı; ilki varsayılan). */
+export const startPoints = () => starts;
 
-/** Bu başlangıç ve varış için onaylı altın rota var mı (profil kısıtına bakmadan). */
-export function hasCuratedRoute(startId: string, endId: string): boolean {
-  return curatedRoutes.some((r) => r.status === 'verified' && r.nodeIds[0] === startId && r.nodeIds.at(-1) === endId);
+export function useStartPoints(): StartPoint[] {
+  useNavVersion();
+  return starts;
 }
 
-/** Pilot alanın başlangıç seçenekleri (data/lynch'te seçilmiş buluşma/varış noktaları). */
-export const START_POINTS: StartPoint[] = (raw as unknown as { starts?: StartPoint[] }).starts ?? [];
-/** Varsayılan başlangıç: T1 Ulucami tramvay durağı (bölgeye en yaygın varış); yoksa listedeki ilk nokta. */
-export const DEFAULT_START_ID = START_POINTS.some((p) => p.id === 't1-ulucami') ? 't1-ulucami' : (START_POINTS[0]?.id ?? '');
-const DEFAULT_START: LngLat = START_POINTS.find((p) => p.id === DEFAULT_START_ID)?.location ?? [29.0620479, 40.1834979];
+/** Varsayılan başlangıç: listedeki ilk başlangıç noktası; hiç yoksa pilot alanın merkezi. */
+export const defaultStart = (): LngLat => starts[0]?.location ?? CENTER;
 
 /** Kimliği verilen başlangıcın konumu (bilinmeyen kimlikte varsayılan). */
 export function startLocation(id: string | undefined): LngLat {
-  return START_POINTS.find((p) => p.id === id)?.location ?? DEFAULT_START;
+  return starts.find((p) => p.id === id)?.location ?? defaultStart();
 }
 
-export function nearestNode(p: LngLat): PilotNode {
-  let best: PilotNode | undefined;
-  let bestD = Infinity;
-  for (const n of nodes.values()) {
-    const d = distanceM(p, n.location);
-    if (d < bestD) {
-      bestD = d;
-      best = n;
-    }
-  }
-  return best!;
-}
+// ---------- Sorgular ----------
+
+export const nearestNode = (p: LngLat): PilotNode => nearestIn(nodes, p);
 
 export function landmarkNodeForWork(slug: string): PilotNode | undefined {
   for (const n of nodes.values()) if (n.workSlug === slug) return n;
   return undefined;
 }
 
-export function hasRouteTo(slug: string): boolean {
-  return landmarkNodeForWork(slug) !== undefined;
-}
+export const hasRouteTo = (slug: string) => landmarkNodeForWork(slug) !== undefined;
+
+/** Konum pilot grafiğin kapsadığı alanda mı (rota yalnızca burada çizilir). */
+export const inPilotArea = (p: LngLat) => distanceM(p, nearestNode(p).location) <= PILOT_REACH_M;
+
+/** Talimatta anılan ve ses veren yer işaretleri: eserler ve admin yer işaretleri. */
+export const landmarkNodes = () => [...nodes.values()].filter((n) => n.lynchType === 'landmark');
+
+// ---------- Rota ----------
 
 export interface PlannedRoute {
+  /** work: esere rota; stroll: hedefsiz gezinti (yakındaki anlatım noktalarını sırayla dolaşır). */
+  kind: 'work' | 'stroll';
   route: Route;
   geometry: RouteGeometry;
   steps: GuidanceStep[];
@@ -153,36 +221,24 @@ export interface PlannedRoute {
   end: PilotNode;
   /** Rotadaki basamaklı segment sayısı (profil açıklaması için). */
   stairSegments: number;
-  /** Rota boyunca geçilen landmark'lar (başlangıç ve varış hariç). */
+  /** Rota boyunca geçilen yer işaretleri (başlangıç ve varış hariç). */
   passedLandmarks: PilotNode[];
-  /** Tarif ekibin onaylı altın rotasından geliyorsa kimliği ve onay bilgisi. */
-  curated?: { id: string; name: LocalizedText; verifiedBy?: string; verifiedAt?: string };
-  /** Altın rota kullanıldıysa motorun aynı yolculuk için ürettiği rota (fark raporu). */
-  engine?: { overlap: number; lengthM: number; turnSteps: number };
-  /** Rota anlatım noktalarından geçiyorsa: geçilen nokta kimlikleri ve uzama (m). */
-  via?: { storyIds: string[]; extraM: number };
+  /** Rotanın uğradığı anlatım/varış noktaları (rotadaki sırayla) ve uğramanın getirdiği uzama (m). */
+  via: { pointIds: string[]; extraM: number };
+  /** Hedef eserin varış bilgisi (admin panelinde girildiyse). */
+  arrival?: NavPoint;
 }
 
 export interface PlanOptions {
   /** Kapalı segmentler (onaylı bildirim ya da simülasyondaki yol kapatma). */
   blocked?: ReadonlySet<string>;
-  /** Rotayı tam bu noktadan başlat: noktadan en yakın düğüme bağlantı eklenir (yeniden rota). */
+  /** Rotayı tam bu noktadan başlat: noktadan en yakın düğüme bağlantı eklenir (yeniden rota, haritada seçilen yer). */
   leadIn?: boolean;
-  /** Yol üstünde uğranabilecek anlatım noktaları. */
-  via?: readonly { id: string; location: LngLat }[];
+  /** Yakındaki anlatım noktalarına uğra (varsayılan açık). */
+  via?: boolean;
+  /** Uğranmayacak noktalar (bu yürüyüşte zaten açılmış olanlar). */
+  skip?: ReadonlySet<string>;
 }
-
-/** Anlatım noktasının grafiğe bağlanacağı en uzak düğüm (m). */
-const STORY_SNAP_M = 40;
-/** Konum en yakın düğüme bundan yakınsa pilot alanın içinde sayılır (m). */
-export const PILOT_REACH_M = 150;
-
-/** Konum pilot grafiğin kapsadığı alanda mı (rota yalnızca burada çizilir). */
-export function inPilotArea(p: LngLat): boolean {
-  return distanceM(p, nearestNode(p).location) <= PILOT_REACH_M;
-}
-
-const nodeLocations = new Map([...nodes.values()].map((n) => [n.id, n.location]));
 
 /** Kapalı segmentler işaretlenmiş graf (onaylı bildirimler zaten uygulanmış). */
 function segmentsWith(blocked?: ReadonlySet<string>): NavSegment[] {
@@ -190,87 +246,128 @@ function segmentsWith(blocked?: ReadonlySet<string>): NavSegment[] {
   return effective.map((s) => (blocked.has(s.id) ? { ...s, blocked: true } : s));
 }
 
-export function planRoute(destSlug: string, profile: UserProfile, from: LngLat = DEFAULT_START, opts: PlanOptions = {}): PlannedRoute | null {
-  const end = landmarkNodeForWork(destSlug);
-  if (!end) return null;
-  const start = nearestNode(from);
-  const segs = segmentsWith(opts.blocked);
-  // Uğrayan rota: yol üstündeki anlatım noktaları en yakın düğümlerine bağlanır, rota sınırlı bütçeyle uzatılır.
-  let viaRoute: { route: Route; storyIds: string[]; extraM: number } | null = null;
-  if (opts.via?.length) {
-    const nodeToStories = new Map<string, string[]>();
-    for (const p of opts.via) {
-      const n = nearestNode(p.location);
-      if (n.id === start.id || n.id === end.id || distanceM(n.location, p.location) > STORY_SNAP_M) continue;
-      nodeToStories.set(n.id, [...(nodeToStories.get(n.id) ?? []), p.id]);
-    }
-    const v = nodeToStories.size > 0 ? routeVia(segs, profile, start.id, end.id, [...nodeToStories.keys()], nodeLocations) : null;
-    if (v && v.via.length > 0) {
-      viaRoute = { route: v.route, storyIds: v.via.flatMap((id) => nodeToStories.get(id)!), extraM: Math.round(v.route.lengthM - v.baseLengthM) };
-    }
-  }
-  // Altın rota profile uymuyorsa ya da yolu kapalıysa motor devralır. Uğrayan rotada altın rota kullanılmaz.
-  const match = preferCurated && !viaRoute ? matchCurated(curatedRoutes, segs === effective ? effMap : new Map(segs.map((s) => [s.id, s])), profile, start.id, end.id) : null;
-  const engineRoute = viaRoute ? viaRoute.route : findRoute(segs, profile, start.id, end.id);
-  const route = match?.route ?? engineRoute;
-  if (!route) return null;
-  let geometry = routeGeometry(route, nodes, segMap);
-  let steps = match ? curatedGuidance(match.def, route, nodes, profile, geometry) : buildGuidance(route, nodes, [], profile, geometry, segMap);
-  let engine: PlannedRoute['engine'];
-  if (match && engineRoute) {
-    const engineSteps = buildGuidance(engineRoute, nodes, [], profile, routeGeometry(engineRoute, nodes, segMap), segMap);
-    engine = { overlap: routeOverlap(route, engineRoute, segMap), lengthM: engineRoute.lengthM, turnSteps: engineSteps.filter((s) => s.kind === 'turn').length };
-  }
-  if (opts.leadIn) ({ geometry, steps } = withLeadIn(geometry, steps, from));
-  return {
-    route,
-    geometry,
-    steps,
-    start,
-    end,
-    stairSegments: route.segmentIds.filter((id) => (effMap.get(id)?.steps ?? 0) > 0).length,
-    passedLandmarks: [...new Set(route.nodeIds.slice(1, -1))].map((id) => nodes.get(id)!).filter((n) => n.lynchType === 'landmark'),
-    curated: match ? { id: match.def.id, name: match.def.name, verifiedBy: match.def.verifiedBy, verifiedAt: match.def.verifiedAt } : undefined,
-    engine,
-    via: viaRoute ? { storyIds: viaRoute.storyIds, extraM: viaRoute.extraM } : undefined,
-  };
-}
+const nodeLocations = new Map([...baseNodes.values()].map((n) => [n.id, n.location]));
 
 /** Yanlış dönüş senaryosu: önümüzdeki ilk kavşakta rotadan ayrılan yürüyüş çizgisi. */
 export function detourFrom(plan: PlannedRoute, alongM: number, blocked?: ReadonlySet<string>) {
   return buildDetour(plan.route, plan.geometry, segmentsWith(blocked), nodeLocations, alongM);
 }
 
+/**
+ * Başlangıçtan esere rota. Yakındaki anlatım ve varış noktalarına sınırlı bir uzamayla uğrar
+ * (rota en çok %25 ve 300 m uzar; bkz. shared/via.ts). Yol yoksa null.
+ */
+export function planRoute(destSlug: string, profile: UserProfile, from: LngLat = defaultStart(), opts: PlanOptions = {}): PlannedRoute | null {
+  const end = landmarkNodeForWork(destSlug);
+  if (!end) return null;
+  const start = nearestNode(from);
+  const segs = segmentsWith(opts.blocked);
+  const arrival = arrivalFor(navPoints, destSlug);
+
+  // Uğranabilecek noktalar düğümlerine göre gruplanır (aynı düğüme bağlı iki nokta tek uğrama).
+  const nodeToPoints = opts.via === false ? new Map<string, string[]>() : viaCandidates(opts.skip, [start.id, end.id], arrival?.id);
+  const v = nodeToPoints.size > 0 ? routeVia(segs, profile, start.id, end.id, [...nodeToPoints.keys()], nodeLocations) : null;
+  const route = v ? v.route : findRoute(segs, profile, start.id, end.id);
+  if (!route) return null;
+  const via = { pointIds: v ? v.via.flatMap((id) => nodeToPoints.get(id)!) : [], extraM: v ? Math.round(v.route.lengthM - v.baseLengthM) : 0 };
+  return finish('work', route, nodes, profile, from, opts.leadIn, via, arrival);
+}
+
+/** Gezintide en fazla uğranacak nokta, bir bacağın ve toplamın üst sınırı (m). */
+const STROLL_MAX_STOPS = 5;
+const STROLL_MAX_LEG_M = 500;
+const STROLL_MAX_M = 1200;
+
+/**
+ * Hedefsiz gezinti: bulunulan yerden en yakın (henüz açılmamış) anlatım noktasına, oradan bir sonrakine…
+ * En fazla 5 nokta ve toplam 1,2 km. Yakında nokta yoksa null.
+ */
+export function planStroll(profile: UserProfile, from: LngLat, opts: Omit<PlanOptions, 'via'> = {}): PlannedRoute | null {
+  const start = nearestNode(from);
+  const segs = segmentsWith(opts.blocked);
+  const remaining = viaCandidates(opts.skip, [], undefined);
+  const legs: Route[] = [];
+  const visited: string[] = [];
+  let cur = start.id;
+  let total = 0;
+  remaining.delete(cur);
+  while (legs.length < STROLL_MAX_STOPS && remaining.size > 0) {
+    const here = baseNodes.get(cur)!.location;
+    const order = [...remaining.keys()].sort((a, b) => distanceM(here, baseNodes.get(a)!.location) - distanceM(here, baseNodes.get(b)!.location));
+    let picked: { node: string; leg: Route } | null = null;
+    for (const node of order) {
+      if (distanceM(here, baseNodes.get(node)!.location) > STROLL_MAX_LEG_M) break;
+      const leg = findRoute(segs, profile, cur, node);
+      if (leg && leg.lengthM <= STROLL_MAX_LEG_M && total + leg.lengthM <= STROLL_MAX_M) {
+        picked = { node, leg };
+        break;
+      }
+    }
+    if (!picked) break;
+    legs.push(picked.leg);
+    visited.push(...remaining.get(picked.node)!);
+    total += picked.leg.lengthM;
+    remaining.delete(picked.node);
+    cur = picked.node;
+    // Bacağın geçtiği diğer noktalar da ziyaret edilmiş sayılır.
+    for (const id of picked.leg.nodeIds) {
+      if (id !== cur && remaining.has(id)) {
+        visited.push(...remaining.get(id)!);
+        remaining.delete(id);
+      }
+    }
+  }
+  if (legs.length === 0) return null;
+  const route = joinRoutes(legs);
+  // Gezintinin varışı son anlatım noktasıdır: talimat "Vardınız: <nokta>" desin.
+  const last = navPoints.find((p) => p.id === visited.at(-1));
+  const named = last ? new Map(nodes).set(cur, { ...nodes.get(cur)!, name: last.title }) : nodes;
+  const order = route.nodeIds;
+  const pointIds = [...new Set(visited)].sort((a, b) => order.indexOf(viaNode.get(a)!) - order.indexOf(viaNode.get(b)!));
+  return finish('stroll', route, named, profile, from, opts.leadIn, { pointIds, extraM: 0 }, undefined);
+}
+
+/** Uğranabilecek noktalar, bağlandıkları düğüme göre (aynı düğümdeki noktalar tek uğrama). */
+function viaCandidates(skip: ReadonlySet<string> | undefined, excludeNodes: string[], excludePoint: string | undefined) {
+  const out = new Map<string, string[]>();
+  for (const [pointId, nodeId] of viaNode) {
+    if (skip?.has(pointId) || pointId === excludePoint || excludeNodes.includes(nodeId)) continue;
+    out.set(nodeId, [...(out.get(nodeId) ?? []), pointId]);
+  }
+  return out;
+}
+
+function finish(
+  kind: PlannedRoute['kind'],
+  route: Route,
+  routeNodes: Map<string, PilotNode>,
+  profile: UserProfile,
+  from: LngLat,
+  leadIn: boolean | undefined,
+  via: PlannedRoute['via'],
+  arrival: NavPoint | undefined,
+): PlannedRoute {
+  let geometry = routeGeometry(route, routeNodes, baseSegMap);
+  let steps = buildGuidance(route, routeNodes, [], profile, geometry, effMap);
+  if (leadIn) ({ geometry, steps } = withLeadIn(geometry, steps, from));
+  return {
+    kind,
+    route,
+    geometry,
+    steps,
+    start: routeNodes.get(route.nodeIds[0]!)!,
+    end: routeNodes.get(route.nodeIds.at(-1)!)!,
+    stairSegments: route.segmentIds.filter((id) => (effMap.get(id)?.steps ?? 0) > 0).length,
+    passedLandmarks: [...new Set(route.nodeIds.slice(1, -1))].map((id) => routeNodes.get(id)!).filter((n) => n.lynchType === 'landmark'),
+    via,
+    arrival,
+  };
+}
+
 /** Yol kapatma senaryosu: kullanıcının önündeki ilk rota segmenti. */
 export function blockableAhead(plan: PlannedRoute, alongM: number) {
   return segmentAhead(plan.route, plan.geometry, alongM);
 }
-
-/** Mesafe metni: 1 km altı metre, üstü tek ondalıklı kilometre (TR'de virgülle). */
-export function formatDistance(m: number, lang: 'tr' | 'en'): string {
-  if (m < 1000) return `${Math.round(m)} m`;
-  return `${(m / 1000).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-GB', { maximumFractionDigits: 1 })} km`;
-}
-
-/** Profile göre yürüme hızı (m/sn); süre tahmini ve simülasyon için. */
-export function walkingSpeed(profile: UserProfile): number {
-  if (profile.mobility === 'wheelchair') return 0.9;
-  if (profile.mobility === 'cane' || profile.vision === 'blind') return 0.8;
-  return 1.2;
-}
-
-export function boundsOf(line: LngLat[]): [number, number, number, number] {
-  let w = Infinity, s = Infinity, e = -Infinity, n = -Infinity;
-  for (const [x, y] of line) {
-    w = Math.min(w, x);
-    s = Math.min(s, y);
-    e = Math.max(e, x);
-    n = Math.max(n, y);
-  }
-  return [w, s, e, n];
-}
-
-export const pilotLandmarks = [...nodes.values()].filter((n) => n.lynchType === 'landmark');
 
 /** İki düğüm arası rota uzunluğu ve basamak sayısı (tur planlama için). */
 export function legBetween(fromId: string, toId: string, profile: UserProfile): { lengthM: number; stairs: number } | null {
@@ -281,10 +378,10 @@ export function legBetween(fromId: string, toId: string, profile: UserProfile): 
 
 /** Bir esere en yakın yol segmenti (erişilebilirlik bildirimi bu segmente bağlanır). */
 export function nearestSegmentId(p: LngLat): string {
-  let best = segments[0]!.id;
+  let best = baseSegments[0]!.id;
   let bestD = Infinity;
-  for (const s of segments) {
-    const pts = s.geometry ?? [nodes.get(s.from)!.location, nodes.get(s.to)!.location];
+  for (const s of baseSegments) {
+    const pts = s.geometry ?? [baseNodes.get(s.from)!.location, baseNodes.get(s.to)!.location];
     for (const q of pts) {
       const d = distanceM(p, q);
       if (d < bestD) {
@@ -314,13 +411,36 @@ export function segmentLines(ids: readonly string[]): GeoJSON.FeatureCollection 
   return {
     type: 'FeatureCollection',
     features: ids.flatMap((id) => {
-      const seg = segMap.get(id);
+      const seg = baseSegMap.get(id);
       if (!seg) return [];
-      const coordinates = seg.geometry ?? [nodes.get(seg.from)!.location, nodes.get(seg.to)!.location];
+      const coordinates = seg.geometry ?? [baseNodes.get(seg.from)!.location, baseNodes.get(seg.to)!.location];
       return [{ type: 'Feature' as const, properties: {}, geometry: { type: 'LineString' as const, coordinates } }];
     }),
   };
 }
 
-export const DEFAULT_START_POINT = DEFAULT_START;
-export type LngLatLike = LngLat;
+// ---------- Biçim ve ölçü ----------
+
+/** Mesafe metni: 1 km altı metre, üstü tek ondalıklı kilometre (TR'de virgülle). */
+export function formatDistance(m: number, lang: 'tr' | 'en'): string {
+  if (m < 1000) return `${Math.round(m)} m`;
+  return `${(m / 1000).toLocaleString(lang === 'tr' ? 'tr-TR' : 'en-GB', { maximumFractionDigits: 1 })} km`;
+}
+
+/** Profile göre yürüme hızı (m/sn); süre tahmini ve simülasyon için. */
+export function walkingSpeed(profile: UserProfile): number {
+  if (profile.mobility === 'wheelchair') return 0.9;
+  if (profile.mobility === 'cane' || profile.vision === 'blind') return 0.8;
+  return 1.2;
+}
+
+export function boundsOf(line: LngLat[]): [number, number, number, number] {
+  let w = Infinity, s = Infinity, e = -Infinity, n = -Infinity;
+  for (const [x, y] of line) {
+    w = Math.min(w, x);
+    s = Math.min(s, y);
+    e = Math.max(e, x);
+    n = Math.max(n, y);
+  }
+  return [w, s, e, n];
+}

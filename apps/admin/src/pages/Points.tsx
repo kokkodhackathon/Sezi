@@ -46,6 +46,8 @@ interface Form {
   files: Partial<Record<Lang, File>>;
   /** Mevcut kayıtları kaldır. */
   removed: Record<Lang, boolean>;
+  /** Form her yeniden kurulduğunda değişir: dosya alanları sıfırlanır. */
+  rev: number;
 }
 
 const emptyForm = (): Form => ({
@@ -64,6 +66,7 @@ const emptyForm = (): Form => ({
   sortOrder: 0,
   files: {},
   removed: { tr: false, en: false },
+  rev: Date.now(),
 });
 
 const toForm = (r: PointRow, workName?: string): Form => ({
@@ -82,6 +85,7 @@ const toForm = (r: PointRow, workName?: string): Form => ({
   sortOrder: r.sort_order,
   files: {},
   removed: { tr: false, en: false },
+  rev: Date.now(),
 });
 
 /** Metin ve ses yalnızca anlatım ve varış noktalarında var. */
@@ -552,7 +556,7 @@ export function Points() {
                       </span>
                     ) : null}
                     <input
-                      key={`${form.id}-${l}-${form.files[l]?.name ?? ''}`}
+                      key={`${form.rev}-${l}`}
                       type="file"
                       accept=".mp3,.m4a,.aac,audio/mpeg,audio/mp4,audio/aac"
                       aria-label={`Ses dosyası seç (${l.toUpperCase()})`}

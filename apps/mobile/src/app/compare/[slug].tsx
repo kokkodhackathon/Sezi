@@ -1,110 +1,170 @@
-import { Camera, GeoJSONSource, Layer } from '@maplibre/maplibre-react-native';
-import type { ThemeColors, UserProfile } from '@sezi/shared';
-import { Stack, useLocalSearchParams } from 'expo-router';
-import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { LngLat, ThemeColors, UserProfile } from '@sezi/shared';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { DeferredMap } from '@/components/deferred-map';
-import { Badge } from '@/components/ui';
+import { EndPin, ExtraLines, PointsLayer, SeziMap, type SeziMapHandle } from '@/components/map';
+import { Badge, Chip, Note } from '@/components/ui';
+import { CloseIcon, MapIcon } from '@/design/icons';
 import { radius, space, type } from '@/design/type';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
-import { boundsOf, planRoute, routeStats, useNavVersion, walkingSpeed, type PlannedRoute } from '@/lib/nav';
+import { formatDistance, inPilotArea, pilotWorks, planRoute, routeStats, startLocation, useNavVersion, useStartPoints, walkingSpeed, type PlannedRoute } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 
 type ProfileKey = 'walker' | 'wheelchair' | 'blind';
+const KEYS: ProfileKey[] = ['walker', 'wheelchair', 'blind'];
+type Start = { kind: 'point'; id: string } | { kind: 'pick'; location: LngLat };
+
+const DESTINATIONS = [...pilotWorks].sort((a, b) => (a.name?.tr ?? '').localeCompare(b.name?.tr ?? '', 'tr'));
 
 /**
- * Profil karşılaştırması: aynı hedefe üç profilin rotası aynı haritada.
- * Sezi'nin farkını görünür kılar: rota kişinin algısına ve hareketine göre değişir.
- * Çizgiler renk yanında kalınlık ve kesiklikle de ayrışır (renk tek başına anlam taşımaz).
+ * Profil karşılaştırması: aynı başlangıçtan aynı hedefe üç profilin rotası aynı haritada.
+ * Başlangıç bir başlangıç noktası ya da haritada seçilen yer; hedef değiştirilebilir.
+ * Seçili profilin çizgisi öne çıkar; çizgiler renk yanında kalınlık ve kesiklikle de ayrışır.
  */
 export default function Compare() {
-  const { slug } = useLocalSearchParams<{ slug: string }>();
+  const params = useLocalSearchParams<{ slug: string }>();
   const t = useSeziTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
+  const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
   const { profile } = useProfile();
-
+  const starts = useStartPoints();
   const navVersion = useNavVersion();
-  const rows = useMemo(() => {
-    const base: UserProfile = { vision: 'full', mobility: 'none', hearing: 'full', senses: { audio: true, haptic: true, visual: true }, lang };
-    const profiles: Record<ProfileKey, UserProfile> = {
-      walker: base,
-      wheelchair: { ...base, mobility: 'wheelchair' },
-      blind: { ...base, vision: 'blind', mobility: 'cane', senses: { audio: true, haptic: true, visual: false } },
-    };
-    return (Object.keys(profiles) as ProfileKey[]).map((key) => {
-      const p = profiles[key];
-      const plan = planRoute(slug, p);
-      return { key, profile: p, plan, stats: plan ? routeStats(plan) : null };
-    });
-    // navVersion: grafik modül düzeyinde değişir (onaylı bildirim); sürüm değişince rotalar yeniden hesaplanmalı.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slug, lang, navVersion]);
+  const mapRef = useRef<SeziMapHandle>(null);
+  const [dest, setDest] = useState(params.slug);
+  const [start, setStart] = useState<Start | null>(null);
+  const [picking, setPicking] = useState(false);
 
-  const style: Record<ProfileKey, { color: string; width: number; dash?: number[] }> = {
-    walker: { color: t.text, width: 3 },
-    wheelchair: { color: t.primary, width: 8 },
-    blind: { color: t.accent, width: 5, dash: [1.4, 1] },
-  };
+  const base: UserProfile = useMemo(() => ({ vision: 'full', mobility: 'none', hearing: 'full', senses: { audio: true, haptic: true, visual: true }, lang }), [lang]);
+  const profiles: Record<ProfileKey, UserProfile> = useMemo(
+    () => ({ walker: base, wheelchair: { ...base, mobility: 'wheelchair' }, blind: { ...base, vision: 'blind', mobility: 'cane', senses: { audio: true, haptic: true, visual: false } } }),
+    [base],
+  );
+  // Kullanıcının profiline en yakın satır başta seçili gelir.
+  const yours: ProfileKey = profile?.mobility === 'wheelchair' ? 'wheelchair' : profile?.vision === 'blind' ? 'blind' : 'walker';
+  const [selected, setSelected] = useState<ProfileKey>(yours);
+
+  const from: LngLat = start?.kind === 'pick' ? start.location : startLocation(start?.kind === 'point' ? start.id : starts[0]?.id);
+  const outside = !inPilotArea(from);
+  const rows = useMemo(
+    () =>
+      KEYS.map((key) => {
+        const plan = outside ? null : planRoute(dest, profiles[key], from, { leadIn: start?.kind === 'pick' });
+        return { key, plan, stats: plan ? routeStats(plan) : null, minutes: plan ? Math.max(1, Math.round(plan.route.lengthM / walkingSpeed(profiles[key]) / 60)) : 0 };
+      }),
+    // navVersion: nokta ya da bildirim değişince rotalar yeniden hesaplanır.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [dest, from[0], from[1], profiles, navVersion, outside],
+  );
   const shortest = Math.min(...rows.flatMap((r) => (r.stats ? [r.stats.lengthM] : [])));
   const all = rows.flatMap((r) => (r.plan ? r.plan.geometry.line : []));
-  const end = rows.find((r) => r.plan)?.plan;
-  const endName = end ? (end.end.name?.[lang] ?? end.end.name?.tr ?? '') : '';
-  const yours = profile ? rows.find((r) => r.profile.mobility === profile.mobility && (r.profile.vision === 'blind') === (profile.vision === 'blind'))?.key : undefined;
+  const end = DESTINATIONS.find((n) => n.workSlug === dest);
+  const endName = end ? (end.name?.[lang] ?? end.name?.tr ?? '') : '';
+
+  useEffect(() => {
+    if (all.length > 1) mapRef.current?.fit(all, { top: insets.top + 72, bottom: 40 });
+    // Rota kümesi değişince (başlangıç, hedef) yeniden sığdır.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
+
+  const line: Record<ProfileKey, { color: string; width: number; dash?: number[] }> = {
+    walker: { color: t.text, width: 4 },
+    wheelchair: { color: t.primary, width: 9 },
+    blind: { color: t.accent, width: 5, dash: [1.4, 1] },
+  };
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.body}>
-      <Stack.Screen options={{ title: tr('compare.title') }} />
-      <Text style={[type.title, { color: t.text }]} accessibilityRole="header">{endName}</Text>
-      <Text style={[type.body, { color: t.text }]}>{tr('compare.lead')}</Text>
+    <View style={s.screen}>
+      <SeziMap
+        ref={mapRef}
+        style={{ height: Math.round(height * 0.42) }}
+        initial={all.length > 1 ? all : [from]}
+        initialPadding={{ top: insets.top + 72 }}
+        onPress={(p) => {
+          if (!picking) return;
+          setPicking(false);
+          setStart({ kind: 'pick', location: p });
+        }}
+        accessibilityLabel={tr('compare.mapLabel')}>
+        {/* Seçili profil en üstte çizilir; diğerleri soluk. */}
+        {[...KEYS.filter((k) => k !== selected), selected].map((k) => {
+          const plan = rows.find((r) => r.key === k)?.plan;
+          if (!plan) return null;
+          const st = line[k];
+          return <ExtraLines key={k} id={`route-${k}`} data={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: plan.geometry.line } }} color={st.color} width={st.width} dashed={!!st.dash} opacity={k === selected ? 1 : 0.35} />;
+        })}
+        <PointsLayer
+          points={starts.map((p) => ({ id: p.id, location: p.location, kind: 'start', label: p.name[lang] ?? p.name.tr, selected: start?.kind === 'point' ? start.id === p.id : !start && p.id === starts[0]?.id }))}
+          onPress={(id) => !picking && setStart({ kind: 'point', id })}
+        />
+        <EndPin id="start" location={from} kind="start" />
+        {end ? <EndPin id="end" location={end.location} kind="end" /> : null}
+      </SeziMap>
 
-      {all.length > 1 ? (
-        <View style={s.map} accessible accessibilityLabel={tr('compare.mapLabel')} importantForAccessibility="no-hide-descendants">
-          <DeferredMap>
-            <Camera initialViewState={{ bounds: boundsOf(all), padding: { top: 40, bottom: 40, left: 40, right: 40 } }} />
-            {/* Kalın çizgi altta, ince üstte: üst üste binen rotalar da seçilebilir kalır. */}
-            {(['wheelchair', 'blind', 'walker'] as ProfileKey[]).map((key) => {
-              const plan = rows.find((r) => r.key === key)?.plan;
-              if (!plan) return null;
-              const st = style[key];
-              return (
-                <GeoJSONSource key={key} id={`route-${key}`} data={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: plan.geometry.line } }}>
-                  <Layer
-                    id={`route-${key}-line`}
-                    type="line"
-                    layout={{ 'line-cap': st.dash ? 'butt' : 'round', 'line-join': 'round' }}
-                    paint={{ 'line-color': st.color, 'line-width': st.width, 'line-opacity': key === 'wheelchair' ? 0.55 : 1, ...(st.dash ? { 'line-dasharray': st.dash as never } : {}) }}
-                  />
-                </GeoJSONSource>
-              );
-            })}
-            {end ? (
-              <GeoJSONSource id="end" data={{ type: 'Point', coordinates: end.end.location }}>
-                <Layer id="end-halo" type="circle" paint={{ 'circle-radius': 12, 'circle-color': t.surface }} />
-                <Layer id="end-dot" type="circle" paint={{ 'circle-radius': 7, 'circle-color': t.danger }} />
-              </GeoJSONSource>
-            ) : null}
-          </DeferredMap>
+      <View style={[s.mapBar, { top: insets.top + space.sm }]} pointerEvents="box-none">
+        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={tr('nav.close')} style={[s.round, { backgroundColor: t.surface }]}>
+          <CloseIcon color={t.text} />
+        </Pressable>
+      </View>
+      {picking ? (
+        <View style={[s.pickBanner, { top: insets.top + 72 }]} accessibilityLiveRegion="polite">
+          <Text style={[type.button, { color: t.onPrimary }]}>{tr('nav.pickHint')}</Text>
         </View>
       ) : null}
 
-      {rows.map((r) => (
-        <ProfileCard
-          key={r.key}
-          k={r.key}
-          plan={r.plan}
-          stats={r.stats}
-          minutes={r.stats ? Math.max(1, Math.round(r.stats.lengthM / walkingSpeed(r.profile) / 60)) : 0}
-          shortest={shortest}
-          line={style[r.key]}
-          isYou={yours === r.key}
-          t={t}
-          tr={tr}
-        />
-      ))}
-    </ScrollView>
+      <View style={s.panel}>
+        <ScrollView contentContainerStyle={[s.body, { paddingBottom: insets.bottom + space.xl }]}>
+          <View style={{ gap: space.xs }}>
+            <Text style={[type.eyebrow, { color: t.primary }]}>{tr('compare.title')}</Text>
+            <Text style={[type.title, { color: t.text }]} accessibilityRole="header">
+              {endName}
+            </Text>
+            <Text style={[type.body, { color: t.textMuted }]}>{tr('compare.lead')}</Text>
+          </View>
+
+          <View style={{ gap: space.sm }}>
+            <Text style={s.label}>{tr('nav.from')}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips} style={s.chipScroll}>
+              <Chip label={start?.kind === 'pick' ? tr('nav.picked') : tr('nav.pickOnMap')} selected={start?.kind === 'pick' || picking} onPress={() => setPicking(!picking)} icon={(c) => <MapIcon color={c} size={18} />} />
+              {starts.map((p) => (
+                <Chip key={p.id} label={p.name[lang] ?? p.name.tr} selected={start?.kind === 'point' ? start.id === p.id : !start && p.id === starts[0]?.id} onPress={() => setStart({ kind: 'point', id: p.id })} />
+              ))}
+            </ScrollView>
+          </View>
+          <View style={{ gap: space.sm }}>
+            <Text style={s.label}>{tr('nav.to')}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips} style={s.chipScroll}>
+              {DESTINATIONS.map((n) => (
+                <Chip key={n.id} label={n.name?.[lang] ?? n.name?.tr ?? ''} selected={dest === n.workSlug} onPress={() => setDest(n.workSlug!)} />
+              ))}
+            </ScrollView>
+          </View>
+          {outside ? <Note text={tr('nav.note.outside_pilot')} /> : null}
+
+          <View style={{ gap: space.md }} accessibilityRole="radiogroup" accessibilityLabel={tr('compare.pick')}>
+            {rows.map((r) => (
+              <ProfileCard
+                key={r.key}
+                k={r.key}
+                plan={r.plan}
+                stats={r.stats}
+                minutes={r.minutes}
+                shortest={shortest}
+                line={line[r.key]}
+                isYou={yours === r.key}
+                selected={selected === r.key}
+                onPress={() => setSelected(r.key)}
+                t={t}
+              />
+            ))}
+          </View>
+        </ScrollView>
+      </View>
+    </View>
   );
 }
 
@@ -116,8 +176,9 @@ function ProfileCard({
   shortest,
   line,
   isYou,
+  selected,
+  onPress,
   t,
-  tr,
 }: {
   k: ProfileKey;
   plan: PlannedRoute | null;
@@ -126,30 +187,38 @@ function ProfileCard({
   shortest: number;
   line: { color: string; width: number; dash?: number[] };
   isYou: boolean;
+  selected: boolean;
+  onPress: () => void;
   t: ThemeColors;
-  tr: ReturnType<typeof useT>['t'];
 }) {
+  const { t: tr, lang } = useT();
   const title = tr(`compare.${k}` as MessageKey);
+  const diff = stats ? Math.round(stats.lengthM - shortest) : 0;
   const facts = stats
     ? [
-        tr('compare.length', { m: Math.round(stats.lengthM), min: minutes }),
-        stats.stairs > 0 ? tr('compare.stairs', { n: stats.stairs }) : tr('compare.noStairs'),
-        tr('compare.busy', { m: stats.busyM }),
-        stats.cobbleM > 0 ? tr('compare.cobble', { m: stats.cobbleM }) : null,
-        Math.round(stats.lengthM - shortest) > 5 ? tr('compare.diff', { m: Math.round(stats.lengthM - shortest) }) : tr('compare.shortest'),
-      ].filter(Boolean)
+        { label: tr('compare.statLength'), value: `${formatDistance(stats.lengthM, lang)} · ${tr('nav.minutes', { n: minutes })}` },
+        { label: tr('compare.statStairs'), value: stats.stairs > 0 ? String(stats.stairs) : tr('compare.none') },
+        { label: tr('compare.statBusy'), value: `${stats.busyM} m` },
+        { label: tr('compare.statCobble'), value: `${stats.cobbleM} m` },
+        { label: tr('compare.statPoints'), value: String(plan?.via.pointIds.length ?? 0) },
+      ]
     : [];
+  const summary = stats ? (diff > 5 ? tr('compare.diff', { m: diff }) : tr('compare.shortest')) : tr('compare.noRoute');
   return (
-    <View
-      style={[cardStyles.card, { borderColor: isYou ? t.primary : t.border, backgroundColor: t.surface }]}
-      accessible
-      accessibilityLabel={[title, isYou ? tr('compare.you') : null, ...(plan ? facts : [tr('compare.noRoute')]), tr(`compare.why.${k}` as MessageKey)].filter(Boolean).join('. ')}>
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+      accessibilityLabel={[title, isYou ? tr('compare.you') : null, summary, ...facts.map((f) => `${f.label}: ${f.value}`), tr(`compare.why.${k}` as MessageKey)].filter(Boolean).join('. ')}
+      style={({ pressed }) => [cardStyles.card, { backgroundColor: t.surface, borderColor: selected ? t.primary : t.border }, pressed && { opacity: 0.9 }]}>
       <View style={cardStyles.head}>
         {/* Haritadaki çizginin küçük örneği. */}
         <View style={cardStyles.swatch}>
           {line.dash ? (
             <View style={{ flexDirection: 'row', gap: 4 }}>
-              {[0, 1, 2].map((i) => <View key={i} style={{ width: 8, height: line.width, backgroundColor: line.color }} />)}
+              {[0, 1, 2].map((i) => (
+                <View key={i} style={{ width: 8, height: line.width, backgroundColor: line.color }} />
+              ))}
             </View>
           ) : (
             <View style={{ width: 32, height: line.width, borderRadius: line.width, backgroundColor: line.color }} />
@@ -158,22 +227,39 @@ function ProfileCard({
         <Text style={[type.itemTitle, { color: t.text, flex: 1 }]}>{title}</Text>
         {isYou ? <Badge label={tr('compare.you')} tone="primary" /> : null}
       </View>
-      {plan ? facts.map((f) => <Text key={f} style={[type.body, { color: t.text }]}>{f}</Text>) : <Text style={[type.body, { color: t.danger }]}>{tr('compare.noRoute')}</Text>}
-      <Text style={[type.meta, { color: t.textMuted }]}>{tr(`compare.why.${k}` as MessageKey)}</Text>
-      <Text style={[type.meta, { color: t.textMuted }]}>{`${tr('compare.legend')}: ${tr(`compare.line.${k}` as MessageKey)}`}</Text>
-    </View>
+      <Text style={[type.button, { color: stats ? t.text : t.danger }]}>{summary}</Text>
+      {stats ? (
+        <View style={cardStyles.grid}>
+          {facts.map((f) => (
+            <View key={f.label} style={cardStyles.fact}>
+              <Text style={[type.meta, { color: t.textMuted }]}>{f.label}</Text>
+              <Text style={[type.button, { color: t.text }]}>{f.value}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
+      {selected ? <Text style={[type.meta, { color: t.textMuted }]}>{tr(`compare.why.${k}` as MessageKey)}</Text> : null}
+    </Pressable>
   );
 }
 
 const cardStyles = StyleSheet.create({
-  card: { gap: space.xs, padding: space.lg, borderRadius: radius.lg, borderWidth: 1.5 },
-  head: { flexDirection: 'row', alignItems: 'center', gap: space.md, marginBottom: space.xs },
+  card: { gap: space.sm, padding: space.lg, borderRadius: radius.lg, borderWidth: 2 },
+  head: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   swatch: { width: 40, alignItems: 'center', justifyContent: 'center' },
+  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.sm },
+  fact: { width: '50%', gap: 2 },
 });
 
 const makeStyles = (t: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
-    body: { padding: space.lg, gap: space.lg, paddingBottom: 56 },
-    map: { height: 340, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },
+    mapBar: { position: 'absolute', left: space.lg, right: space.lg, flexDirection: 'row' },
+    round: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', elevation: 3, shadowColor: t.shadow, shadowOpacity: 0.15, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
+    pickBanner: { position: 'absolute', alignSelf: 'center', backgroundColor: t.primary, paddingHorizontal: space.lg, paddingVertical: space.sm, borderRadius: radius.pill },
+    panel: { flex: 1, marginTop: -radius.xl, backgroundColor: t.background, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+    body: { paddingHorizontal: space.xl, paddingTop: space.xl, gap: space.lg },
+    label: { ...type.eyebrow, color: t.textMuted },
+    chips: { gap: space.sm, paddingHorizontal: space.xl },
+    chipScroll: { marginHorizontal: -space.xl },
   });

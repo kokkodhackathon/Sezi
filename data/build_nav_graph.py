@@ -1,10 +1,13 @@
-"""OSM yaya ağından pilot navigasyon grafiği (Lynch grafiği) üretir.
+"""OSM yaya ağından pilot navigasyon grafiği üretir.
 
 Girdi:
   data/raw/osm_<alan>.json        Overpass çıktısı (merkez çevresindeki yaya ağı)
-  Supabase works_view             doğrulanmış eserler (konumu kesin olanlar landmark olur)
+  Supabase works_view             doğrulanmış eserler (konumu kesin olanlar varış düğümü olur)
 Çıktı:
   apps/mobile/assets/pilot/<alan>-nav.json   uygulamaya gömülü, internetsiz çalışır
+
+Başlangıç noktaları, yer işaretleri ve anlatım noktaları burada değil: admin panelinden (nav_points) girilir,
+uygulama onları çalışırken en yakın düğüme bağlar ve yer işareti görünürlüğünü hesaplar.
 
 Yeni pilot alan eklemek: AREAS sözlüğüne merkez/yarıçap/şehir girip Overpass çıktısını data/raw'a koymak yeter.
 
@@ -12,7 +15,6 @@ Kaynak ve tahminler (saha ölçümüyle güncellenecek):
   - steps:  OSM highway=steps (step_count yoksa 1 = "basamak var")
   - surface, width, incline: OSM etiketleri; etiket yoksa varsayılan (paving, genişlik bilinmiyor, eğim 0)
   - noise:  OSM yol sınıfından tahmin (ana cadde gürültülü, yaya yolu sessiz)
-  - landmarkVisibility: bir landmark'a 40 m'den yakın segmentler 0.5, diğerleri 0
 
 Kullanım:  python -I data/build_nav_graph.py [alan]   (varsayılan: bursa-hanlar)
 """
@@ -37,8 +39,6 @@ AREAS = {
         "center": (29.06135, 40.18415),
         "radius": 650,
         "osm": "data/raw/osm_bursa_hanlar_650.json",
-        # Ekibin seçtiği Lynch düğümleri (buluşma/varış) ve eser dışı yer işaretleri
-        "lynch": "data/lynch/bursa-hanlar.json",
     },
 }
 
@@ -98,40 +98,6 @@ def parse_width_cm(tags):
         return None
 
 
-def embed_curated_routes(out, area_slug):
-    """Altın rotaları (data/lynch/routes/*.json) grafiğe gömer; güzergâh grafikte yoksa hata verir.
-
-    Her ardışık düğüm çiftinin segmenti bulunur; manevra düğümleri rotada ve sıralı olmalı, son manevra varış.
-    """
-    by_pair = {}
-    for s in out["segments"]:
-        by_pair[(s["from"], s["to"])] = s["id"]
-        by_pair[(s["to"], s["from"])] = s["id"]
-    routes = []
-    for f in sorted((ROOT / "data/lynch/routes").glob("*.json")):
-        r = json.loads(f.read_text(encoding="utf-8"))
-        if r.get("area") != area_slug:
-            continue
-        ids = r["nodeIds"]
-        seg_ids = []
-        for a, b in zip(ids, ids[1:]):
-            if (a, b) not in by_pair:
-                sys.exit(f"altın rota {r['id']}: {a} → {b} arasında segment yok (grafik değişmiş olabilir)")
-            seg_ids.append(by_pair[(a, b)])
-        pos = 0
-        for m in r["maneuvers"]:
-            try:
-                pos = ids.index(m["nodeId"], pos + 1)
-            except ValueError:
-                sys.exit(f"altın rota {r['id']}: manevra düğümü {m['nodeId']} rotada yok ya da sıra dışı")
-        if r["maneuvers"][-1]["kind"] != "arrive" or pos != len(ids) - 1:
-            sys.exit(f"altın rota {r['id']}: son manevra varış düğümünde olmalı")
-        keep = ("id", "name", "status", "verifiedBy", "verifiedAt", "nodeIds", "maneuvers")
-        routes.append({**{k: r[k] for k in keep if k in r}, "segmentIds": seg_ids})
-    out["curatedRoutes"] = routes
-    return len(routes)
-
-
 def build(area_slug):
     area = AREAS[area_slug]
     out_file = ROOT / f"apps/mobile/assets/pilot/{area_slug}-nav.json"
@@ -163,20 +129,6 @@ def build(area_slug):
             key_nodes.add(best)
         else:
             print(f"  bağlanamadı: {lm['slug']} ({d:.0f} m)", file=sys.stderr)
-
-    # Seçilmiş Lynch noktaları: buluşma/varış düğümleri ve eser dışı yer işaretleri (Heykel, Saat Kulesi…).
-    curated = {}  # osm node -> nokta
-    points = json.loads((ROOT / area["lynch"]).read_text(encoding="utf-8"))["points"] if area.get("lynch") else []
-    for pt in points:
-        p = tuple(pt["location"])
-        free = [n for n in walkable if n not in snapped and n not in curated]
-        best = min(free, key=lambda n: haversine(p, coords[n]))
-        d = haversine(p, coords[best])
-        if d <= LANDMARK_SNAP_M:
-            curated[best] = pt
-            key_nodes.add(best)
-        else:
-            print(f"  nokta bağlanamadı: {pt['id']} ({d:.0f} m)", file=sys.stderr)
 
     segments = []
     for w in ways:
@@ -240,62 +192,27 @@ def build(area_slug):
             best_comp = comp
     segments = [s for s in segments if s["from"] in best_comp]
 
-    landmark_pts = [coords[n] for n in snapped if str(n) in best_comp]
-    landmark_pts += [coords[n] for n, pt in curated.items() if str(n) in best_comp and "landmark" in pt["roles"]]
-    for s in segments:
-        mid = s["geometry"][len(s["geometry"]) // 2]
-        if any(haversine(mid, p) < 40 for p in landmark_pts):
-            s["landmarkVisibility"] = 0.5
-
     nodes = []
     for n in sorted(best_comp, key=int):
         node = {"id": n, "lynchType": "node", "location": [round(coords[int(n)][0], 7), round(coords[int(n)][1], 7)]}
         lm = snapped.get(int(n))
         if lm:
             node.update({"lynchType": "landmark", "name": lm["name"], "workSlug": lm["slug"], "workType": lm["type_slug"]})
-        pt = curated.get(int(n))
-        if pt:
-            node.update({"lynchType": "landmark" if "landmark" in pt["roles"] else "node", "name": pt["name"], "pointId": pt["id"], "roles": pt["roles"]})
-            if pt.get("sound"):
-                node["sound"] = pt["sound"]
         nodes.append(node)
-
-    # Başlangıç seçenekleri: buluşma/varış noktaları, dosyadaki sırayla ("Neredesiniz?").
-    starts = [
-        {"id": pt["id"], "nodeId": str(n), "name": pt["name"], "location": [round(coords[n][0], 7), round(coords[n][1], 7)]}
-        for n, pt in sorted(curated.items(), key=lambda kv: points.index(kv[1]))
-        if "gathering" in pt["roles"] and str(n) in best_comp
-    ]
 
     out = {
         "area": area_slug,
         "name": area["name"],
         "center": list(area["center"]),
-        "source": "OpenStreetMap katkıcıları (ODbL); landmark: Sezi works_view + data/lynch",
-        "starts": starts,
+        "source": "OpenStreetMap katkıcıları (ODbL); eserler: Sezi works_view",
         "nodes": nodes,
         "segments": segments,
     }
-    n_routes = embed_curated_routes(out, area_slug)
     out_file.parent.mkdir(parents=True, exist_ok=True)
     out_file.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     n_lm = sum(1 for n in nodes if n["lynchType"] == "landmark")
-    print(f"{len(nodes)} düğüm, {len(segments)} segment, {n_lm} landmark, {len(starts)} başlangıç, {n_routes} altın rota -> {out_file.relative_to(ROOT)}", file=sys.stderr)
-
-
-def embed_only(area_slug):
-    """Yalnız altın rotaları yeniden gömer (ağ ve OSM gerekmez; grafik aynen kalır)."""
-    out_file = ROOT / f"apps/mobile/assets/pilot/{area_slug}-nav.json"
-    out = json.loads(out_file.read_text(encoding="utf-8"))
-    n = embed_curated_routes(out, area_slug)
-    out_file.write_text(json.dumps(out, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    print(f"{n} altın rota -> {out_file.relative_to(ROOT)}", file=sys.stderr)
+    print(f"{len(nodes)} düğüm, {len(segments)} segment, {n_lm} eser -> {out_file.relative_to(ROOT)}", file=sys.stderr)
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    slug = args[0] if args else "bursa-hanlar"
-    if "--routes-only" in sys.argv:
-        embed_only(slug)
-    else:
-        build(slug)
+    build(sys.argv[1] if len(sys.argv) > 1 else "bursa-hanlar")

@@ -1,26 +1,23 @@
 # HANDOFF — oturum devri
 
-Son güncelleme: 15 Ekim 2026 (Ediz + Claude oturumu). Yeni oturum önce [AGENTS.md](AGENTS.md)'yi, sonra bu dosyayı okur.
+Son güncelleme: 17 Ekim 2026 (Ediz + Claude oturumu). Yeni oturum önce [AGENTS.md](AGENTS.md)'yi, sonra bu dosyayı okur.
 
 ## Şu an neredeyiz
 
-- **Dal:** `main`. GitHub: `https://github.com/kokkodhackathon/Sezi` (remote `origin`). Son commit: altın rota ("Rota: Heykel → Koza Hanı…"); push edilmedi.
-- **Testler:** `pnpm test` → 7 dosya, 47 test geçiyor. `pnpm typecheck` ve `expo lint` temiz.
-- **Bağımlılık:** `859a09a` (Zehra) `expo-build-properties` ekledi; yeni klonda Metro'dan önce `pnpm install` şart (yoksa "Failed to resolve plugin").
-- **Release APK hazır** ama telefona **kurulmadı** (telefon bağlı değildi):
-  `apps/mobile/android/app/build/outputs/apk/release/app-release.apk` (arm64-v8a, ~72 MB, debug anahtarıyla imzalı, JS gömülü, Metro gerektirmez).
-  ```bash
-  adb -s BYWKBEQOZD8XB6NB install -r apps/mobile/android/app/build/outputs/apk/release/app-release.apk
-  ```
-  Aynı paket adı ve imza: telefondaki dev build'in yerine geçer. Metro ile geliştirmeye dönülecekse dev build yeniden kurulur.
-- **Telefonda (Xiaomi) artık dev build var** (13 Ekim APK, `install -r`); Metro ile çalışır. Altın rota cihazda görüldü (15 Ekim): 618 m, "Ekip tarifi" rozeti, ekip/motor seçimi, ilk adım sol ok, teyitler düz ok, merdiven grubunun ilk ve son adımı kendi yerinde. Görülmedi: adım listesi, 262 m'deki ara adım (kareler arasında kaldı; testte var), titreşim.
-- **Cihazda denenmemiş özellikler:** simülasyon başlangıç seçimi (Heykel dışı), Lynch noktaları, admin bağlantısı (bildirim → onay → rota), pull-to-refresh.
+- **Dal:** `main`, remote `origin` (`https://github.com/kokkodhackathon/Sezi`). 16–17 Ekim commit'leri push edilmedi.
+- **Testler:** `pnpm test` → 56 test geçiyor. `pnpm typecheck` ve `expo lint` temiz.
+- **Navigasyon yeniden tasarımı (17 Ekim, ROADMAP #21):**
+  - Noktalar tek tabloda: `nav_points` (roller `start`, `landmark`, `story`, `arrival`), admin → **Noktalar**. `data/lynch` silindi; 12 nokta veritabanında.
+  - Mobil: tek `navigate` ekranı (nereden: konumum / başlangıç noktası / haritada seçilen yer; nereye: eser, tur, gezinti). Eski `route/[slug]`, `guide/[slug]`, `walk` ekranları kaldırıldı. Oturum `lib/navigation/session.ts`.
+  - Deneme verisi: Hanlar'da 10 eser varış noktası (envanter cilt/sayfa olgularından metin), Koza Hanı'nda TR ses kaydı. Örnek rota: Heykel → Pirinç Hanı, 4 noktaya uğrar.
+  - Sıradaki: **Mapbox'a geçiş** (kullanıcıdan `pk.` token bekleniyor; harita yalnız `components/map` ve `deferred-map.tsx` içinde değişecek, ardından native build).
+- **Cihazda denenmemiş:** gerçek telefonda yeni navigasyon ekranı, sahada GPS, admin bağlantısı (bildirim → onay → rota).
 
 ## Okunabilir rota (ROADMAP #20) — plan ve durum
 
 Tespit: motor Lynch'e göre rota seçmiyor (yalnız mesafe), sokak adlarını (1220 segmentin 1009'unda var) hiç kullanmıyor, karar noktası ayırt etmiyor, district/edge yok. Zafer Plaza → Ulu Cami: 641 m'de 12 dönüş talimatı.
 
-- **Faz 0 ✅ Altın rota:** `data/lynch/routes/heykel-koza-hani.json` — Heykel → Atatürk Cd. → Koza Parkı → Ulu Cami → Kapalıçarşı → Uzunçarşı → Koza Hanı, 618 m, 12 manevra, `verified`. Onay masa başı (saha gezisi yok, ekip kararı): her yer işaretinin rotaya göre yanı geometriden, merdiven ve yol adları OSM etiketlerinden kontrol edildi. OSM'de merdiven yönü (incline) ve Koza Hanı kapısı (entrance) yok; metin bunları iddia etmez. Heykel düğümü grafikte kavşağın 6 m batısında: ilk manevra bu kısa erişimi ve köşedeki keskin sol dönüşü birlikte anlatır (yürüyüşün başında duyurulur). Dönüşler her zaman geometriden; `pilot-graph.test.ts` sessiz dönüş olmadığını ve ok/haptik/metin tutarlılığını denetler. Motor aynı yolculukta 497 m, 8 dönüş talimatı, ortak yol %54.
+- **Faz 0 (altın rota) kaldırıldı (17 Ekim):** ekip artık rota yazmıyor, yalnız nokta giriyor (admin → Noktalar). Rotalar her zaman motordan; talimat kalitesi Faz 1'den itibaren motorda iyileştirilir.
 - **Faz 1:** dönüş cezası (kenar durumlu Dijkstra; yalnız bağlantı ≥ 3 kavşakta), sokak değişim cezası.
 - **Faz 2:** karar noktası ve yol parçaları; zikzak sunumda birleşir, manevra atomik kalır.
 - **Faz 3:** yol dili ("X boyunca N m"), teyitte yol adı.
