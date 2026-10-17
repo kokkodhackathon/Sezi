@@ -90,6 +90,19 @@ Tarayıcıda **http://localhost:3000** açılır.
   Sonra panelde çıkış yapıp yeniden girin.
 - Sayfalar: Eserler, Yeni eser, Fotoğraf kutusu, **Noktalar** (başlangıç, yer işareti, anlatım, eser varışı), **Rota testi** (uygulamadaki rota ve sanal yürüyüş, telefonsuz), Bildirimler, İller.
 
+### Yayına alma (Coolify)
+
+Panel statik bir sitedir: `apps/admin/Dockerfile` derler, nginx sunar (`apps/admin/nginx.conf`, `/rota-testi` gibi adresler doğrudan açılır).
+
+1. Coolify → **New Resource** → GitHub deposu (`kokkodhackathon/Sezi`, dal `main`). Coolify depoyu çeker: yayına girecek commit'ler push edilmiş olmalı.
+2. **Build Pack:** Dockerfile. **Base Directory:** `/` (depo kökü; panel ortak paketi ve mobilin pilot grafiğini kullanır). **Dockerfile Location:** `/apps/admin/Dockerfile`. **Port:** `80`.
+3. **Domains:** `https://panel.alanadiniz.com` gibi tam adres; Coolify sertifikayı kendisi alır.
+4. **Environment Variables:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_MAPBOX_TOKEN`; üçünde de **Build Variable** işaretli olmalı (değerler derlemede pakete gömülür). Değer değişince yeniden deploy edilir. `service_role` anahtarı ya da veritabanı parolası **asla** buraya girmez.
+5. **Supabase → Authentication → URL Configuration:** **Redirect URLs** listesine panelin adresini ekleyin (`https://panel.alanadiniz.com/**`). Eklenmezse e-postadaki giriş bağlantısı localhost'a döner. Yerelde de giriş yapılacaksa **Site URL** `http://localhost:3000` kalabilir.
+6. **Mapbox:** paneldeki token'ı yalnızca bu adrese kısıtlamak isterseniz admin için ayrı bir token açın (URL kısıtı mobil haritayı bozar; bkz. yukarıdaki Mapbox notu).
+
+Yerelde denemek için: `docker build -f apps/admin/Dockerfile --build-arg VITE_SUPABASE_URL=… --build-arg VITE_SUPABASE_ANON_KEY=… --build-arg VITE_MAPBOX_TOKEN=… -t sezi-admin .` → `docker run -p 8080:80 sezi-admin`.
+
 ## 5. Mobil uygulama (geliştirme)
 
 Uygulama native modüller kullanır (harita, ses, konum); **Expo Go ile açılmaz**, development build gerekir.

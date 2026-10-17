@@ -1,0 +1,12 @@
+**/node_modules
+**/.env
+**/.env.*
+.git
+docs
+data
+scratchpad
+supabase
+apps/mobile/android
+apps/mobile/ios
+apps/mobile/.expo
+apps/admin/dist
