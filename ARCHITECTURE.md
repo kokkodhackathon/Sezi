@@ -104,6 +104,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
    - Duymayan kullanıcıda ses yerine `CueFlash` (ekran kenarı parlaması) ve titreşim.
 7. **Harita** (Mapbox): mobilde `@rnmapbox/maps` yalnızca `components/map` içinde (ekranlar `SeziMap`, `RouteLine`, `PointsLayer`, `WorkClusters`… kullanır); adminde `mapbox-gl` yalnızca `lib/mapbox.ts` üzerinden. Stil Mapbox Standard: düz, dükkân etiketleri kapalı, Çini zemin renkleri; koyu temada gece, az gören profilinde tek renkli.
 8. **Admin rota testi** (`admin/pages/RouteTest.tsx`, `lib/route-test.ts`): telefona gerek kalmadan aynı planlayıcı, aynı sanal yürüyüşçü ve aynı takip adımı. Profil (yürüyen, tekerlekli sandalye, görme engelli, duymayan) ve talimat dili seçilir; rota, talimat listesi, uğrama sırası, yol kapatma ve yanlış dönüş senaryoları, açılan nokta kartı ve zaman damgalı kayıt panelde görünür. İstenirse taslak noktalar da rotaya katılır (uygulama yalnızca yayındakileri görür).
+   - **Profil karşılaştırması:** aynı başlangıç ve hedef için dört profilin rotası aynı haritada (renk yanında kalınlık ve kesiklikle ayrışır) ve tabloda: uzunluk, süre, en kısaya fark, basamak, ana cadde ve arnavut kaldırımı, uğrama, talimat sayısı, profilin rotayı neden değiştirdiği, aynı çıkan rotalar. Seçilen profil simülasyonun profili olur. Duymayan profil rota maliyetinde yürüyenle aynıdır; fark ipucundadır.
 
 ## Mobil ekranlar
 

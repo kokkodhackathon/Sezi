@@ -1,9 +1,9 @@
 import { formatDistance, walkingSpeed, type LngLat } from '@sezi/shared';
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 
 import { RouteTestMap } from '../components/RouteTestMap';
 import { pilotPlanner } from '../lib/pilot';
-import { PROFILE_LABEL, profileFor, useRouteTest, type LogKind, type ProfileKey, type RouteTestState } from '../lib/route-test';
+import { PROFILE_KEYS, PROFILE_LABEL, PROFILE_LINE, PROFILE_WHY, profileFor, useRouteTest, type LogKind, type ProfileKey, type ProfileRoute, type RouteTestState } from '../lib/route-test';
 import { AUDIO_BASE } from '../lib/supabase';
 
 const SPEEDS = [1, 3, 8, 20];
@@ -59,6 +59,19 @@ export function RouteTest() {
   const planning = state.phase === 'plan';
   const current = plan && state.stepIndex >= 0 ? plan.steps[state.stepIndex] : undefined;
 
+  // Profil karşılaştırması yalnızca plan aşamasında; plan, başlangıç, hedef, dil ya da nokta değişince yeniden hesaplanır.
+  const [comparing, setComparing] = useState(false);
+  const rows = useMemo(
+    () => (comparing && planning ? test.compareProfiles() : null),
+    // state.plan: replan her değişiklikte yeni plan üretir (başlangıç, hedef, dil, noktalar, bildirimler).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [comparing, planning, state.plan, state.start, state.dest, state.lang, test],
+  );
+  const compareLines = useMemo(
+    () => (rows ? rows.flatMap((r) => (r.plan ? [{ key: r.key, line: r.plan.geometry.line, selected: r.key === state.profile }] : [])) : null),
+    [rows, state.profile],
+  );
+
   const pick = (p: LngLat) => {
     if (!planning) return;
     setPicking(false);
@@ -109,13 +122,17 @@ export function RouteTest() {
             onPick={pick}
             onStart={(id) => planning && test.setStart({ kind: 'point', id })}
             onDest={(slug) => planning && test.setDest(slug)}
+            compare={compareLines}
           />
           <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-            Turkuaz çizgi kalan rota, gri kısmı yürünen yol; kesikli kırmızı kapalı yol, kesikli sarı yanlış dönüş. Numaralı daireler rotanın uğradığı noktalar, gri
-            olanlar açılmış noktalar.
+            {rows
+              ? 'Her profilin rotası kendi çizgisiyle; seçili profil öne çıkar. Çizgi örnekleri aşağıdaki tabloda.'
+              : 'Turkuaz çizgi kalan rota, gri kısmı yürünen yol; kesikli kırmızı kapalı yol, kesikli sarı yanlış dönüş. Numaralı daireler rotanın uğradığı noktalar, gri olanlar açılmış noktalar.'}
           </p>
 
-          {plan ? <Steps plan={plan} stepIndex={state.stepIndex} /> : null}
+          {/* Karşılaştırma açıkken tablo haritanın hemen altında; tek profilin talimatları gizlenir. */}
+          {rows ? <CompareTable rows={rows} selected={state.profile} onSelect={(k) => test.setProfile(k)} /> : null}
+          {plan && !rows ? <Steps plan={plan} stepIndex={state.stepIndex} /> : null}
         </div>
 
         <div className="stack">
@@ -176,6 +193,15 @@ export function RouteTest() {
             </label>
 
             {state.note ? <p className="muted" style={{ margin: 0 }}>{NOTE[state.note]}</p> : null}
+
+            <label className="check">
+              <input type="checkbox" checked={comparing} onChange={(e) => setComparing(e.target.checked)} disabled={!planning} />
+              <span>
+                Profilleri karşılaştır
+                <br />
+                <span className="muted">Aynı başlangıç ve hedef için dört profilin rotası haritada ve tabloda.</span>
+              </span>
+            </label>
 
             {plan && stats ? (
               <>
@@ -350,6 +376,107 @@ function Steps({ plan, stepIndex }: { plan: NonNullable<RouteTestState['plan']>;
           ))}
         </tbody>
       </table>
+    </section>
+  );
+}
+
+/** Haritadaki çizginin küçük örneği: profil, renk yanında kalınlık ve kesiklikle de tanınır. */
+function LineSwatch({ k }: { k: ProfileKey }) {
+  const s = PROFILE_LINE[k];
+  const w = Math.min(s.width, 8);
+  return (
+    <svg width="40" height="12" viewBox="0 0 40 12" aria-hidden="true" style={{ flex: 'none' }}>
+      <line x1="2" y1="6" x2="38" y2="6" stroke={s.color} strokeWidth={w} strokeLinecap={s.dash ? 'butt' : 'round'} strokeDasharray={s.dash ? s.dash.map((d) => d * w).join(' ') : undefined} />
+    </svg>
+  );
+}
+
+/**
+ * Aynı başlangıç ve hedef için dört profilin rotası yan yana. En kısa rotaya göre fark, aynı çıkan rotalar ve
+ * profilin rotayı neden değiştirdiği yazılır; "Bu profil" ile simülasyonun profili seçilir.
+ */
+function CompareTable({ rows, selected, onSelect }: { rows: ProfileRoute[]; selected: ProfileKey; onSelect: (k: ProfileKey) => void }) {
+  if (rows.length === 0) return <p className="muted">Karşılaştırma için pilot alanda bir başlangıç seçin.</p>;
+  const lengths = rows.flatMap((r) => (r.stats ? [r.stats.lengthM] : []));
+  const shortest = lengths.length ? Math.min(...lengths) : 0;
+  const sig = (r: ProfileRoute) => r.plan?.route.segmentIds.join(',') ?? '';
+  /** Aynı rotayı çizen ilk profil (aynıysa "… ile aynı rota" yazılır). */
+  const sameAs = (r: ProfileRoute) => (r.plan ? rows.find((o) => o !== r && o.plan && sig(o) === sig(r) && PROFILE_KEYS.indexOf(o.key) < PROFILE_KEYS.indexOf(r.key)) : undefined);
+  return (
+    <section aria-labelledby="rt-compare" className="stack" style={{ gap: 8 }}>
+      <h2 id="rt-compare">Profil karşılaştırması</h2>
+      <div style={{ overflowX: 'auto' }}>
+      <table className="table">
+        <thead>
+          <tr>
+            <th scope="col">Profil</th>
+            <th scope="col">Uzunluk · süre</th>
+            <th scope="col">Basamak</th>
+            <th scope="col">Ana cadde · zemin</th>
+            <th scope="col">Uğrama</th>
+            <th scope="col">
+              <span className="sr-only">Seçim</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => {
+            const same = sameAs(r);
+            const diff = r.stats ? Math.round(r.stats.lengthM - shortest) : 0;
+            const bg = r.key === selected ? { background: '#DCEFEE' } : undefined;
+            return (
+              <Fragment key={r.key}>
+              <tr aria-current={r.key === selected ? 'true' : undefined} style={bg}>
+                <td>
+                  <div className="row" style={{ gap: 8, flexWrap: 'nowrap' }}>
+                    <LineSwatch k={r.key} />
+                    <strong>{PROFILE_LABEL[r.key]}</strong>
+                  </div>
+                </td>
+                {r.plan && r.stats ? (
+                  <>
+                    <td className="num">
+                      {formatDistance(r.stats.lengthM, 'tr')} · ~{r.minutes} dk
+                      <div className="muted" style={{ fontSize: 13 }}>
+                        {diff === 0 ? 'En kısa' : `+${diff} m`} · {r.plan.steps.length} talimat
+                      </div>
+                    </td>
+                    <td className="num">{r.stats.stairs === 0 ? 'Yok' : r.stats.stairs}</td>
+                    <td className="num">
+                      Cadde {r.stats.busyM} m
+                      <div className="muted" style={{ fontSize: 13 }}>Arnavut {r.stats.cobbleM} m</div>
+                    </td>
+                    <td className="num">
+                      {r.plan.via.pointIds.length} nokta
+                      <div className="muted" style={{ fontSize: 13 }}>{r.plan.via.extraM > 0 ? `+${r.plan.via.extraM} m` : r.plan.via.pointIds.length ? 'yol üstünde' : ''}</div>
+                    </td>
+                  </>
+                ) : (
+                  <td colSpan={4} className="muted">
+                    Bu profil için rota bulunamadı.
+                  </td>
+                )}
+                <td style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>
+                  <button type="button" className={`btn small${r.key === selected ? '' : ' outline'}`} aria-pressed={r.key === selected} onClick={() => onSelect(r.key)}>
+                    {r.key === selected ? 'Seçili' : 'Bu profil'}
+                  </button>
+                </td>
+              </tr>
+              <tr style={bg}>
+                <td colSpan={6} className="muted" style={{ fontSize: 13, borderTop: 'none', paddingTop: 0 }}>
+                  {PROFILE_LINE[r.key].style} · {PROFILE_WHY[r.key]}
+                  {same ? ` ${PROFILE_LABEL[same.key]} ile aynı rota.` : ''}
+                </td>
+              </tr>
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+      </div>
+      <p className="muted" style={{ margin: 0, fontSize: 13 }}>
+        Seçili profilin çizgisi haritada öne çıkar; simülasyon bu profille yürür.
+      </p>
     </section>
   );
 }

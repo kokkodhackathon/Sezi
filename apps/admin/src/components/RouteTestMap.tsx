@@ -2,6 +2,7 @@ import { boundsOf, sliceLine, type LngLat, type NavPoint, type PilotNode, type S
 import { useEffect, useRef } from 'react';
 
 import { createMap, MAP_FONT } from '../lib/mapbox';
+import { PROFILE_LINE, type ProfileKey } from '../lib/route-test';
 import { ROLE_COLOR, hasRadius } from './PointsMap';
 
 /** Merkez ve yarıçaptan (m) 48 köşeli daire poligonu. */
@@ -41,6 +42,8 @@ interface Props {
   onPick: (p: LngLat) => void;
   onStart: (id: string) => void;
   onDest: (slug: string) => void;
+  /** Profil karşılaştırması açıksa her profilin rotası; tek rota yerine bunlar çizilir. */
+  compare: { key: ProfileKey; line: LngLat[]; selected: boolean }[] | null;
 }
 
 /**
@@ -53,7 +56,7 @@ export function RouteTestMap(props: Props) {
   const ready = useRef(false);
   const latest = useRef(props);
   latest.current = props;
-  const fittedFor = useRef<LngLat[] | null>(null);
+  const fittedFor = useRef<unknown>(null);
 
   const sync = () => {
     const m = map.current;
@@ -61,7 +64,11 @@ export function RouteTestMap(props: Props) {
     const p = latest.current;
     const set = (id: string, data: GeoJSON.FeatureCollection) => (m.getSource(id) as mapboxgl.GeoJSONSource).setData(data);
 
-    set('route', fc(p.routeLine ? [line(p.routeLine)] : []));
+    set('route', fc(p.routeLine && !p.compare ? [line(p.routeLine)] : []));
+    for (const key of Object.keys(PROFILE_LINE) as ProfileKey[]) {
+      const c = p.compare?.find((x) => x.key === key);
+      set(`cmp-${key}`, fc(c ? [{ ...line(c.line), properties: { selected: c.selected } }] : []));
+    }
     set('walked', fc(p.routeLine && p.walkedM > 1 ? [line(sliceLine(p.routeLine, 0, p.walkedM))] : []));
     set('detour', fc(p.detourLine ? [line(p.detourLine)] : []));
     set('blocked', fc(p.blockedLines.map(line)));
@@ -103,8 +110,13 @@ export function RouteTestMap(props: Props) {
     set('user', fc(p.position ? [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: p.position } }] : []));
     m.getCanvas().style.cursor = p.picking ? 'crosshair' : '';
 
-    // Yeni rota çizilince ekrana sığdırılır (yürürken kamera kendiliğinden kaymaz).
-    if (p.routeLine && p.routeLine !== fittedFor.current && p.walkedM === 0) {
+    // Yeni rota (ya da karşılaştırma kümesi) çizilince ekrana sığdırılır; yürürken kamera kendiliğinden kaymaz.
+    const cmp = p.compare;
+    if (cmp && cmp !== fittedFor.current && cmp.length) {
+      fittedFor.current = cmp;
+      const [w, s, e, n] = boundsOf(cmp.flatMap((c) => c.line));
+      m.fitBounds([[w, s], [e, n]], { padding: 60, duration: 400, maxZoom: 18 });
+    } else if (!cmp && p.routeLine && p.routeLine !== fittedFor.current && p.walkedM === 0) {
       fittedFor.current = p.routeLine;
       const [w, s, e, n] = boundsOf(p.routeLine);
       m.fitBounds([[w, s], [e, n]], { padding: 60, duration: 400, maxZoom: 18 });
@@ -117,6 +129,19 @@ export function RouteTestMap(props: Props) {
     m.on('load', () => {
       for (const id of ['route', 'walked', 'detour', 'blocked', 'radius', 'points', 'picked', 'user']) {
         m.addSource(id, { type: 'geojson', data: fc([]) });
+      }
+      // Profil karşılaştırması: her profil kendi kaynağında, kalından inceye (kalın çizgi altta kalır).
+      for (const key of Object.keys(PROFILE_LINE) as ProfileKey[]) {
+        const s = PROFILE_LINE[key];
+        m.addSource(`cmp-${key}`, { type: 'geojson', data: fc([]) });
+        m.addLayer({
+          id: `cmp-${key}`,
+          type: 'line',
+          slot: 'top',
+          source: `cmp-${key}`,
+          paint: { 'line-color': s.color, 'line-width': s.width, 'line-opacity': ['case', ['get', 'selected'], 1, 0.5], ...(s.dash ? { 'line-dasharray': s.dash } : {}) },
+          layout: { 'line-join': 'round', ...(s.dash ? {} : { 'line-cap': 'round' as const }) },
+        });
       }
       m.addLayer({ id: 'radius-fill', type: 'fill', slot: 'top', source: 'radius', paint: { 'fill-color': '#B8321F', 'fill-opacity': 0.08 } });
       m.addLayer({ id: 'route-casing', type: 'line', slot: 'top', source: 'route', paint: { 'line-color': '#FFFFFF', 'line-width': 10 }, layout: { 'line-cap': 'round', 'line-join': 'round' } });

@@ -48,6 +48,34 @@ const PROFILES: Record<ProfileKey, Omit<UserProfile, 'lang'>> = {
 
 export const profileFor = (key: ProfileKey, lang: 'tr' | 'en'): UserProfile => ({ ...PROFILES[key], lang });
 
+export const PROFILE_KEYS: ProfileKey[] = ['walker', 'wheelchair', 'blind', 'deaf'];
+
+/** Profil rotayı nasıl değiştirir (uygulamadaki karşılaştırma ekranıyla aynı açıklama). */
+export const PROFILE_WHY: Record<ProfileKey, string> = {
+  walker: 'En kısa yol; yer işaretlerinin göründüğü sokaklar tercih edilir.',
+  wheelchair: 'Merdivenli, dik ve dar yollar hiç kullanılmaz; arnavut kaldırımı mümkünse atlanır.',
+  blind: 'Gürültülü ana caddelerden uzak durur ki ses ipuçları duyulsun; kaldırım kenarları azaltılır.',
+  deaf: 'Rota yürüyenle aynı maliyetle hesaplanır; fark ipucundadır: ses yerine yazı, titreşim ve ekran ışığı.',
+};
+
+export interface ProfileRoute {
+  key: ProfileKey;
+  plan: PlannedRoute | null;
+  stats: { lengthM: number; stairs: number; busyM: number; cobbleM: number } | null;
+  minutes: number;
+}
+
+/**
+ * Karşılaştırma haritasında profil çizgileri: renk yanında kalınlık ve kesiklikle de ayrışır (renk tek başına anlam taşımaz).
+ * Çizim sırası kalından inceye; kalın çizgi altta kalır, üst üste binen rotalar da görünür.
+ */
+export const PROFILE_LINE: Record<ProfileKey, { color: string; width: number; dash?: number[]; style: string }> = {
+  wheelchair: { color: '#0B6E73', width: 9, style: 'kalın düz çizgi' },
+  blind: { color: '#B8321F', width: 5, dash: [1.4, 1], style: 'kesikli çizgi' },
+  walker: { color: '#1E1A17', width: 3, style: 'ince düz çizgi' },
+  deaf: { color: '#B07A12', width: 3, dash: [0.4, 1.8], style: 'noktalı çizgi' },
+};
+
 export type Start = { kind: 'point'; id: string } | { kind: 'pick'; location: LngLat };
 
 export type LogKind = 'step' | 'point' | 'reroute' | 'blocked' | 'detour' | 'arrive' | 'info';
@@ -298,6 +326,26 @@ export class RouteTest {
   }
 
   // ---------- Dışa açık API ----------
+
+  /**
+   * Aynı başlangıç ve hedef için her profilin rotası (karşılaştırma). Başlangıç yoksa ya da pilot alan dışındaysa boş.
+   * Yürüyüşte o anki rota değil, plan aşamasındaki başlangıç kullanılır.
+   */
+  compareProfiles(): ProfileRoute[] {
+    const from = this.origin();
+    if (!from || !this.planner.inPilotArea(from)) return [];
+    const leadIn = this.state.start?.kind === 'pick';
+    return PROFILE_KEYS.map((key) => {
+      const profile = profileFor(key, this.state.lang);
+      const plan = this.state.dest ? this.planner.planRoute(this.state.dest, profile, from, { leadIn }) : this.planner.planStroll(profile, from, { leadIn });
+      return {
+        key,
+        plan,
+        stats: plan ? this.planner.routeStats(plan) : null,
+        minutes: plan ? Math.max(1, Math.round(plan.route.lengthM / walkingSpeed(profile) / 60)) : 0,
+      };
+    });
+  }
 
   /** Noktalar değişti (veri ya da taslak seçimi): önizleme yenilenir. */
   setPoints(points: NavPoint[]) {
