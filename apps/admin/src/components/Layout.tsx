@@ -25,6 +25,7 @@ export function Layout() {
           <NavLink to="/eserler/yeni">Yeni eser</NavLink>
           <NavLink to="/fotograflar">Fotoğraf kutusu</NavLink>
           <NavLink to="/noktalar">Noktalar</NavLink>
+          <NavLink to="/rota-testi">Rota testi</NavLink>
           <NavLink to="/bildirimler">Bildirimler</NavLink>
           <NavLink to="/iller">İller</NavLink>
         </nav>

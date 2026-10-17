@@ -1,4 +1,6 @@
-import { bearingDeg, pointAlong, polylineLength, type LngLat, type LocationFix } from '@sezi/shared';
+import { bearingDeg, pointAlong, polylineLength } from "./geo";
+import type { LngLat } from "./schemas";
+import type { LocationFix } from "./tracking";
 
 /**
  * Sanal yürüyüşçü: bir çizgi boyunca yürür ve gerçek GPS'e benzeyen konum ölçümleri üretir

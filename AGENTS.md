@@ -97,7 +97,8 @@ Ekibin ve önceki oturumların çalışma biçimi. Bunlara uyulmazsa süreç boz
   - Konum kesinliği (`location_precision`) arayüzde gösterilir.
 - **Rota ve rehberlik:**
   - Pilot grafiği `assets/pilot/bursa-hanlar-nav.json` dosyasında, uygulamaya gömülü olduğu için internetsiz çalışır.
-  - Rota `src/lib/nav.ts`, turlar `src/lib/tours.ts`, simülasyon `src/lib/simulation.ts` içinde. Motorlar `packages/shared` içinde.
+  - Planlayıcı (`createPlanner`), sanal yürüyüşçü (`walker`) ve rota takibi adımı (`followRoute`) `packages/shared` içinde; mobil `src/lib/nav.ts` gömülü grafikle kurar, oturum `src/lib/navigation/session.ts`, turlar `src/lib/tours.ts`.
+  - Rota ve simülasyon telefonsuz denenebilir: admin → **Rota testi** aynı motoru çalıştırır. Rota davranışı değişince önce orada bakılır.
 - **Kullanıcı durumu:** Profil (`lib/profile.tsx`: görme, hareket, işitme, duyular, dil) ve ayarlar (`lib/settings.tsx`) cihazda `expo-sqlite/kv-store` ile tutulur.
 
 ## Veritabanı (Supabase Cloud)

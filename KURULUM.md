@@ -88,7 +88,7 @@ Tarayıcıda **http://localhost:3000** açılır.
   where email = '<sizin e-postanız>';
   ```
   Sonra panelde çıkış yapıp yeniden girin.
-- Sayfalar: Eserler, Yeni eser, Fotoğraf kutusu, **Noktalar** (başlangıç, yer işareti, anlatım, eser varışı), Bildirimler, İller.
+- Sayfalar: Eserler, Yeni eser, Fotoğraf kutusu, **Noktalar** (başlangıç, yer işareti, anlatım, eser varışı), **Rota testi** (uygulamadaki rota ve sanal yürüyüş, telefonsuz), Bildirimler, İller.
 
 ## 5. Mobil uygulama (geliştirme)
 

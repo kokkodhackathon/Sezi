@@ -11,6 +11,7 @@ Son güncelleme: 17 Ekim 2026 (Ediz + Claude oturumu). Yeni oturum önce [AGENTS
   - Mobil: tek `navigate` ekranı (nereden: konumum / başlangıç noktası / haritada seçilen yer; nereye: eser, tur, gezinti). Eski `route/[slug]`, `guide/[slug]`, `walk` ekranları kaldırıldı. Oturum `lib/navigation/session.ts`.
   - Deneme verisi: Hanlar'da 10 eser varış noktası (envanter cilt/sayfa olgularından metin), Koza Hanı'nda TR ses kaydı. Örnek rota: Heykel → Pirinç Hanı, 4 noktaya uğrar.
   - Harita Mapbox'a geçirildi (17 Ekim): mobil `@rnmapbox/maps` (yalnız `components/map`), admin `mapbox-gl` (`lib/mapbox.ts`), Mapbox Standard stil. Token `.env`'lerde.
+  - Admin → **Rota testi** (17 Ekim): uygulamanın rota planlayıcısı ve simülasyonu panelde. Planlayıcı, yürüyüşçü ve takip adımı `packages/shared`'a taşındı (`planner.ts`, `walker.ts`, `follow.ts`); mobil ve admin aynı kodu kullanır.
 - **Cihazda denenmemiş:** gerçek telefonda yeni navigasyon ekranı, sahada GPS, admin bağlantısı (bildirim → onay → rota).
 
 ## Okunabilir rota (ROADMAP #20) — plan ve durum

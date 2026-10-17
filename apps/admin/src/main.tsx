@@ -12,6 +12,7 @@ import { Inbox } from './pages/Inbox';
 import { NewWork } from './pages/NewWork';
 import { Reports } from './pages/Reports';
 import { Points } from './pages/Points';
+import { RouteTest } from './pages/RouteTest';
 import { WorkEdit } from './pages/WorkEdit';
 import { Works } from './pages/Works';
 
@@ -39,6 +40,7 @@ const router = createBrowserRouter([
       { path: 'fotograflar', element: <Inbox /> },
       { path: 'bildirimler', element: <Reports /> },
       { path: 'noktalar', element: <Points /> },
+      { path: 'rota-testi', element: <RouteTest /> },
       { path: 'iller', element: <Cities /> },
     ],
   },

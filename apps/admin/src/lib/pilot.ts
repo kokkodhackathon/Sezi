@@ -1,4 +1,6 @@
 // Pilot alan grafikleri: mobil uygulamayla aynı dosya (tek kaynak, data/build_nav_graph.py üretir).
+import { createPlanner, type PilotGraphData } from '@sezi/shared';
+
 import bursaHanlar from '../../../mobile/assets/pilot/bursa-hanlar-nav.json';
 
 interface PilotGraph {
@@ -17,3 +19,8 @@ export function segmentGeometry(area: string | null, key: string | null): [numbe
   const seg = PILOT_AREAS[area]?.segments.find((s) => s.id === key);
   return seg?.geometry ?? null;
 }
+
+/** Rota testi: mobil uygulamayla aynı planlayıcı ve aynı gömülü grafik (Bursa Ulu Cami ve Hanlar Bölgesi). */
+export const pilotPlanner = createPlanner(bursaHanlar as unknown as PilotGraphData);
+/** Pilot alanın ili (noktalar bu ilden okunur). */
+export const PILOT_CITY = 'bursa';

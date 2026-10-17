@@ -9,10 +9,10 @@ Durum: 13 Ekim 2026. Bu belge **bugün çalışan** sistemi anlatır. Hedefler v
 │ Expo Router ekranları ─ TanStack Query ─ supabase-js (anon) ──────────────► Supabase Cloud │
 │        │                                                                    (Postgres+RLS,  │
 │        ├─ lib/nav.ts ─ assets/pilot/bursa-hanlar-nav.json (gömülü, internetsiz)  PostGIS,   │
-│        │        └─ @sezi/shared: findRoute · buildGuidance · routeGeometry       pgvector)  │
-│        └─ lib/simulation.ts ─ expo-speech · expo-haptics · react-native-audio-api  ▲        │
+│        │        └─ @sezi/shared: createPlanner · findRoute · buildGuidance       pgvector)  │
+│        └─ lib/navigation/session.ts ─ @sezi/shared: followRoute · walker ─ ses/haptik ▲    │
 └────────────────────────────────────────────────────────────────────────────────────│────────┘
-apps/admin (Vite + React; henüz iskelet) ───────────────────── authenticated + admin ┘
+apps/admin (Vite + React) ─ Rota testi: aynı planlayıcı + sanal yürüyüş ── authenticated + admin ┘
 data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets/pilot/*-nav.json
 ```
 
@@ -89,7 +89,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
    - Profile göre değişir: tekerlekli sandalye basamağı hiç kullanmaz; görme kısıtlı kullanıcı gürültü ve kaldırımdan kaçınır.
    - Yer işareti görünürlüğü maliyeti düşürür.
    - Arama algoritması Dijkstra (`findRoute`).
-4. **Rota** (`nav.ts`)
+4. **Rota** (`shared/planner.ts › createPlanner`; mobilde `nav.ts` gömülü grafikle kurar, adminde `lib/pilot.ts`)
    - `planRoute(eser, profil, başlangıç)`: `shared/via.ts › routeVia` rotayı yakındaki anlatım/varış noktalarına uğratır (açgözlü ekleme, en çok %25 ve +300 m). Haritada seçilen başlangıç ya da yeniden rotada `withLeadIn` kullanıcının tam konumundan bağlar.
    - `planStroll` (hedefsiz gezinti): en yakın açılmamış noktaya, oradan bir sonrakine; en çok 5 nokta, bacak ≤ 500 m, toplam ≤ 1,2 km.
    - Turlar (`lib/tours.ts`): eser türüne göre havuz, en yakın komşu sırası; "Başla" durakları sırayla aynı navigasyon ekranında yürütür.
@@ -97,12 +97,13 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
    - Dönüş açısı ve en yakın yer işaretinden Lynch tarzı talimat; merdiven, zemin, cadde uyarısı; uzun düzlükte teyit.
    - İpucu türü profile göre seçilir (`cuePreference`): duymayan kullanıcıya sesli ipucu verilmez.
 6. **Navigasyon oturumu** (`mobile/lib/navigation/session.ts`)
-   - Aşamalar: plan → yürüyüş → varış. Konum kaynağı GPS (`expo-location`, ön planda; ekran `expo-keep-awake` ile açık) ya da geliştirici simülasyon modunda sanal yürüyüşçü (başlangıç "Konumum" değilse). İkisi de aynı takip hattından geçer (`trackFix`, `dueStep`).
+   - Aşamalar: plan → yürüyüş → varış. Konum kaynağı GPS (`expo-location`, ön planda; ekran `expo-keep-awake` ile açık) ya da geliştirici simülasyon modunda sanal yürüyüşçü (`shared/walker.ts`, başlangıç "Konumum" değilse). İkisi de aynı takip adımından geçer (`shared/follow.ts › followRoute`: `trackFix`, `dueStep`, rotadaki uğrama noktaları).
    - Yarıçapa girilen anlatım/varış noktası yürüyüş başına bir kez açılır (`shared/points.ts › duePoints`, doğruluk > 50 m ise tetiklemez); sanal yürüyüş nokta okunurken bekler.
    - Ses sırası (`pointVoice`): kendi dilinde kayıt → kendi dilinde metin (TTS) → TR kayıt → TR metin. Kayıt çalarken talimatlar bekler, bitince okunur.
    - Sapma, yol kapatma ve yanlış dönüşte bulunulan yerden yeniden rota (açılmış noktalar atlanır). Varışta eser kartı ve varış bilgisinin sesi.
    - Duymayan kullanıcıda ses yerine `CueFlash` (ekran kenarı parlaması) ve titreşim.
 7. **Harita** (Mapbox): mobilde `@rnmapbox/maps` yalnızca `components/map` içinde (ekranlar `SeziMap`, `RouteLine`, `PointsLayer`, `WorkClusters`… kullanır); adminde `mapbox-gl` yalnızca `lib/mapbox.ts` üzerinden. Stil Mapbox Standard: düz, dükkân etiketleri kapalı, Çini zemin renkleri; koyu temada gece, az gören profilinde tek renkli.
+8. **Admin rota testi** (`admin/pages/RouteTest.tsx`, `lib/route-test.ts`): telefona gerek kalmadan aynı planlayıcı, aynı sanal yürüyüşçü ve aynı takip adımı. Profil (yürüyen, tekerlekli sandalye, görme engelli, duymayan) ve talimat dili seçilir; rota, talimat listesi, uğrama sırası, yol kapatma ve yanlış dönüş senaryoları, açılan nokta kartı ve zaman damgalı kayıt panelde görünür. İstenirse taslak noktalar da rotaya katılır (uygulama yalnızca yayındakileri görür).
 
 ## Mobil ekranlar
 

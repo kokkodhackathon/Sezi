@@ -8,3 +8,6 @@ export * from "./scenarios";
 export * from "./soundscape";
 export * from "./points";
 export * from "./via";
+export * from "./planner";
+export * from "./walker";
+export * from "./follow";

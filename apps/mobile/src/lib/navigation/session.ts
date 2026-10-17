@@ -1,17 +1,19 @@
 import {
   bearingDeg,
+  createWalker,
   distanceM,
-  dueStep,
   duePoints,
+  followRoute,
   initialTrack,
   offRouteThreshold,
-  pointAlong,
   pointVoice,
   projectOnLine,
   soundKindFor,
   soundscapeMix,
+  stepWalker,
   stereoPan,
-  trackFix,
+  walkerOnLine,
+  type Walker,
   type GuidanceStep,
   type LngLat,
   type LocationFix,
@@ -31,7 +33,6 @@ import { navPoints, pointAudioUri } from '../points';
 import { hapticAlert, hapticForTurn, playLandmarkCue } from '../sim/cues';
 import { stopSoundscape, updateSoundscape } from '../sim/soundscape-engine';
 import { say, silence } from '../sim/speech';
-import { createWalker, stepWalker, walkerOnLine, type Walker } from '../sim/walker';
 import { playPointFile, stopPointFile } from './point-audio';
 
 /**
@@ -440,33 +441,37 @@ function onFix(fix: LocationFix, truthAt: LngLat, walkerAtEnd: boolean) {
     return;
   }
 
-  // 3. Rota takibi.
-  const track = trackFix(state.track, plan.geometry.line, fix);
-  if (track.offRoute || (state.detouring && walkerAtEnd)) {
+  // 3. Rota takibi (ortak adım: admin rota testi de bunu kullanır).
+  const r = followRoute({
+    line: plan.geometry.line,
+    totalM: totalOf(plan),
+    stepsAtM: plan.steps.map((s) => s.atM),
+    via: plan.via,
+    track: state.track,
+    stepIndex: state.stepIndex,
+    fired: new Set(state.fired),
+    fix,
+    mps: walkingSpeed(cfg.profile) * (state.source === 'sim' ? state.speed : 1),
+    snapToLine: state.source === 'sim',
+    // Sanal yürüyüşçü çizginin sonuna ulaştıysa GPS benzeri sapma varışı geciktirmesin.
+    atEnd: state.source === 'sim' && walkerDone && !state.detouring,
+  });
+  if (r.offRoute || (state.detouring && walkerAtEnd)) {
     reroute('offroute', state.blocked, truthAt);
     return;
   }
-  const total = totalOf(plan);
-  // Sanal yürüyüşçü çizginin sonuna ulaştıysa GPS benzeri sapma varışı geciktirmesin.
-  const distance = state.source === 'sim' && walkerDone && !state.detouring ? total : track.alongM;
-  const position = state.source === 'sim' && track.crossM <= 10 ? pointAlong(plan.geometry.line, distance) : fix.position;
-  const mps = walkingSpeed(cfg.profile) * (state.source === 'sim' ? state.speed : 1);
-  const index = dueStep(plan.steps.map((s) => s.atM), state.stepIndex, distance, total, mps);
-  const last = plan.steps.length - 1;
   let cueCount = state.cueCount;
-  if (index > state.stepIndex) {
-    announce(plan.steps[index]!, index === last, position, heading);
+  if (r.newStep) {
+    announce(plan.steps[r.stepIndex]!, r.arrived, r.position, heading);
     cueCount++;
   }
-  emit({ fix, position, heading, sounds, track: { ...track, alongM: distance }, distance, stepIndex: index, cueCount });
-  // Rotanın uğradığı noktaya varıldı: yarıçapın dışında kalsa da (düğüm noktadan biraz uzak olabilir) açılır.
-  const reached = plan.via.pointIds.filter((id, i) => !state.fired.includes(id) && plan.via.atM[i]! <= distance + 3);
-  if (reached.length) emit({ fired: [...state.fired, ...reached] });
-  for (const id of reached) {
+  emit({ fix, position: r.position, heading, sounds, track: r.track, distance: r.distance, stepIndex: r.stepIndex, cueCount });
+  if (r.reached.length) emit({ fired: [...state.fired, ...r.reached] });
+  for (const id of r.reached) {
     if (state.popup) emit({ queue: [...state.queue, id] });
     else present(id);
   }
-  if (index === last) arrive();
+  if (r.arrived) arrive();
 }
 
 /** Bulunulan yerden yeniden rota. Bulunamazsa mevcut rota korunur. */
