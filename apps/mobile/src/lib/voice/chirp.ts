@@ -3,13 +3,17 @@ import Storage from 'expo-sqlite/kv-store';
 import { z } from 'zod';
 
 import { supabase } from '../supabase';
+import { BUNDLED, BUNDLED_VOICE } from './bundled';
+import type { ClipSource } from './clip-player';
+import { CHIRP_VOICE } from './voice-name';
 
 /**
  * Türkçe metin için Google Chirp 3 HD seslendirmesi (edge function `tts`).
- * Üretilen MP3 sunucuda bir kez saklanır, cihazda da kalıcı dosya olarak tutulur: daha önce çalınan metin internetsiz çalar.
+ * Sabit yönlendirme cümleleri uygulamaya gömülü (`bundled.ts`, `scripts/gen-voice-bundle.mts`).
+ * Diğerleri sunucuda bir kez üretilir, cihazda da kalıcı dosya olarak tutulur: daha önce çalınan metin internetsiz çalar.
  * Ses sabittir; değişirse sunucu önbellek yolu da (ses adıyla) ayrılır.
  */
-export const CHIRP_VOICE = 'tr-TR-Chirp3-HD-Laomedeia';
+
 /** Google sınırı 5000 bayt; daha uzun metin cihaz sesiyle okunur. */
 const MAX_BYTES = 4500;
 const KEY = 'sezi.tts.v1';
@@ -34,9 +38,14 @@ try {
 
 const inflight = new Map<string, Promise<string>>();
 
-/** Cihazda hazır Chirp dosyası; yoksa null. */
-export function cachedChirp(text: string): string | null {
-  const key = index[norm(text)];
+const bundled = (BUNDLED_VOICE as string) === CHIRP_VOICE ? BUNDLED : {};
+
+/** Hemen çalınabilecek Chirp sesi: uygulamaya gömülü ya da cihazda indirilmiş; yoksa null. */
+export function readyChirp(text: string): ClipSource | null {
+  const t = norm(text);
+  const asset = bundled[t];
+  if (asset !== undefined) return asset;
+  const key = index[t];
   if (!key) return null;
   const file = fileFor(key);
   return file.exists ? file.uri : null;
@@ -66,7 +75,7 @@ export function fetchChirp(text: string): Promise<string> {
 /** Metinleri sırayla önceden hazırlar. İlk hatada durur (internet yok, bütçe dolu): gereksiz istek yağmuru olmasın. */
 export async function prefetchChirp(texts: string[]): Promise<void> {
   for (const t of new Set(texts.map(norm))) {
-    if (!t || cachedChirp(t)) continue;
+    if (!t || readyChirp(t) !== null) continue;
     try {
       await fetchChirp(t);
     } catch {

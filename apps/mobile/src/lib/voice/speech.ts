@@ -1,7 +1,7 @@
 import * as Speech from 'expo-speech';
 
-import { cachedChirp, fetchChirp } from './chirp';
-import { createClipPlayer } from './clip-player';
+import { fetchChirp, readyChirp } from './chirp';
+import { createClipPlayer, type ClipSource } from './clip-player';
 
 /**
  * Konuşma kuyruğu. Rehberlikte iki kural:
@@ -47,17 +47,17 @@ function device(u: Utterance, id: number) {
   Speech.speak(u.text, { language: u.lang === 'tr' ? 'tr-TR' : 'en-US', rate: u.rate, onDone: done, onStopped: done, onError: done });
 }
 
-function playClip(u: Utterance, id: number, uri: string) {
+function playClip(u: Utterance, id: number, source: ClipSource) {
   if (id !== token) return;
-  clip.play(uri, { rate: u.rate, onEnd: () => finish(id, u), onError: () => device(u, id) });
+  clip.play(source, { rate: u.rate, onEnd: () => finish(id, u), onError: () => device(u, id) });
 }
 
 function speakNow(u: Utterance) {
   const id = ++token;
   speaking = true;
   if (u.lang !== 'tr') return device(u, id);
-  const ready = cachedChirp(u.text);
-  if (ready) return playClip(u, id, ready);
+  const ready = readyChirp(u.text);
+  if (ready !== null) return playClip(u, id, ready);
   // Zaman aşımında indirme arka planda sürer ve önbelleğe yazılır; bir sonraki sefer Chirp çalar.
   let settled = false;
   const timer = setTimeout(() => {

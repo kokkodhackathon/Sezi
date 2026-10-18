@@ -70,6 +70,7 @@ Ekibin ve önceki oturumların çalışma biçimi. Bunlara uyulmazsa süreç boz
 - Simülasyon ve geliştirici araçları `settings.devSimulation` arkasında; normal kullanıcı görmez.
 - Az yazı, önce fotoğraf (DESIGN.md "Çini"). Yeni renk değil token; gölge için `softShadow()`.
 - Rota grafiği değişince: `python -I data/build_nav_graph.py` → `assets/pilot/*.json` yeniden üretilir → `pnpm test` (pilot-graph testleri).
+- Sabit yönlendirme cümlesi (`shared/guidance.ts` dönüş/uyarı kalıpları, `navigation/texts.ts`) değişince: `cd apps/mobile && npx tsx scripts/gen-voice-bundle.mts` → `assets/voice/tr` ve `voice/bundled.ts` yeniden üretilir (Chirp sesleri uygulamaya gömülü).
 - Başlangıç noktası, yer işareti, anlatım ve eser varış bilgisi kod değil veridir: admin panelinde **Noktalar** (`nav_points`). Kodda sabit nokta ya da rota yazılmaz.
 - Sunucu yazmaları security-definer RPC ile değil **RLS + trigger** ile yapılır (advisor uyarısı vermemesi için).
 - Uygulama sunucudan gelen veriyi kv-store'da önbelleğe alır; internet yokken son bilinen hâlle çalışmalı.

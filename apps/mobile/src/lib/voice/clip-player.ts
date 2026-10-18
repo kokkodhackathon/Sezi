@@ -2,10 +2,13 @@ import { createAudioPlayer, setAudioModeAsync, type AudioPlayer } from 'expo-aud
 
 /**
  * Ses dosyası oynatıcısı: her örnek aynı anda tek kayıt çalar (nokta kaydı, eser kaydı, Chirp seslendirmesi).
+ * Kaynak: adres/yerel dosya (string) ya da uygulamaya gömülü dosya (`require` ile gelen modül numarası).
  * Bitince `onEnd`, çalınamazsa (dosya yok, internet yok) `onError` çağrılır; durdurmada hiçbiri çağrılmaz.
  */
+export type ClipSource = string | number;
+
 export interface ClipPlayer {
-  play(uri: string, cb: { rate?: number; onEnd: () => void; onError: () => void }): void;
+  play(source: ClipSource, cb: { rate?: number; onEnd: () => void; onError: () => void }): void;
   stop(): void;
 }
 
@@ -38,12 +41,12 @@ export function createClipPlayer(): ClipPlayer {
     }
   }
 
-  function play(uri: string, cb: { rate?: number; onEnd: () => void; onError: () => void }) {
+  function play(source: ClipSource, cb: { rate?: number; onEnd: () => void; onError: () => void }) {
     stop();
     ensureAudioMode();
     let p: AudioPlayer;
     try {
-      p = createAudioPlayer({ uri });
+      p = createAudioPlayer(typeof source === 'number' ? source : { uri: source });
     } catch {
       cb.onError();
       return;

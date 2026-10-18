@@ -101,6 +101,26 @@ const HAZARD_TEXT: Record<"tr" | "en", Record<Hazard, string>> = {
   },
 };
 
+/** Yer adı ve sayı içermeyen dönüş cümlesi ("Sola dönün."); uyarı varsa arkasına eklenir. */
+function bareTurnText(turn: Turn, lang: "tr" | "en", hazard?: Hazard): string {
+  const t = TURN_TEXT[lang][turn];
+  const text = t.charAt(0).toUpperCase() + t.slice(1) + ".";
+  return hazard ? `${text} ${HAZARD_TEXT[lang][hazard]}` : text;
+}
+
+const arrivedText = (lang: "tr" | "en", name?: string) =>
+  lang === "tr" ? `Vardınız${name ? `: ${name}` : ""}.` : `You have arrived${name ? `: ${name}` : ""}.`;
+
+/**
+ * Rotaya, yer adına ve mesafeye bağlı olmayan yönlendirme cümlelerinin tamamı.
+ * Bunların sesi uygulamaya gömülebilir; adlı ve sayılı cümleler çalışırken üretilir.
+ */
+export function staticGuidanceTexts(lang: "tr" | "en"): string[] {
+  const turns = Object.keys(TURN_TEXT[lang]) as Turn[];
+  const hazards: (Hazard | undefined)[] = [undefined, ...(Object.keys(HAZARD_TEXT[lang]) as Hazard[])];
+  return [...turns.flatMap((turn) => hazards.map((h) => bareTurnText(turn, lang, h))), arrivedText(lang)];
+}
+
 /** Gürültü değeri bu eşiği aşan segment ana cadde sayılır (OSM yol sınıfından tahmin). */
 const TRAFFIC_NOISE = 0.6;
 /** İki talimat arası bu mesafeyi aşarsa yol üstünde teyit verilir ("doğru yoldasınız"). */
@@ -206,16 +226,16 @@ export function buildGuidance(
     const near = segments && !name && nextId && turn !== "straight" ? nearestLandmark(nodes, node.location, NEAR_LANDMARK_M, lang, ids[0]) : undefined;
     let text: string;
     if (!nextId) {
-      text = lang === "tr" ? `Vardınız${name ? `: ${name}` : ""}.` : `You have arrived${name ? `: ${name}` : ""}.`;
+      text = arrivedText(lang, name);
     } else if (name) {
       text = lang === "tr" ? `${name} hizasında ${TURN_TEXT.tr[turn]}.` : `At ${name}, ${TURN_TEXT.en[turn]}.`;
     } else if (near) {
       text = lang === "tr" ? `${near.name} yakınında ${TURN_TEXT.tr[turn]}.` : `Near ${near.name}, ${TURN_TEXT.en[turn]}.`;
     } else {
-      const t = TURN_TEXT[lang][turn];
-      text = t.charAt(0).toUpperCase() + t.slice(1) + ".";
+      // Adsız dönüş: cümle sabit (uyarısıyla birlikte); sesi uygulamaya gömülü.
+      text = bareTurnText(turn, lang, hazard);
     }
-    if (hazard) text += ` ${HAZARD_TEXT[lang][hazard]}`;
+    if (hazard && (name || near)) text += ` ${HAZARD_TEXT[lang][hazard]}`;
     steps.push({
       nodeId: id,
       text,

@@ -35,6 +35,7 @@ import { stopSoundscape, updateSoundscape } from '../sim/soundscape-engine';
 import { prefetchChirp } from '../voice/chirp';
 import { createClipPlayer } from '../voice/clip-player';
 import { NARRATION_WAIT_MS, say, silence } from '../voice/speech';
+import { NAV_TEXT as TEXT } from './texts';
 
 /**
  * Tek navigasyon oturumu: rota planı, canlı rehberlik ve yürüyüş aynı yerde.
@@ -112,27 +113,6 @@ export interface NavConfig {
 const TICK_MS = 200;
 /** Plan aşamasında GPS konumu bu kadar değişince önizleme rotası yenilenir (m). */
 const REPLAN_MOVE_M = 25;
-
-const TEXT = {
-  tr: {
-    intro: (name: string, m: number) => `Hedef: ${name}. Yaklaşık ${m} metre.`,
-    strollIntro: (n: number, m: number) => `Gezinti: ${n} anlatım noktası, yaklaşık ${m} metre.`,
-    offroute: (m: number) => `Rotadan çıktınız. Bulunduğunuz yerden yeni rota: ${m} metre.`,
-    blocked: (m: number) => `İleride yol kapalı. Sizi başka yoldan götürüyorum: ${m} metre.`,
-    noRoute: 'Bulunduğunuz yerden rota bulunamadı. Lütfen bekleyin ya da yardım isteyin.',
-    crowdOn: 'Ortam gürültülü. Bundan sonra titreşim ve ekran ışığıyla yönlendiriyorum.',
-    crowdOff: 'Ortam sakinleşti. Sesli yönlendirme yeniden açık.',
-  },
-  en: {
-    intro: (name: string, m: number) => `Destination: ${name}. About ${m} metres.`,
-    strollIntro: (n: number, m: number) => `Stroll: ${n} story points, about ${m} metres.`,
-    offroute: (m: number) => `You have left the route. New route from here: ${m} metres.`,
-    blocked: (m: number) => `The way ahead is closed. Taking you another way: ${m} metres.`,
-    noRoute: 'No route was found from here. Please wait or ask for help.',
-    crowdOn: 'It is noisy here. From now on I will guide you with vibration and screen light.',
-    crowdOff: 'It is quieter now. Spoken guidance is back on.',
-  },
-};
 
 const tracking = () => ({
   running: false,
@@ -329,7 +309,7 @@ function compute(from: LngLat, dest: string | null, leadIn: boolean, extra: { bl
   // Türkçe talimatlar Chirp ile önceden hazırlanır: yürürken beklemeden ve internetsiz çalsın.
   const p = cfg.profile;
   if (p.lang === 'tr' && p.hearing !== 'deaf' && p.senses.audio) {
-    void prefetchChirp([introText(plan, 'tr'), ...plan.steps.map((s) => s.text), TEXT.tr.noRoute, TEXT.tr.crowdOn, TEXT.tr.crowdOff]);
+    void prefetchChirp([introText(plan, 'tr'), ...plan.steps.map((s) => s.text)]);
   }
   return { plan, note: null };
 }
