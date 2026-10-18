@@ -218,7 +218,10 @@ function Editor({ slug, data }: { slug: string; data: WorkData }) {
             <Pair label="Adres" value={form.address} onChange={(l, v) => setText('address', l, v)} />
           </Section>
 
-          <Section title="İçerik" note="Tarihçe, mimari ve dönem bilgisi ancak kaynağıyla girilir. Envanter kitaplarındaki metinler resmî paylaşım gelene kadar kopyalanmaz.">
+          <Section title="İçerik" note="Tarihçe, mimari ve dönem bilgisi ancak kaynağıyla girilir. Envanter kitaplarından çıkarılan taslaklar “Eser metinleri” sayfasında kitap sayfasıyla karşılaştırılıp yayınlanır.">
+            <Link className="btn ghost small" style={{ justifySelf: 'start', paddingInline: 0 }} to={`/metinler?city=${data.citySlug}&work=${data.work.slug}`}>
+              Kitaptan metin taslağına git →
+            </Link>
             <Pair label="Dönem" value={form.period} onChange={(l, v) => setText('period', l, v)} />
             <Pair label="Tarihçe" value={form.history} onChange={(l, v) => setText('history', l, v)} multiline />
             <Pair label="Mimari" value={form.architecture} onChange={(l, v) => setText('architecture', l, v)} multiline />
@@ -284,6 +287,9 @@ function Editor({ slug, data }: { slug: string; data: WorkData }) {
                 </>
               ) : null}
             </div>
+            <Link className="btn ghost small" style={{ justifySelf: 'start', paddingInline: 0 }} to={`/eslestirme?city=${data.citySlug}&work=${data.work.slug}`}>
+              Konum adaylarını karşılaştır →
+            </Link>
           </Section>
 
           <Section title="Ses kaydı" note="Yüklenen kayıt uygulamada metin okuması yerine çalar. Kaydın içeriği de kaynağıyla girilir.">

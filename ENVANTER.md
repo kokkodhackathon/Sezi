@@ -55,8 +55,8 @@ Kaynak: *KÖK&KOD Hackathonu – Vakıf Eserleri Envanter Projesi Bilgi Notu* ve
 ## 5. Veri politikası (telif)
 
 - **Kitaplardan alınanlar (olgular):** Eser adı (TR/EN), il, ilçe, kitaptaki bölüm, cilt ve sayfa. Bunlar `verified` olarak yayımlanır ve kaynak olarak kitaba bağlanır.
-- **Alınmayanlar:** Tarihçe metinleri, mimari açıklamalar, kitabe çevirileri ve fotoğraflar. Organizasyonun resmî paylaşımı ("envanter dokümanları ve yüksek çözünürlüklü fotoğraflar") gelince eklenecek.
-- **Konumlar:** Wikidata (CC0) ve OpenStreetMap/Nominatim (ODbL) eşleşmesinden geliyor. Her eserde kesinlik (`exact` / `approximate` / `unknown`) ayrıca gösterilir.
+- **Kitap metinleri (18 Ekim, kullanıcı kararı):** Kitaplar organizasyonun hackathon için paylaştığı veri setidir. Adres ve tarihçe metinleri (TR/EN) `data/inventory_texts.py` ile `text_drafts` tablosuna **taslak** olarak çıkarılır. Admin, **Eser metinleri** sayfasında kitap sayfasıyla karşılaştırıp yayınlar; yayınlanan metin esere kitap atfıyla bağlı kalır. Otomatik yayın yoktur. Kitabe çevirileri ve kitaptaki fotoğraflar alınmaz; fotoğraflar arşiv paylaşımından gelir.
+- **Konumlar:** Wikidata (CC0) ve OpenStreetMap/Nominatim (ODbL). `data/location_candidates.py` her eser için aday üretir, tür ve ilçe çelişkisini veto eder; admin **Konum eşleştirme** sayfasında karar verir. Her eserde kesinlik (`exact` / `approximate` / `unknown`) ayrıca gösterilir.
 
 ## 6. Pipeline
 

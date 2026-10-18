@@ -44,6 +44,38 @@ npx supabase@latest db query --linked --project-ref jejsvycpzulpleftkssj -f supa
 - `"type"` türü elle düzeltir.
 - Düzeltmeden sonra `inventory_import.py` ve seed adımlarını yeniden çalıştırın.
 
+### Konum adayları (eşleştirme masası)
+
+```bash
+python -I data/location_candidates.py            # → supabase/seed_location_candidates.sql (ham yanıtlar data/raw/lc_*.json'dan; ilk çalıştırma ~10 dk)
+python -I data/location_candidates.py --refresh  # önbelleği yok sayıp Overpass/Wikidata'dan yeniden çeker
+npx supabase@latest db query --linked --project-ref jejsvycpzulpleftkssj -f supabase/seed_location_candidates.sql
+```
+
+Her eser için birden çok kaynaktan konum **adayı** üretilir; karar admin panelindedir. Önbellek varken ağa gidilmez, çıktı her çalıştırmada aynıdır.
+- **Kaynaklar:** OSM yapı kayıtları (Overpass, il bbox'ı; ibadethane, `historic`, hamam, çeşme), Wikidata (il içi koordinatlı öğeler, P31 sınıfı, TR/EN etiket), `geo_overrides.json` (`override`, puan 1.0) ve `inventory_geo.json`'daki mevcut sonuç (`current`/`nominatim`; Wikidata ise ilgili adaya `reasons.current` işareti).
+- **Aday seçimi:** ad benzerliği ≥ 0.6 olan, kaynak başına en iyi 3 aday. Benzerlik tür sözcükleri atılarak çekirdek sözcüklerle ölçülür (0.6 örtüşme + 0.4 SequenceMatcher); parantezli alternatif adlar ve İngilizce ad da denenir.
+- **Veto** (`vetoed = true`, puan ≤ 0.3): tür çelişkisi (eser türü ile adayın türü uyumsuz; uyumlu gruplar cami↔külliye, türbe↔hazire, çeşme↔sebil, han↔kervansaray) ya da adayın eserin ilçesinin dışında kalması (OSM `admin_level=6` sınırları, nokta-çokgen testi; Hatay'da ve sınırı bulunamayan ilçede veto yok). Aday türü önce adın baş isminden, yoksa OSM etiketlerinden / Wikidata P31 sınıfından çıkar.
+- **Uyuşma:** vetosuz başka bir kaynaktan aday 100 m içindeyse `reasons.agree` (OSM ve Nominatim aynı veri sayıldığından birbirini onaylamaz).
+- **Puan:** 0.55 ad benzerliği + 0.15 tür + 0.10 ilçe + 0.20 uyuşma (tür/ilçe bilinmiyorsa yarım puan); alan düzeyindeki (`current` `wikidata-area`) en çok 0.3.
+- **Kararların korunması:** yalnız `status = 'pending'` adaylar güncellenir; yeni sette olmayan pending adaylar silinir, kabul/ret kararlarına dokunulmaz. `inventory_import.py` de adayı kabul edilmiş eserin `location`, `location_precision` ve `external_ids` alanlarını ezmez.
+
+### Metin taslakları (eşleştirme masası)
+
+```bash
+python -I data/inventory_texts.py   # → supabase/seed_text_drafts_01…08.sql + seed_text_drafts_cleanup.sql (PDF ayrıştırması data/raw/texts_cache/'e önbelleğe alınır; ilk çalıştırma ~4 dk)
+for f in supabase/seed_text_drafts_0*.sql supabase/seed_text_drafts_cleanup.sql; do npx supabase@latest db query --linked --project-ref jejsvycpzulpleftkssj -f $f; done
+```
+
+Envanter kitaplarının (`data/raw/books/`) eser metinleri `text_drafts` tablosuna **taslak** (`status = 'pending'`) olarak yazılır. Metinler hackathon kapsamında organizasyonca paylaşılmış veri setidir; yine de hiçbir şey otomatik yayınlanmaz, yayına alma admin panelindeki **Eser metinleri** sayfasındadır. Her taslak `source_id` (kitap + cilt) ve `page` (basılı sayfa) ile atfedilir; yayınlanan metinde kitap kaynak olarak gösterilmelidir. Seed dosyaları kitabın tam metnini içerdiği için git'e girmez (`supabase/.gitignore`); her makinede PDF'lerden yeniden üretilir.
+- **Sayfa eşlemesi:** PDF çift sayfa yayılımıdır; basılı sol sayfa = 2 × PDF dizini + sabit (Bursa/Hatay 0, Konya −2; sabit, köşe numaralarının çoğunluğundan bulunur). Konya'da eserin başlığı TOC sayfasının solundaki sayfadaysa metin orada başlar. Eser aralığı kendi sayfasından sonraki eserin sayfasının öncesine kadardır, en çok 8 sayfa (`range_capped`).
+- **`pdf_page`:** metnin başladığı PDF sayfası (1 tabanlı, tarayıcıda `#page=`); `(basılı sayfa − sabit) // 2 + 1`.
+- **Ayıklama:** yalnız gövde yazı boyutundaki bloklar alınır (başlık, altyazı, sayfa numarası, dikey ilçe harfleri atılır); satır sonu tirelemesi birleştirilir. Bursa'nın bozuk glifleri düzeltilir (`!` → ş, `%` → Ş/İ ya da ff).
+- **TR/EN:** bloklar Türkçe harf ve sık sözcük puanıyla sınıflanır; sütun düzeni gözetilerek okuma sırası korunur. `history = {tr, en}`; mimari ayrımı güvenilir yapılamadığından `architecture` boştur.
+- **Adres:** TR metnin ilk cümlesi konum bildiriyorsa (…Mahallesi, …Sokak’ta bulunmaktadır) `address` olur ve gövdeden çıkarılır; EN karşılığı eşlenir. Yüklemi konum bildirmeyen ama adres öğeleri taşıyan cümle `address_loose` uyarısıyla alınır; bulunamazsa `no_address` ve alan boş.
+- **Uyarılar (`warnings`):** `range_capped`, `shared_page` (aynı sayfada birden çok eser), `no_address`, `address_loose`, `tr_en_unbalanced` (EN uzunluğu TR'nin %50'sinden az / %200'ünden çok), `unclassified_blocks` (dil puanı eşit, atılan blok), `needs_review_entry` (TOC kaydı şüpheli).
+- **Kararların korunması:** yalnız `status = 'pending'` taslaklar güncellenir; artık üretilmeyen pending taslaklar silinir (`cleanup` dosyası, en son uygulanır), yayınlanmış/reddedilmiş taslaklara dokunulmaz. Çıktı, uzak sorgu boyut sınırı (413) yüzünden ≤ 500 KB'lık parçalara bölünür.
+
 ## 2. Envanter fotoğraf arşivi
 
 Organizasyon 14 Ekim'de Bursa örnekleminin yüksek çözünürlüklü arşivini paylaştı (yerelde `docs/drive/`, git'e girmez). Dosya adları eseri söylemez ("ERD03201 kopya.jpg"); aynı fotoğraflar yayımlanmış kitapta da var.

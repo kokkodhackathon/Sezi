@@ -28,6 +28,8 @@ Kullanıcı çıkış yapıp yeniden girince rol oturuma yazılır.
 | Eserler | Arama; il, tür, durum, konum, fotoğraf, inceleme süzgeçleri | – |
 | Eser düzenleme | TR/EN alanlar, tür, ilçe, durum; haritada konum; fotoğraf onayı ve kapak | `verified` eser ve fotoğraflar uygulamada görünür (aşağı çekip yenileyince) |
 | Yeni eser | Kimlik bilgileriyle taslak açar; benzer adlı eser uyarısı | Yayımlanınca görünür |
+| Konum eşleştirme | Veri hattının konum adaylarını (Wikidata, OSM, önceki eşleşme) haritada ve gerekçeleriyle gösterir; tür/ilçe çelişkisi işaretli. Kabul et / reddet / hiçbiri; klavye J/K, 1–9, Enter | Kabul edilen aday eserin konumu olur (yapı düzeyi → kesin); seed yeniden çalışınca karar ezilmez |
+| Eser metinleri | Kitaptan çıkarılan TR/EN adres ve tarihçe taslakları; kitap sayfasıyla karşılaştırıp düzeltme | "Esere yayınla" eserin adres/tarihçe/mimari alanına yazar; uygulamada eser sayfasında görünür |
 | Fotoğraf kutusu | Kitapta eşleşmeyen arşiv fotoğraflarını klasör ipucuyla esere bağlar | "Bağla ve yayımla" ile eserin galerisine girer |
 | Bildirimler | Erişilebilirlik bildirimlerini haritada gösterir; onay / ret | Onay `segment_overrides` tablosuna yazılır; uygulama rotada o yol parçasından kaçınır |
 | İller | İl ekleme, yayına alma | Yalnızca yayındaki iller uygulamanın il seçicisinde |

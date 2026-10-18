@@ -20,9 +20,15 @@ select inv.slug, inv.name,
   case when inv.lng is null then null else extensions.st_setsrid(extensions.st_makepoint(inv.lng, inv.lat), 4326)::extensions.geography end,
   inv.precision::location_precision, inv.status::content_status, inv.needs_review, inv.external_ids
 from inv
+-- Admin bir konum adayını kabul ettiyse (location_candidates.status = 'accepted') konum alanları seed'le ezilmez.
 on conflict (slug) do update set name = excluded.name, work_type_id = excluded.work_type_id, district = excluded.district,
-  location = excluded.location, location_precision = excluded.location_precision, needs_review = excluded.needs_review,
-  external_ids = excluded.external_ids;
+  location = case when exists (select 1 from location_candidates lc where lc.work_id = works.id and lc.status = 'accepted')
+    then works.location else excluded.location end,
+  location_precision = case when exists (select 1 from location_candidates lc where lc.work_id = works.id and lc.status = 'accepted')
+    then works.location_precision else excluded.location_precision end,
+  needs_review = excluded.needs_review,
+  external_ids = case when exists (select 1 from location_candidates lc where lc.work_id = works.id and lc.status = 'accepted')
+    then works.external_ids else excluded.external_ids end;
 
 insert into work_sources (work_id, source_id, page, section)
 select w.id, s.id, inv.page, inv.section

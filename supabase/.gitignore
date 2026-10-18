@@ -6,3 +6,6 @@
 .env.keys
 .env.local
 .env.*.local
+
+# Kitap metni taslakları: envanter kitaplarının tam metnini içerir; yerel PDF'lerden yeniden üretilir (data/inventory_texts.py)
+seed_text_drafts_*.sql

@@ -32,9 +32,9 @@ cd apps/mobile && npx expo run:android          # native modül eklendiyse yenid
 3. **Kaynaksız bilgi uydurulmaz.**
    - Tarihçe, mimari, tarih, kitabe gibi metinler ancak kaynağıyla girer.
    - Doğrulanmamış içerik `draft` kalır. Anonim kullanıcı yalnızca `verified` içeriği görür (RLS).
-4. **Telif.** Envanter kitapları "Tüm hakları saklıdır" ibaresi taşıyor.
-   - Kitaplardan yalnızca olgular alınır: ad, il, ilçe, tür, cilt/sayfa.
-   - Metinler ve fotoğraflar resmî paylaşım gelene kadar eklenmez. Ayrıntı: ENVANTER.md §5.
+4. **Telif.** Envanter kitapları "Tüm hakları saklıdır" ibaresi taşıyor; organizasyon hackathon kapsamında veri seti olarak paylaştı (kullanıcı kararı, 18 Ekim).
+   - Ad, il, ilçe, tür, cilt/sayfa doğrudan girer.
+   - Kitap metinleri (adres, tarihçe) yalnız `text_drafts` taslağı olarak girer; admin kitap sayfasıyla karşılaştırıp **Eser metinleri** sayfasından yayınlar. Otomatik yayın yok, kitap atfı korunur. Ayrıntı: ENVANTER.md §5.
 5. **Erişilebilirlik çekirdektir, sonradan eklenmez.**
    - Her etkileşimli öğede `accessibilityRole` ve etiket olur. Dokunma alanı en az 48 dp.
    - Renk tek başına anlam taşımaz. Reduce motion'a uyulur.

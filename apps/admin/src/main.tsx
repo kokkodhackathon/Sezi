@@ -9,10 +9,12 @@ import { Layout } from './components/Layout';
 import { AuthProvider } from './lib/auth';
 import { Cities } from './pages/Cities';
 import { Inbox } from './pages/Inbox';
+import { Matching } from './pages/Matching';
 import { NewWork } from './pages/NewWork';
 import { Reports } from './pages/Reports';
 import { Points } from './pages/Points';
 import { RouteTest } from './pages/RouteTest';
+import { Texts } from './pages/Texts';
 import { WorkEdit } from './pages/WorkEdit';
 import { Works } from './pages/Works';
 
@@ -37,6 +39,8 @@ const router = createBrowserRouter([
       { path: 'eserler', element: <Works /> },
       { path: 'eserler/yeni', element: <NewWork /> },
       { path: 'eserler/:slug', element: <WorkEdit /> },
+      { path: 'eslestirme', element: <Matching /> },
+      { path: 'metinler', element: <Texts /> },
       { path: 'fotograflar', element: <Inbox /> },
       { path: 'bildirimler', element: <Reports /> },
       { path: 'noktalar', element: <Points /> },
