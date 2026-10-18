@@ -171,36 +171,19 @@ export function formatDistance(m: number): string {
   return `${(m / 1000).toFixed(m < 10_000 ? 1 : 0)} km`;
 }
 
+/** Güncelleme bir satıra dokunmadıysa (RLS gizledi ya da satır yok) hata: sessiz başarısızlık olmasın. */
+async function expectOne(q: PromiseLike<{ data: unknown; error: unknown }>): Promise<void> {
+  const { data, error } = await q;
+  if (error) throw error;
+  if (!Array.isArray(data) || data.length === 0) throw new Error('Kayıt güncellenemedi (yetki ya da kayıt yok).');
+}
+
 /**
- * Adayı kabul eder: eserin konumu ve kesinliği ondan gelir, aynı eserin diğer bekleyen adayları reddedilir.
- * Yapı düzeyi aday "kesin", daha kaba düzeyler "yaklaşık" sayılır. Dış kimlikler: kabul edilen aday ve onunla 100 m içinde
- * uyuşan vetosuz adaylar yazılır; reddedilen diğer adayların kimliği (ör. yanlış eşleşmiş Wikidata kaydı) silinir.
+ * Adayı kabul eder. Tek istek: eserin konumu, kesinliği (yapı düzeyi → kesin) ve dış kimlikleri, aynı eserin diğer
+ * adaylarının reddi aynı işlemde veritabanı tetikleyicisinde yapılır (`apply_candidate_decision`). Eser yazılamazsa karar da yazılmaz.
  */
-export async function acceptCandidate(c: Candidate, workId: string, siblings: Candidate[]): Promise<void> {
-  const { data: work, error: e0 } = await supabase.from('works').select('external_ids').eq('id', workId).single();
-  if (e0) throw e0;
-  const ids = { ...((work?.external_ids as Record<string, string> | null) ?? {}) };
-  const keyOf = (ref: string) => (/^Q\d+$/.test(ref) ? 'wikidata' : /^(node|way|relation)\/\d+$/.test(ref) ? 'osm' : null);
-  const others = siblings.filter((s) => s.id !== c.id);
-  for (const s of others) {
-    const k = keyOf(s.ref);
-    if (k && ids[k] === s.ref) delete ids[k];
-  }
-  const agreeing = others.filter((s) => !s.vetoed && distanceM([s.lng, s.lat], [c.lng, c.lat]) <= 100);
-  for (const s of [...agreeing.sort((a, b) => a.score - b.score), c]) {
-    const k = keyOf(s.ref);
-    if (k) ids[k] = s.ref;
-  }
-  const precision: Precision = c.level === 'building' ? 'exact' : 'approximate';
-  const { error: e1 } = await supabase
-    .from('works')
-    .update({ location: `SRID=4326;POINT(${c.lng} ${c.lat})`, location_precision: precision, external_ids: ids })
-    .eq('id', workId);
-  if (e1) throw e1;
-  const { error: e2 } = await supabase.from('location_candidates').update({ status: 'accepted' }).eq('id', c.id);
-  if (e2) throw e2;
-  const { error: e3 } = await supabase.from('location_candidates').update({ status: 'rejected' }).eq('work_id', workId).neq('id', c.id).eq('status', 'pending');
-  if (e3) throw e3;
+export async function acceptCandidate(c: Candidate): Promise<void> {
+  await expectOne(supabase.from('location_candidates').update({ status: 'accepted' }).eq('id', c.id).select('id'));
 }
 
 export async function setCandidateStatus(ids: string[], status: Decision): Promise<void> {
@@ -209,14 +192,16 @@ export async function setCandidateStatus(ids: string[], status: Decision): Promi
   if (error) throw error;
 }
 
-/** Hiçbir aday doğru değil: hepsi reddedilir; istenirse eserin mevcut (yanlış) konumu da kaldırılır. */
+/**
+ * Hiçbir aday doğru değil: hepsi reddedilir; istenirse eserin mevcut (yanlış) konumu da kaldırılır.
+ * Konum önce kaldırılır: ikinci adım düşerse adaylar bekliyor kalır ve işlem güvenle yeniden denenir.
+ */
 export async function rejectAll(workId: string, clearLocation: boolean): Promise<void> {
+  if (clearLocation) {
+    await expectOne(supabase.from('works').update({ location: null, location_precision: 'unknown' }).eq('id', workId).select('id'));
+  }
   const { error } = await supabase.from('location_candidates').update({ status: 'rejected' }).eq('work_id', workId).eq('status', 'pending');
   if (error) throw error;
-  if (clearLocation) {
-    const { error: e2 } = await supabase.from('works').update({ location: null, location_precision: 'unknown' }).eq('id', workId);
-    if (e2) throw e2;
-  }
 }
 
 // ---------- Kitaptan metin taslakları ----------
@@ -279,12 +264,12 @@ export function useTextDrafts(citySlug: string, status: DraftStatus) {
   });
 }
 
-/** Düzenlenmiş metni esere yazar ve taslağı "yayında" işaretler. Boş alan esere null olarak yazılır. */
+/**
+ * Düzenlenmiş metni yayınlar. Tek istek: taslak satırı düzenlenmiş metinle "yayında" yapılır; tetikleyici
+ * (`apply_text_publish`) aynı işlemde esere yazar. Boş alan esere null olarak yazılır.
+ */
 export async function publishDraft(d: TextDraft, fields: { address: LocalizedText | null; history: LocalizedText | null; architecture: LocalizedText | null }): Promise<void> {
-  const { error } = await supabase.from('works').update(fields).eq('id', d.work_id);
-  if (error) throw error;
-  const { error: e2 } = await supabase.from('text_drafts').update({ status: 'published' }).eq('id', d.id);
-  if (e2) throw e2;
+  await expectOne(supabase.from('text_drafts').update({ ...fields, status: 'published' }).eq('id', d.id).select('id'));
 }
 
 export async function setDraftStatus(id: string, status: DraftStatus): Promise<void> {

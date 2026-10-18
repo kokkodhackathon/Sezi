@@ -60,7 +60,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 **Eşleştirme masası** (veri hattının önerileri; yalnız admin okur/yazar, uygulama okumaz)
 - `location_candidates`: eser başına konum adayları (`wikidata` / `osm` / `nominatim` / `override` / `current`), puan, gerekçe (`reasons`: ad benzerliği, tür, ilçe, uyuşan kaynaklar), `vetoed` (tür ya da ilçe çelişkisi), `status` (pending / accepted / rejected). Üretici `data/location_candidates.py`. Admin kabul edince eserin `location`, `location_precision` (yapı düzeyi → exact) ve `external_ids` alanları yazılır; `seed_inventory.sql` kabul edilmiş konumu ezmez.
 - `text_drafts`: envanter kitabından çıkarılan TR/EN adres ve tarihçe taslağı (kitap, basılı sayfa aralığı, PDF sayfası, uyarılar). Üretici `data/inventory_texts.py`. Admin "Esere yayınla" deyince eserin `address` / `history` / `architecture` alanlarına yazılır.
-- Karar zamanı ve karar veren (`decided_at`, `decided_by`) tetikleyiciyle sunucuda yazılır (`stamp_decision`).
+- Kararlar tek işlemde: istemci yalnız karar satırının `status`'unu günceller; eser değişikliğini aynı transaction'da tetikleyici yapar (`apply_candidate_decision`, `apply_text_publish`; security invoker, RLS geçerli). Eser yazılamazsa karar da yazılmaz. Bir eserin en çok bir kabul edilmiş adayı olur (kısmi tekil dizin); yeni kabul öncekini reddeder. Karar zamanı ve karar veren (`decided_at`, `decided_by`) de tetikleyiciyle yazılır (`stamp_decision`).
 
 **Seslendirme (Chirp 3 HD)**
 - Edge function `tts` (`supabase/functions/tts`, JWT doğrulaması kapalı): Türkçe metni Google Chirp 3 HD ile MP3'e çevirir, `tts` bucket'ına `chirp3/<ses>/<sha256>.mp3` olarak yazar. Aynı metin ikinci kez Google'a gitmez.

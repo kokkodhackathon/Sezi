@@ -116,7 +116,7 @@ export function Matching() {
   const accept = (c: Candidate) => {
     if (!work) return;
     if (c.vetoed && !window.confirm('Bu aday tür ya da ilçe bakımından çelişkili. Yine de eserin konumu yapılsın mı?')) return;
-    void decide(() => acceptCandidate(c, work.id, candidates));
+    void decide(() => acceptCandidate(c));
   };
 
   // Klavye kısayolları (yazı alanındayken devre dışı).
