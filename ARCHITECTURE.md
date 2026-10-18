@@ -36,6 +36,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
   - konum: `district`, `address`, `location_precision` (exact / approximate / unknown)
   - içerik: `period`, `history`, `architecture`, `condition`, `condition_note`, `unesco`
   - yönetim: `external_ids`, `needs_review`, `status` (draft / verified / archived)
+  - ses: `audio_tr_id`, `audio_en_id` (`audio_assets`; admin eser sayfasından yüklenir, uygulamada metin okuması yerine çalar)
 - Bağlı tablolar: `complexes`, `work_events` (zaman çizelgesi), `inscriptions` (kitabeler), `media`, `glossary_terms`
 
 **Kaynak**
@@ -56,8 +57,12 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 - `a11y_reports`: pending → approved / rejected
 - `doc_chunks`: RAG için embedding'ler; henüz boş.
 
+**Seslendirme (Chirp 3 HD)**
+- Edge function `tts` (`supabase/functions/tts`, JWT doğrulaması kapalı): Türkçe metni Google Chirp 3 HD ile MP3'e çevirir, `tts` bucket'ına `chirp3/<ses>/<sha256>.mp3` olarak yazar. Aynı metin ikinci kez Google'a gitmez.
+- `tts_usage` + `tts_reserve`: yeni üretilen karakterlerin günlük toplamı; sınır `TTS_DAILY_CHAR_LIMIT` (30.000). Aşılınca 429, uygulama cihaz sesine düşer. Google anahtarı `GOOGLE_TTS_API_KEY` secret'ı.
+
 **Okuma arayüzü**
-- `works_view` (security_invoker): eser, il, tür, külliye, `lng/lat`, kaynaklar ve sergiler tek satırda.
+- `works_view` (security_invoker): eser, il, tür, külliye, `lng/lat`, kaynaklar, sergiler, fotoğraflar ve ses kaydı yolları (`audio_tr`, `audio_en`) tek satırda.
 - Mobil uygulama yalnızca bu view'u ve `cities`, `sources`, `exhibitions` tablolarını okur.
 
 **RLS**
@@ -100,6 +105,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
    - Aşamalar: plan → yürüyüş → varış. Konum kaynağı GPS (`expo-location`, ön planda; ekran `expo-keep-awake` ile açık) ya da geliştirici simülasyon modunda sanal yürüyüşçü (`shared/walker.ts`, başlangıç "Konumum" değilse). İkisi de aynı takip adımından geçer (`shared/follow.ts › followRoute`: `trackFix`, `dueStep`, rotadaki uğrama noktaları).
    - Yarıçapa girilen anlatım/varış noktası yürüyüş başına bir kez açılır (`shared/points.ts › duePoints`, doğruluk > 50 m ise tetiklemez); sanal yürüyüş nokta okunurken bekler.
    - Ses sırası (`pointVoice`): kendi dilinde kayıt → kendi dilinde metin (TTS) → TR kayıt → TR metin. Kayıt çalarken talimatlar bekler, bitince okunur.
+   - Metin okuması (`lib/voice/speech.ts`, kuyruk + `interrupt`): Türkçe metin Chirp 3 HD (`tr-TR-Chirp3-HD-Laomedeia`) ile çalar; cihazda hazır değilse talimatta 1,5 sn, anlatımda 8 sn beklenir, gelmezse `expo-speech`. İngilizce her zaman `expo-speech`. Üretilen dosyalar `Paths.document/tts` altında kalır (`lib/voice/chirp.ts`); rota hesaplanınca talimatlar, nokta eşitlemesinde kaydı olmayan anlatımlar önceden hazırlanır, böylece sahada internetsiz çalar.
    - Sapma, yol kapatma ve yanlış dönüşte bulunulan yerden yeniden rota (açılmış noktalar atlanır). Varışta eser kartı ve varış bilgisinin sesi.
    - Duymayan kullanıcıda ses yerine `CueFlash` (ekran kenarı parlaması) ve titreşim.
 7. **Harita** (Mapbox): mobilde `@rnmapbox/maps` yalnızca `components/map` içinde (ekranlar `SeziMap`, `RouteLine`, `PointsLayer`, `WorkClusters`… kullanır); adminde `mapbox-gl` yalnızca `lib/mapbox.ts` üzerinden. Stil Mapbox Standard: düz, dükkân etiketleri kapalı, Çini zemin renkleri; koyu temada gece, az gören profilinde tek renkli.
@@ -144,4 +150,5 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 | Kitaplardan yalnızca olgular | Telif; metin ve foto resmî paylaşımla gelecek |
 | Konum kesinliği ayrı alan | Yaklaşık eşleşmeler gerçek konum gibi gösterilmemeli |
 | LLM sağlayıcısı kararsız | `LLMProvider` arayüzüyle bağımsız kalınacak; karar ROADMAP'te açık |
+| Türkçe seslendirme Chirp 3 HD, önbellekli; İngilizce cihaz sesi | Cihazdaki Türkçe ses zayıf. Aynı metin bir kez üretilir (Storage + cihaz), günlük 30k karakter sınırı aylık ücretsiz 1M içinde kalır; ayrı sunucu gerekmez |
 | Kendi i18n katmanı (i18next değil) | Tipli anahtarlar; eksik EN çevirisi derleme hatası verir |

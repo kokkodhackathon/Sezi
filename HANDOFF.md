@@ -44,6 +44,7 @@ Tespit: motor Lynch'e göre rota seçmiyor (yalnız mesafe), sokak adlarını (1
 - Çevrimdışı önbellek yok (ROADMAP #4, P0): uçak modunda Keşfet boş açılır; rota/rehberlik gömülü grafikle çalışır.
 - Yeniden tasarlanmamış ekranlar: Sor, Profil, Ayarlar, Hakkında, Onboarding (eski stil, çalışıyor).
 - Supabase advisor'da tek uyarı: `auth_leaked_password_protection` (dashboard ayarı, ücretli özellik; kabul edildi).
+- **Chirp 3 HD seslendirme kurulu ama Google anahtarı girilmedi** (18 Ekim): edge function `tts` deploy edildi, `GOOGLE_TTS_API_KEY` yokken 503 döner, uygulama cihaz sesine düşer. Açmak için Google Cloud'da Text-to-Speech API'yi etkinleştirip anahtarı yalnız bu API'yle kısıtlayın, sonra `npx supabase@latest secrets set GOOGLE_TTS_API_KEY=<anahtar> --project-ref jejsvycpzulpleftkssj`. Migration'lar `20261018120000_tts_cache` ve `20261018120100_work_audio` `db query -f` ile uygulandı (uzak migration geçmişi yerelle uyuşmadığı için `db push` kullanılmadı).
 
 ## Sıradaki adımlar (öneri sırası)
 

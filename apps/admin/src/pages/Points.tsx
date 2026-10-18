@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 
+import { AudioField } from '../components/AudioField';
 import { hasRadius, PointsMap, primaryRole, ROLE_COLOR } from '../components/PointsMap';
+import { LANGS, MAX_AUDIO_BYTES, removeAudio, uploadAudio, type Lang, type Uploaded } from '../lib/audio';
 import {
   AMBIENT_LABEL,
   CITY_CENTER,
@@ -17,15 +19,12 @@ import {
   type PointRow,
   type Status,
 } from '../lib/data';
-import { AUDIO_BASE, supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 
-type Lang = 'tr' | 'en';
 type Pt = [number, number];
 type WorkHit = Awaited<ReturnType<typeof searchWorks>>[number];
 
-const LANGS: Lang[] = ['tr', 'en'];
 const ROLES: PointRole[] = ['start', 'landmark', 'story', 'arrival'];
-const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
 const DEFAULT_RADIUS = 25;
 
 interface Form {
@@ -90,8 +89,6 @@ const toForm = (r: PointRow, workName?: string): Form => ({
 
 /** Metin ve ses yalnızca anlatım ve varış noktalarında var. */
 const hasText = (roles: PointRole[]) => hasRadius(roles);
-
-const extOf = (f: File) => f.name.split('.').pop()?.toLowerCase().replace(/[^a-z0-9]/g, '') || 'mp3';
 
 /** Bu sayfadaki işlemlerin ortak hata iletisi. */
 const message = (e: unknown) => (typeof e === 'object' && e && 'message' in e ? String(e.message) : String(e));
@@ -179,27 +176,19 @@ export function Points() {
       const removed = text ? f.removed : { tr: true, en: true };
       const files = text ? f.files : {};
 
-      const uploaded: { lang: Lang; assetId: string | null; path: string }[] = [];
-      const rollback = async () => {
-        const ids = uploaded.map((u) => u.assetId).filter((x): x is string => !!x);
-        if (ids.length) await supabase.from('audio_assets').delete().in('id', ids);
-        if (uploaded.length) await supabase.storage.from('audio').remove(uploaded.map((u) => u.path));
-      };
+      const uploaded: Uploaded[] = [];
+      const rollback = () =>
+        removeAudio(
+          uploaded.map((u) => u.assetId).filter((x): x is string => !!x),
+          uploaded.map((u) => u.path),
+        );
 
       const audioIds: Record<Lang, string | null> = { tr: old?.audio_tr_id ?? null, en: old?.audio_en_id ?? null };
       try {
         for (const lang of LANGS) {
           const file = files[lang];
           if (file) {
-            const path = `points/${id}/${lang}-${Date.now()}.${extOf(file)}`;
-            const entry = { lang, assetId: null as string | null, path };
-            const up = await supabase.storage.from('audio').upload(path, file, { contentType: file.type });
-            if (up.error) throw up.error;
-            uploaded.push(entry);
-            const ins = await supabase.from('audio_assets').insert({ storage_path: path, label: `${title.tr} · ${lang.toUpperCase()}` }).select('id').single();
-            if (ins.error) throw ins.error;
-            entry.assetId = ins.data.id as string;
-            audioIds[lang] = entry.assetId;
+            audioIds[lang] = await uploadAudio(`points/${id}`, lang, file, `${title.tr} · ${lang.toUpperCase()}`, uploaded);
           } else if (removed[lang]) {
             audioIds[lang] = null;
           }
@@ -231,18 +220,15 @@ export function Points() {
       }
 
       // Kayıt geçerli; değiştirilen ya da kaldırılan eski sesleri temizle.
-      let cleanupFailed = false;
       const stale = LANGS.flatMap((lang) => {
         const oldId = lang === 'tr' ? old?.audio_tr_id : old?.audio_en_id;
         const oldPath = lang === 'tr' ? old?.audio_tr : old?.audio_en;
         return oldId && audioIds[lang] !== oldId ? [{ id: oldId, path: oldPath }] : [];
       });
-      if (stale.length) {
-        const del = await supabase.from('audio_assets').delete().in('id', stale.map((s) => s.id));
-        const paths = stale.map((s) => s.path).filter((p): p is string => !!p);
-        const rm = paths.length ? await supabase.storage.from('audio').remove(paths) : { error: null };
-        cleanupFailed = !!del.error || !!rm.error;
-      }
+      const cleanupFailed = await removeAudio(
+        stale.map((s) => s.id),
+        stale.map((s) => s.path).filter((p): p is string => !!p),
+      );
       return { id, cleanupFailed, workName: f.work?.name };
     },
     onSuccess: ({ id, cleanupFailed, workName }) => {
@@ -261,12 +247,10 @@ export function Points() {
     mutationFn: async (r: PointRow) => {
       const { error: e } = await supabase.from('nav_points').delete().eq('id', r.id);
       if (e) throw e;
-      const ids = [r.audio_tr_id, r.audio_en_id].filter((x): x is string => !!x);
-      const paths = [r.audio_tr, r.audio_en].filter((x): x is string => !!x);
-      let cleanupFailed = false;
-      if (ids.length) cleanupFailed = !!(await supabase.from('audio_assets').delete().in('id', ids)).error;
-      if (paths.length) cleanupFailed ||= !!(await supabase.storage.from('audio').remove(paths)).error;
-      return cleanupFailed;
+      return removeAudio(
+        [r.audio_tr_id, r.audio_en_id].filter((x): x is string => !!x),
+        [r.audio_tr, r.audio_en].filter((x): x is string => !!x),
+      );
     },
     onSuccess: (cleanupFailed) => {
       reset();
@@ -533,38 +517,19 @@ export function Points() {
           </p>
 
           {text
-            ? LANGS.map((l) => {
-                const path = l === 'tr' ? current?.audio_tr : current?.audio_en;
-                const existing = path && !form.removed[l] && !form.files[l] ? path : null;
-                return (
-                  <div key={l} className="stack" style={{ gap: 8 }}>
-                    <span className="label">Ses ({l.toUpperCase()})</span>
-                    {existing ? (
-                      <div className="row">
-                        <audio controls src={AUDIO_BASE + existing} />
-                        <button type="button" className="btn ghost small" onClick={() => setForm({ ...form, removed: { ...form.removed, [l]: true } })}>
-                          Sesi kaldır
-                        </button>
-                      </div>
-                    ) : null}
-                    {path && form.removed[l] && !form.files[l] ? (
-                      <span className="muted">
-                        Kayıtta kaldırılacak.{' '}
-                        <button type="button" className="btn ghost small" onClick={() => setForm({ ...form, removed: { ...form.removed, [l]: false } })}>
-                          Geri al
-                        </button>
-                      </span>
-                    ) : null}
-                    <input
-                      key={`${form.rev}-${l}`}
-                      type="file"
-                      accept=".mp3,.m4a,.aac,audio/mpeg,audio/mp4,audio/aac"
-                      aria-label={`Ses dosyası seç (${l.toUpperCase()})`}
-                      onChange={(e) => pickFile(l, e.target.files?.[0])}
-                    />
-                  </div>
-                );
-              })
+            ? LANGS.map((l) => (
+                <AudioField
+                  key={l}
+                  lang={l}
+                  path={l === 'tr' ? current?.audio_tr : current?.audio_en}
+                  file={form.files[l]}
+                  removed={form.removed[l]}
+                  rev={form.rev}
+                  onRemove={() => setForm({ ...form, removed: { ...form.removed, [l]: true } })}
+                  onUndo={() => setForm({ ...form, removed: { ...form.removed, [l]: false } })}
+                  onPick={(f) => pickFile(l, f)}
+                />
+              ))
             : null}
 
           {formError ? (

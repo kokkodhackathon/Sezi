@@ -1,6 +1,5 @@
 import type { ThemeColors } from '@sezi/shared';
 import { Image } from 'expo-image';
-import * as Speech from 'expo-speech';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
@@ -18,7 +17,13 @@ import { useT, type MessageKey } from '@/lib/i18n';
 import { hasRouteTo, planRoute } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
+import { AUDIO_BASE } from '@/lib/supabase';
+import { createClipPlayer } from '@/lib/voice/clip-player';
+import { NARRATION_WAIT_MS, say, silence } from '@/lib/voice/speech';
 import { coverOf, hasLocation, inventorySource, loc, photoUrl, useWork, type WorkRow } from '@/lib/works';
+
+/** Eser ses kaydı oynatıcısı (admin panelinden yüklenen kayıt). */
+const workClip = createClipPlayer();
 
 export default function WorkDetail() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
@@ -75,23 +80,31 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
   const place = [work.district, city].filter(Boolean).join(', ');
   const credit = work.photos.find((p) => p.credit)?.credit;
 
-  useEffect(() => () => void Speech.stop(), []);
+  useEffect(
+    () => () => {
+      workClip.stop();
+      silence();
+    },
+    [],
+  );
 
   const narration = [name, kind, place, period, history || (ref ? tr('work.historyRef', { ref }) : tr('work.historyInBook'))].filter(Boolean).join('. ');
+  // İngilizcede TR kayda düşülmez: metin cihaz sesiyle okunur.
+  const audioPath = lang === 'en' ? work.audio_en : work.audio_tr;
   const toggleSpeech = () => {
     if (speaking) {
-      Speech.stop();
+      workClip.stop();
+      silence();
       setSpeaking(false);
       return;
     }
     setSpeaking(true);
-    Speech.speak(narration, {
-      language: lang === 'tr' ? 'tr-TR' : 'en-US',
-      rate: settings.speechRate,
-      onDone: () => setSpeaking(false),
-      onStopped: () => setSpeaking(false),
-      onError: () => setSpeaking(false),
-    });
+    const tts = () =>
+      say(narration, { lang, rate: settings.speechRate, interrupt: true, waitMs: NARRATION_WAIT_MS, onDone: () => setSpeaking(false) });
+    if (!audioPath) return tts();
+    silence();
+    // İnsan kaydı hızlandırılmaz.
+    workClip.play(AUDIO_BASE + audioPath, { onEnd: () => setSpeaking(false), onError: tts });
   };
   const citation = inv ? `${name}. ${inv.title}${ref ? `, ${ref}` : ''}. Vakıf Katılım${inv.year ? `, ${inv.year}` : ''}.${inv.url ? ` ${inv.url}` : ''}` : null;
 

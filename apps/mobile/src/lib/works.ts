@@ -75,6 +75,9 @@ export interface WorkRow {
   sources: WorkSource[];
   exhibitions: WorkExhibition[];
   photos: WorkPhoto[];
+  /** Admin panelinden yüklenen ses kaydının Storage yolu (audio bucket); yoksa metin okunur. */
+  audio_tr: string | null;
+  audio_en: string | null;
 }
 
 /** Haritada gösterilebilir eser (konumu bilinen). */

@@ -1,5 +1,4 @@
 import type { ThemeColors } from '@sezi/shared';
-import * as Speech from 'expo-speech';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -11,6 +10,7 @@ import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
+import { NARRATION_WAIT_MS, say } from '@/lib/voice/speech';
 
 export default function SettingsScreen() {
   const t = useSeziTheme();
@@ -61,8 +61,7 @@ export default function SettingsScreen() {
           label={tr('settings.speechTest')}
           icon={(c) => <PlayIcon color={c} size={18} />}
           onPress={() => {
-            Speech.stop();
-            Speech.speak(tr('settings.speechSample'), { language: lang === 'tr' ? 'tr-TR' : 'en-US', rate: settings.speechRate });
+            say(tr('settings.speechSample'), { lang, rate: settings.speechRate, interrupt: true, waitMs: NARRATION_WAIT_MS });
           }}
         />
       </View>

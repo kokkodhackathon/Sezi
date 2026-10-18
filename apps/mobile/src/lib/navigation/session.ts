@@ -32,8 +32,9 @@ import { blockableAhead, detourFrom, inPilotArea, landmarkNodes, planRoute, plan
 import { navPoints, pointAudioUri } from '../points';
 import { hapticAlert, hapticForTurn, playLandmarkCue } from '../sim/cues';
 import { stopSoundscape, updateSoundscape } from '../sim/soundscape-engine';
-import { say, silence } from '../sim/speech';
-import { playPointFile, stopPointFile } from './point-audio';
+import { prefetchChirp } from '../voice/chirp';
+import { createClipPlayer } from '../voice/clip-player';
+import { NARRATION_WAIT_MS, say, silence } from '../voice/speech';
 
 /**
  * Tek navigasyon oturumu: rota planı, canlı rehberlik ve yürüyüş aynı yerde.
@@ -189,6 +190,8 @@ let playingKind: 'file' | 'tts' | null = null;
 let pendingSpeech: string | null = null;
 let soundSources: SoundSource[] = [];
 const listeners = new Set<() => void>();
+/** Nokta (anlatım / eser varışı) ses kaydı oynatıcısı. */
+const pointClip = createClipPlayer();
 
 function emit(patch: Partial<NavState>) {
   state = { ...state, ...patch };
@@ -234,11 +237,14 @@ function raise(kind: AlertKind, text: string) {
   emit({ alert: { id: ++alertId, kind, text }, cueCount: state.cueCount + 1 });
 }
 
+function introText(plan: PlannedRoute, lang: 'tr' | 'en'): string {
+  const m = Math.round(totalOf(plan));
+  return plan.kind === 'stroll' ? TEXT[lang].strollIntro(plan.via.pointIds.length, m) : TEXT[lang].intro(plan.end.name?.[lang] ?? plan.end.name?.tr ?? '', m);
+}
+
 function intro(plan: PlannedRoute) {
   if (!cfg) return;
-  const lang = cfg.profile.lang;
-  const m = Math.round(totalOf(plan));
-  speak(plan.kind === 'stroll' ? TEXT[lang].strollIntro(plan.via.pointIds.length, m) : TEXT[lang].intro(plan.end.name?.[lang] ?? plan.end.name?.tr ?? '', m));
+  speak(introText(plan, cfg.profile.lang));
 }
 
 // ---------- Noktalar ----------
@@ -264,7 +270,7 @@ function playPoint(id: string) {
   const c = cfg;
   const voice = pointVoice(point, c.profile.lang);
   if (!voice) return;
-  stopPointFile();
+  pointClip.stop();
   emit({ playing: id });
   // Metin okuması bitince "Durdur" düğmesi "Dinle"ye döner.
   const ttsDone = () => {
@@ -274,12 +280,12 @@ function playPoint(id: string) {
   };
   if (voice.kind === 'tts') {
     playingKind = 'tts';
-    say(voice.text, { lang: voice.lang, rate: c.speechRate, interrupt: true, onDone: ttsDone });
+    say(voice.text, { lang: voice.lang, rate: c.speechRate, interrupt: true, waitMs: NARRATION_WAIT_MS, onDone: ttsDone });
     return;
   }
   playingKind = 'file';
   silence();
-  playPointFile(pointAudioUri(voice.path), {
+  pointClip.play(pointAudioUri(voice.path), {
     onEnd: () => {
       playingKind = null;
       emit({ playing: null });
@@ -290,7 +296,7 @@ function playPoint(id: string) {
       playingKind = 'tts';
       const en = c.profile.lang === 'en' && point.body?.en;
       const text = en ? point.body!.en! : point.body?.tr;
-      if (text) say(text, { lang: en ? 'en' : 'tr', rate: c.speechRate, interrupt: true, onDone: ttsDone });
+      if (text) say(text, { lang: en ? 'en' : 'tr', rate: c.speechRate, interrupt: true, waitMs: NARRATION_WAIT_MS, onDone: ttsDone });
       else ttsDone();
       flushPending();
     },
@@ -298,7 +304,7 @@ function playPoint(id: string) {
 }
 
 function stopAudio() {
-  stopPointFile();
+  pointClip.stop();
   if (playingKind === 'tts') silence();
   playingKind = null;
   if (state.playing) emit({ playing: null });
@@ -319,7 +325,13 @@ function compute(from: LngLat, dest: string | null, leadIn: boolean, extra: { bl
   if (!inPilotArea(from)) return { plan: null, note: 'outside_pilot' as const };
   const opts = { leadIn, blocked: new Set(extra.blocked ?? []), skip: new Set(extra.skip ?? []) };
   const plan = dest ? planRoute(dest, cfg.profile, from, opts) : planStroll(cfg.profile, from, opts);
-  return plan ? { plan, note: null } : { plan: null, note: dest ? ('no_route' as const) : ('no_points' as const) };
+  if (!plan) return { plan: null, note: dest ? ('no_route' as const) : ('no_points' as const) };
+  // Türkçe talimatlar Chirp ile önceden hazırlanır: yürürken beklemeden ve internetsiz çalsın.
+  const p = cfg.profile;
+  if (p.lang === 'tr' && p.hearing !== 'deaf' && p.senses.audio) {
+    void prefetchChirp([introText(plan, 'tr'), ...plan.steps.map((s) => s.text), TEXT.tr.noRoute, TEXT.tr.crowdOn, TEXT.tr.crowdOff]);
+  }
+  return { plan, note: null };
 }
 
 function replanPreview() {

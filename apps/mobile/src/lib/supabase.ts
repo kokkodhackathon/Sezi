@@ -12,3 +12,6 @@ if (!url || !key) {
 export const supabase = createClient(url, key, {
   auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false },
 });
+
+/** Admin panelinden yüklenen ses kayıtlarının (nokta, eser) genel adresi. */
+export const AUDIO_BASE = `${url}/storage/v1/object/public/audio/`;

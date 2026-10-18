@@ -3,11 +3,12 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 
+import { AudioField } from '../components/AudioField';
 import { LocationMap } from '../components/LocationMap';
+import { LANGS, MAX_AUDIO_BYTES, removeAudio, uploadAudio, type Lang, type Uploaded } from '../lib/audio';
 import { CITY_CENTER, CONDITION_LABEL, localized, mediaUrl, STATUS_LABEL, tr, useLookups, useWork, type Condition, type MediaRow, type Precision, type Status, type WorkRecord } from '../lib/data';
 import { supabase } from '../lib/supabase';
 
-type Lang = 'tr' | 'en';
 type TextKey = 'name' | 'period' | 'history' | 'architecture' | 'address' | 'condition_note';
 
 interface Form {
@@ -25,6 +26,12 @@ interface Form {
   needs_review: boolean;
   point: [number, number] | null;
   precision: Precision;
+  /** Yeni seçilen ses dosyaları. */
+  files: Partial<Record<Lang, File>>;
+  /** Mevcut kayıtları kaldır. */
+  removed: Record<Lang, boolean>;
+  /** Kayıttan sonra artar: dosya alanları sıfırlanır. */
+  rev: number;
 }
 
 const text = (t: LocalizedText | null | undefined) => ({ tr: t?.tr ?? '', en: t?.en ?? '' });
@@ -45,6 +52,9 @@ function toForm(w: WorkRecord, lng: number | null, lat: number | null): Form {
     needs_review: w.needs_review,
     point: lng !== null && lat !== null ? [lng, lat] : null,
     precision: w.location_precision,
+    files: {},
+    removed: { tr: false, en: false },
+    rev: 0,
   };
 }
 
@@ -64,6 +74,7 @@ function Editor({ slug, data }: { slug: string; data: WorkData }) {
   const qc = useQueryClient();
   const [form, setForm] = useState<Form>(() => toForm(data.work, data.lng, data.lat));
   const [toast, setToast] = useState('');
+  const [fileError, setFileError] = useState('');
 
   useEffect(() => {
     if (!toast) return;
@@ -74,32 +85,57 @@ function Editor({ slug, data }: { slug: string; data: WorkData }) {
   const save = useMutation({
     mutationFn: async (f: Form) => {
       if (!f.name.tr.trim()) throw new Error('Türkçe ad boş olamaz.');
-      const { error: e } = await supabase
-        .from('works')
-        .update({
-          name: localized(f.name),
-          period: localized(f.period),
-          history: localized(f.history),
-          architecture: localized(f.architecture),
-          address: localized(f.address),
-          condition_note: localized(f.condition_note),
-          work_type_id: f.work_type_id,
-          district: f.district.trim() || null,
-          condition: f.condition,
-          unesco: f.unesco,
-          status: f.status,
-          needs_review: f.needs_review,
-          // PostGIS, metin olarak verilen EWKT'yi geography'ye çevirir.
-          location: f.point ? `SRID=4326;POINT(${f.point[0]} ${f.point[1]})` : null,
-          location_precision: f.point ? f.precision : 'unknown',
-        })
-        .eq('id', data.work.id);
-      if (e) throw e;
+      const old: Record<Lang, string | null> = { tr: data.work.audio_tr_id, en: data.work.audio_en_id };
+      const audioIds = { ...old };
+      const uploaded: Uploaded[] = [];
+      try {
+        for (const lang of LANGS) {
+          const file = f.files[lang];
+          if (file) audioIds[lang] = await uploadAudio(`works/${data.work.id}`, lang, file, `${f.name.tr.trim()} · ${lang.toUpperCase()}`, uploaded);
+          else if (f.removed[lang]) audioIds[lang] = null;
+        }
+        const { error: e } = await supabase
+          .from('works')
+          .update({
+            name: localized(f.name),
+            period: localized(f.period),
+            history: localized(f.history),
+            architecture: localized(f.architecture),
+            address: localized(f.address),
+            condition_note: localized(f.condition_note),
+            work_type_id: f.work_type_id,
+            district: f.district.trim() || null,
+            condition: f.condition,
+            unesco: f.unesco,
+            status: f.status,
+            needs_review: f.needs_review,
+            // PostGIS, metin olarak verilen EWKT'yi geography'ye çevirir.
+            location: f.point ? `SRID=4326;POINT(${f.point[0]} ${f.point[1]})` : null,
+            location_precision: f.point ? f.precision : 'unknown',
+            audio_tr_id: audioIds.tr,
+            audio_en_id: audioIds.en,
+          })
+          .eq('id', data.work.id);
+        if (e) throw e;
+      } catch (err) {
+        await removeAudio(
+          uploaded.map((u) => u.assetId).filter((x): x is string => !!x),
+          uploaded.map((u) => u.path),
+        );
+        throw err;
+      }
+      // Kayıt geçerli; değiştirilen ya da kaldırılan eski sesleri temizle.
+      const stale = LANGS.filter((lang) => old[lang] && audioIds[lang] !== old[lang]);
+      return removeAudio(
+        stale.map((lang) => old[lang]!),
+        stale.map((lang) => data.audio[lang]).filter((p): p is string => !!p),
+      );
     },
-    onSuccess: () => {
+    onSuccess: (cleanupFailed) => {
       void qc.invalidateQueries({ queryKey: ['work', slug] });
       void qc.invalidateQueries({ queryKey: ['works'] });
-      setToast('Kaydedildi');
+      setForm((f) => ({ ...f, files: {}, removed: { tr: false, en: false }, rev: f.rev + 1 }));
+      setToast(cleanupFailed ? 'Kaydedildi · Eski ses dosyası silinemedi' : 'Kaydedildi');
     },
   });
 
@@ -248,6 +284,34 @@ function Editor({ slug, data }: { slug: string; data: WorkData }) {
                 </>
               ) : null}
             </div>
+          </Section>
+
+          <Section title="Ses kaydı" note="Yüklenen kayıt uygulamada metin okuması yerine çalar. Kaydın içeriği de kaynağıyla girilir.">
+            {LANGS.map((l) => (
+              <AudioField
+                key={l}
+                lang={l}
+                path={data.audio[l]}
+                file={form.files[l]}
+                removed={form.removed[l]}
+                rev={form.rev}
+                onRemove={() => setForm({ ...form, removed: { ...form.removed, [l]: true } })}
+                onUndo={() => setForm({ ...form, removed: { ...form.removed, [l]: false } })}
+                onPick={(file) => {
+                  if (file && file.size > MAX_AUDIO_BYTES) {
+                    setFileError('Ses dosyası 10 MB’tan büyük olamaz.');
+                    return;
+                  }
+                  setFileError('');
+                  setForm((f) => ({ ...f, files: { ...f.files, [l]: file } }));
+                }}
+              />
+            ))}
+            {fileError ? (
+              <p role="alert" className="error" style={{ margin: 0 }}>
+                {fileError}
+              </p>
+            ) : null}
           </Section>
 
           <Section title={`Fotoğraflar (${data.media.length})`} note="Taslak fotoğraflar uygulamada görünmez. Eşleşmeyi kitaptaki sayfayla karşılaştırıp onaylayın.">

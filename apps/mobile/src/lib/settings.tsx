@@ -9,7 +9,7 @@ const VISITED_KEY = 'sezi.visited.v1';
 
 const SettingsSchema = z.object({
   themeMode: z.enum(['system', 'light', 'dark']).default('light'),
-  /** expo-speech hızı: 0.7 yavaş – 1.2 hızlı. */
+  /** Konuşma hızı (cihaz sesi ve Chirp oynatma hızı): 0.75 yavaş – 1.2 hızlı. */
   speechRate: z.number().min(0.5).max(1.5).default(0.95),
   /** Keşfet ekranında seçili envanter ili. */
   city: z.string().default('bursa'),

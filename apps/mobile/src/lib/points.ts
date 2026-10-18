@@ -7,7 +7,8 @@ import { AppState } from 'react-native';
 import { z } from 'zod';
 
 import { setNavPoints } from './nav';
-import { supabase } from './supabase';
+import { AUDIO_BASE, supabase } from './supabase';
+import { prefetchChirp } from './voice/chirp';
 
 /**
  * Noktalar (nav_points): admin panelinden girilen başlangıç, yer işareti, anlatım ve eser varışı noktaları.
@@ -15,7 +16,6 @@ import { supabase } from './supabase';
  * Her değişiklik rota grafiğine de uygulanır (nav.ts › setNavPoints).
  */
 const KEY = 'sezi.points.v1';
-const AUDIO_BASE = `${process.env.EXPO_PUBLIC_SUPABASE_URL}/storage/v1/object/public/audio/`;
 const COLUMNS = 'id, city_slug, roles, title, body, lng, lat, radius_m, work_slug, salience, ambient, sort_order, audio_tr, audio_en';
 
 const Row = z.object({
@@ -136,6 +136,8 @@ export function usePointsSync() {
     setPoints(list);
     Storage.setItemSync(KEY, JSON.stringify(data));
     void cacheAudio(list);
+    // TR kaydı olmayan anlatımlar Chirp ile önceden üretilir; sahada internetsiz çalar.
+    void prefetchChirp(list.filter((p) => !p.audio.tr && p.body?.tr).map((p) => p.body!.tr));
   }, [data]);
 
   useEffect(() => {

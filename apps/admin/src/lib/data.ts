@@ -111,6 +111,8 @@ export interface WorkRecord {
   needs_review: boolean;
   work_type_id: string;
   city_id: string;
+  audio_tr_id: string | null;
+  audio_en_id: string | null;
 }
 
 export interface MediaRow {
@@ -133,13 +135,13 @@ export function useWork(slug: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('works')
-        .select('id, slug, name, summary, history, architecture, period, district, address, condition, condition_note, unesco, location_precision, status, needs_review, work_type_id, city_id')
+        .select('id, slug, name, summary, history, architecture, period, district, address, condition, condition_note, unesco, location_precision, status, needs_review, work_type_id, city_id, audio_tr_id, audio_en_id')
         .eq('slug', slug)
         .single();
       if (error) throw error;
       const work = data as WorkRecord;
       const [view, media] = await Promise.all([
-        supabase.from('works_view').select('lng, lat, sources, city_slug').eq('id', work.id).single(),
+        supabase.from('works_view').select('lng, lat, sources, city_slug, audio_tr, audio_en').eq('id', work.id).single(),
         supabase.from('media').select('id, storage_path, thumb_path, alt_text, status, kind, sort_order, credit, source_file, source_volume, source_page').eq('work_id', work.id).order('sort_order'),
       ]);
       if (view.error) throw view.error;
@@ -151,6 +153,8 @@ export function useWork(slug: string) {
         citySlug: view.data.city_slug as string,
         sources: view.data.sources as { title: string; kind: string; volume: number | null; page: string | null; url: string | null }[],
         media: (media.data ?? []) as MediaRow[],
+        /** Ses kayıtlarının Storage yolları (audio bucket). */
+        audio: { tr: view.data.audio_tr as string | null, en: view.data.audio_en as string | null },
       };
     },
   });
