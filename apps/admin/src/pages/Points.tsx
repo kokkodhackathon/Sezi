@@ -115,9 +115,9 @@ export function Points() {
     return () => clearTimeout(id);
   }, [toast]);
 
-  // Eser arama (varış noktası için): yazmayı bırakınca sorgula.
+  // Eser arama: yazmayı bırakınca sorgula.
   useEffect(() => {
-    if (!form.roles.includes('arrival') || form.work) return;
+    if (form.work) return;
     let alive = true;
     const id = setTimeout(() => {
       searchWorks(workQuery, city)
@@ -128,7 +128,7 @@ export function Points() {
       alive = false;
       clearTimeout(id);
     };
-  }, [workQuery, city, form.roles, form.work]);
+  }, [workQuery, city, form.work]);
 
   const current = points.find((p) => p.id === form.id) ?? null;
   const cityId = lookups?.cities.find((c) => c.slug === city)?.id;
@@ -205,7 +205,7 @@ export function Points() {
           status: f.status,
           // PostGIS, metin olarak verilen EWKT'yi geography'ye çevirir.
           location: `SRID=4326;POINT(${f.point[0]} ${f.point[1]})`,
-          work_id: f.roles.includes('arrival') ? f.work!.id : null,
+          work_id: f.work?.id ?? null,
           salience: landmark ? f.salience : null,
           ambient: landmark && f.ambient ? f.ambient : null,
           field_checked: f.fieldChecked,
@@ -408,32 +408,36 @@ export function Points() {
             ))}
           </fieldset>
 
-          {form.roles.includes('arrival') ? (
-            <div className="stack" style={{ gap: 6 }}>
-              <span className="label">Eser</span>
-              {form.work ? (
-                <div className="row">
-                  <strong className="grow">{form.work.name}</strong>
-                  <button type="button" className="btn ghost small" onClick={() => setForm({ ...form, work: null })}>
-                    Değiştir
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <input value={workQuery} onChange={(e) => setWorkQuery(e.target.value)} placeholder="Eser adı yazın" aria-label="Eser ara" />
-                  <ul className="picklist">
-                    {workHits.map((w) => (
-                      <li key={w.id}>
-                        <button type="button" onClick={() => void chooseWork(w)}>
-                          {w.name.tr} <span className="muted">· {w.type_name.tr}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </>
-              )}
-            </div>
-          ) : null}
+          {/* Varışta zorunlu; diğer rollerde isteğe bağlı: yürüyüşte nokta açılınca eserin kısa bilgisi ve sayfası. */}
+          <div className="stack" style={{ gap: 6 }}>
+            <span className="label">{form.roles.includes('arrival') ? 'Eser' : 'Bağlı eser (isteğe bağlı)'}</span>
+            {form.roles.includes('arrival') ? null : (
+              <span className="muted" style={{ fontSize: 13 }}>
+                Noktanın anlattığı ya da yanında durduğu eser: yürüyüşte nokta açılınca eserin fotoğrafı ve kısa bilgisi gösterilir.
+              </span>
+            )}
+            {form.work ? (
+              <div className="row">
+                <strong className="grow">{form.work.name}</strong>
+                <button type="button" className="btn ghost small" onClick={() => setForm({ ...form, work: null })}>
+                  {form.roles.includes('arrival') ? 'Değiştir' : 'Kaldır'}
+                </button>
+              </div>
+            ) : (
+              <>
+                <input value={workQuery} onChange={(e) => setWorkQuery(e.target.value)} placeholder="Eser adı yazın" aria-label="Eser ara" />
+                <ul className="picklist">
+                  {workHits.map((w) => (
+                    <li key={w.id}>
+                      <button type="button" onClick={() => void chooseWork(w)}>
+                        {w.name.tr} <span className="muted">· {w.type_name.tr}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
 
           <div className="pair">
             {LANGS.map((l) => (

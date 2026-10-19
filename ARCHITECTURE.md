@@ -92,7 +92,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
    - Çıktı: `nodes` (eserlerde `workSlug`) ve `segments` (uzunluk, basamak, eğim, zemin, gürültü).
    - Bursa Hanlar (650 m): 892 düğüm, 1215 segment, 20 eser.
 2. **Noktalar** (`nav_points`, admin panelinde "Noktalar"; kodda sabit nokta ya da rota yok)
-   - Roller: `start` (başlangıç/buluşma, `sort_order` ile sıralı; ilki varsayılan), `landmark` (yer işareti, belirginlik 1–3, ortam sesi), `story` (anlatım: metin + ses, yarıçap), `arrival` (eser varış bilgisi, `work_id`). Bir yer birden çok rol taşır.
+   - Roller: `start` (başlangıç/buluşma, `sort_order` ile sıralı; ilki varsayılan), `landmark` (yer işareti, belirginlik 1–3, ortam sesi), `story` (anlatım: metin + ses, yarıçap), `arrival` (eser varış bilgisi, `work_id` zorunlu). Bir yer birden çok rol taşır. Her rol isteğe bağlı olarak bir esere bağlanabilir (`work_id`): yürüyüşte nokta açılınca kartta eserin fotoğrafı, türü, yeri ve dönemi görünür, dokununca eser sayfası açılır (`components/point-popup.tsx` + `work-preview.tsx`). Bir esere yayında tek varış noktası olur.
    - Uygulama `nav_points_view`'u çeker, kv'de saklar, sesleri `Paths.cache/point-audio`'ya indirir (`lib/points.ts`) ve grafiğe çalışırken uygular (`nav.ts › setNavPoints`): yer işareti en yakın düğüme (≤ 60 m) bağlanıp talimatta anılır; 40 m içindeki segmentlerin görünürlüğü belirginliğe göre artar; anlatım/varış noktaları uğrama adayı olur (≤ 40 m).
    - Onaylı erişilebilirlik bildirimleri (`segment_overrides`) aynı çalışma grafiğine uygulanır; nokta ya da bildirim değişince `useNavVersion` artar ve ekranlar yeniden hesaplar.
 3. **Maliyet** (`shared/routing.ts › segmentCost`)

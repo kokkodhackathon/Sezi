@@ -1,16 +1,21 @@
 import type { NavPoint } from '@sezi/shared';
+import { router } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, Eyebrow, softShadow } from '@/components/ui';
+import { WorkPeek } from '@/components/work-preview';
 import { PlayIcon, StopIcon } from '@/design/icons';
 import { radius, space, type } from '@/design/type';
 import { useSeziTheme } from '@/hooks/use-sezi-theme';
 import { useT } from '@/lib/i18n';
+import { useWork } from '@/lib/works';
 
 /**
  * Nokta bilgisi: yarıçapa girilince ekranın altından açılır. Sesin yazılı karşılığıdır;
  * ekran okuyucu hemen duyurur. Animasyon yok (reduce motion sorunu doğmaz).
+ * Nokta bir esere bağlıysa (admin → Noktalar) eserin fotoğrafı ve kısa bilgisi de görünür; dokununca eser
+ * sayfası açılır. Yürüyüş arkada sürer, geri dönülünce kart yerinde durur.
  */
 export function PointPopup({
   point,
@@ -37,6 +42,8 @@ export function PointPopup({
   const { t: tr, lang } = useT();
   const title = point.title[lang] ?? point.title.tr;
   const body = point.body ? (point.body[lang] ?? point.body.tr) : '';
+  // İnternet yoksa ve eser önbellekte değilse şerit görünmez; nokta metni yine okunur.
+  const { data: work } = useWork(point.workSlug ?? '');
   const eyebrow = order ? tr('nav.pointOrder', { n: order }) : tr('nav.point');
   return (
     <View style={[styles.wrap, { paddingBottom: insets.bottom + space.md }]} pointerEvents="box-none">
@@ -46,7 +53,8 @@ export function PointPopup({
         <Text style={[type.title, { color: t.text }]} accessibilityRole="header">
           {title}
         </Text>
-        <ScrollView style={{ maxHeight: 240 }}>
+        {work ? <WorkPeek work={work} cardTitle={title} onOpen={() => router.push({ pathname: '/work/[slug]', params: { slug: work.slug } })} /> : null}
+        <ScrollView style={{ maxHeight: work ? 180 : 240 }}>
           <Text style={[type.body, { color: t.text }]}>{body}</Text>
         </ScrollView>
         {queued > 0 ? <Text style={[type.meta, { color: t.textMuted }]}>{tr('nav.pointQueued', { n: queued })}</Text> : null}

@@ -115,6 +115,7 @@ export function useWork(slug: string) {
       if (error) throw error;
       return data as WorkRow | null;
     },
+    enabled: !!slug,
   });
 }
 
