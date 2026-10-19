@@ -9,6 +9,7 @@ import { z } from 'zod';
 import { setNavPoints } from './nav';
 import { AUDIO_BASE, supabase } from './supabase';
 import { prefetchChirp } from './voice/chirp';
+import { prefetchWorks } from './works';
 
 /**
  * Noktalar (nav_points): admin panelinden girilen başlangıç, yer işareti, anlatım ve eser varışı noktaları.
@@ -138,6 +139,8 @@ export function usePointsSync() {
     void cacheAudio(list);
     // TR kaydı olmayan anlatımlar Chirp ile önceden üretilir; sahada internetsiz çalar.
     void prefetchChirp(list.filter((p) => !p.audio.tr && p.body?.tr).map((p) => p.body!.tr));
+    // Noktalara bağlı eserler cihazda saklanır: yürüyüş kartındaki eser bilgisi internetsiz de görünür.
+    void prefetchWorks(list.flatMap((p) => (p.workSlug ? [p.workSlug] : [])));
   }, [data]);
 
   useEffect(() => {

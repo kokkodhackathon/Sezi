@@ -1,8 +1,51 @@
 import type { LocalizedText } from '@sezi/shared';
 import { useQuery } from '@tanstack/react-query';
+import { Image } from 'expo-image';
+import Storage from 'expo-sqlite/kv-store';
 
 import type { Lang } from './i18n';
 import { supabase } from './supabase';
+
+/**
+ * Eser satırlarının cihazdaki son bilinen hâli (slug başına bir anahtar). Açılan eser sayfaları ve
+ * nokta eşitlemesinin önceden çektiği, noktalara bağlı eserler burada kalır: uygulama yeniden açılıp
+ * internetsiz yüründüğünde de nokta kartındaki eser bilgisi ve eser sayfası görünür.
+ */
+const WORK_KEY = (slug: string) => `sezi.work.v1:${slug}`;
+
+export function cachedWork(slug: string): WorkRow | undefined {
+  try {
+    const raw = Storage.getItemSync(WORK_KEY(slug));
+    const row = raw ? (JSON.parse(raw) as WorkRow) : undefined;
+    return row?.slug === slug ? row : undefined;
+  } catch {
+    // Bozuk kayıt yok sayılır; sunucudan yeniden alınır.
+    return undefined;
+  }
+}
+
+function storeWork(row: WorkRow) {
+  Storage.setItemSync(WORK_KEY(row.slug), JSON.stringify(row));
+}
+
+/**
+ * Verilen eserleri sunucudan çekip cihazda saklar (ör. noktalara bağlı eserler); kapak küçükleri de
+ * diske indirilir. Hata sessizce atlanır; sonraki eşitlemede yeniden denenir.
+ */
+export async function prefetchWorks(slugs: string[]): Promise<void> {
+  const want = [...new Set(slugs)];
+  if (want.length === 0) return;
+  try {
+    const { data, error } = await supabase.from('works_view').select('*').in('slug', want);
+    if (error || !data) return;
+    const rows = data as WorkRow[];
+    for (const row of rows) storeWork(row);
+    const thumbs = rows.flatMap((r) => (r.photos[0] ? [photoUrl(r.photos[0], 'thumb')] : []));
+    if (thumbs.length) await Image.prefetch(thumbs, 'disk');
+  } catch {
+    // İnternet yok: saklı satırlar kalır.
+  }
+}
 
 export interface WorkSource {
   id: string;
@@ -107,14 +150,33 @@ export function useWorks(citySlug?: string) {
   });
 }
 
+/**
+ * Tek eser. Cihazdaki son bilinen satır hemen gösterilir (internetsiz de); sunucudan yenisi gelince
+ * güncellenip saklanır. Sunucuya ulaşılamazsa son bilinen satır kalır; eser yayından kalktıysa silinir.
+ */
 export function useWork(slug: string) {
   return useQuery({
     queryKey: ['work', slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from('works_view').select('*').eq('slug', slug).maybeSingle();
-      if (error) throw error;
-      return data as WorkRow | null;
+      let res;
+      try {
+        res = await supabase.from('works_view').select('*').eq('slug', slug).maybeSingle();
+      } catch (e) {
+        res = { data: null, error: e };
+      }
+      if (res.error) {
+        const last = cachedWork(slug);
+        if (last) return last;
+        throw res.error;
+      }
+      const row = res.data as WorkRow | null;
+      if (row) storeWork(row);
+      else Storage.removeItemSync(WORK_KEY(slug));
+      return row;
     },
+    initialData: () => (slug ? cachedWork(slug) : undefined),
+    // Saklı satır eski sayılır: açılışta sunucudan yenilenir.
+    initialDataUpdatedAt: 0,
     enabled: !!slug,
   });
 }
