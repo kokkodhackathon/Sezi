@@ -124,9 +124,10 @@ Yön işareti ve `display` (Atkinson) talimat ana odağı oluşturur; kalan mesa
 
 ## Yönetim paneli
 
-`apps/admin`: shadcn/ui (radix, `components.json`) + Tailwind v4. Token'lar `src/index.css` içinde Çini 2'nin açık temasıyla eşlenir: zemin kırık beyaz, kart beyaz, `primary` pastel firuze dolgu + koyu firuze yazı, `success` / `warning` tür tonlarından (teal / coral), grafik serileri tür tonlarının koyu ve orta değerleri. Başlıklar Nunito (`font-heading`), gövde Atkinson. Panel yalnız açık temadır.
+`apps/admin`: shadcn/ui (radix, `components.json`) + Tailwind v4. Token'lar `src/index.css` içinde Çini 2'nin açık temasıyla eşlenir: zemin kırık beyaz, kart beyaz, `primary` (eylem düğmesi, ilerleme, onay kutusu) koyu firuze `#1C5D55` dolgu + beyaz yazı (masaüstünde beyaz zeminde pastel dolgu silik kalıyordu), pastel firuze menüde seçili öğede, `success` / `warning` tür tonlarından (teal / coral), grafik serileri tür tonlarının koyu ve orta değerleri. Başlıklar Nunito (`font-heading`), gövde Atkinson. Panel yalnız açık temadır.
 - Yerleşim: daraltılabilir sol menü (gruplar: Genel, İçerik, Konum ve rota, Topluluk, Ayarlar; bekleyen iş sayısı rozetle), üstte yol çubuğu. Menü, sayfa başlıkları ve pano kısayolları tek listeden (`src/lib/nav.ts`).
 - Her sayfa `PageHeader` ile açılır: başlık + bu sayfada ne yapılacağını söyleyen tek cümle + sağda eylemler.
+- Görsel boyut ile dokunma alanı ayrıdır. Görsel yükseklik: düğme ve alan varsayılan 40 px, `sm` 36, `xs` 32, ikon düğmesi 32–44 (shadcn varsayılanı 28–32 ince kalıyordu); düğme yazısı Nunito kalın. Dokunma alanı her düğme, toggle ve sekmede en az 48×48 (görünmez `::after` / `::before` uzantısı, AGENTS kural 5); menü satırı görsel olarak da 48 px (düğmesi `overflow-hidden`). Uzantılar çakışmasın diye sarılan düğme satırlarında dikey aralık en az `48 − yükseklik` (ör. `sm` için `gap-y-4`), yan yana ikon düğmeleri `size="icon"` + `gap-3`. Kartlarda gri alt şerit yalnız eylem satırında, özet kartlarında yok.
 - Durum `StatusBadge` (Doğrulandı / Taslak / Arşivde); renk yanında hep metin. Geri alınamaz işlem `AlertDialog` ile onaylanır; sonuç `sonner` bildirimi.
 - Açılış sayfası Pano: kapsam kartları, il grafiği ve tablosu, fotoğraf durumu, pilot alan ve tur kapsamı, sırada bekleyen işler.
 - Ham renk ya da bileşen renklerini ezen sınıf yazılmaz; yeni bileşen `npx shadcn@latest add` ile eklenir.

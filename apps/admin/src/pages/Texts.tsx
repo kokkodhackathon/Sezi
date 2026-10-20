@@ -282,10 +282,10 @@ export function Texts() {
               <CardDescription className="num text-xs">
                 {list.length} taslak {draftIndex >= 0 ? `· ${draftIndex + 1} / ${list.length}` : ''}
               </CardDescription>
-              <CardAction className="flex items-center gap-1">
+              <CardAction className="flex items-center gap-3">
                 <Button
                   variant="outline"
-                  size="icon-xs"
+                  size="icon"
                   disabled={draftIndex <= 0}
                   onClick={() => go(-1)}
                   aria-label="Önceki taslak"
@@ -295,7 +295,7 @@ export function Texts() {
                 </Button>
                 <Button
                   variant="outline"
-                  size="icon-xs"
+                  size="icon"
                   disabled={draftIndex < 0 || draftIndex >= list.length - 1}
                   onClick={() => go(1)}
                   aria-label="Sonraki taslak"

@@ -310,10 +310,10 @@ export function Matching() {
               <CardDescription className="num text-xs">
                 {list.length} eser {workIndex >= 0 ? `· ${workIndex + 1} / ${list.length}` : ''}
               </CardDescription>
-              <CardAction className="flex items-center gap-1">
+              <CardAction className="flex items-center gap-3">
                 <Button
                   variant="outline"
-                  size="icon-xs"
+                  size="icon"
                   disabled={workIndex <= 0}
                   onClick={() => go(-1)}
                   aria-label="Önceki eser (K)"
@@ -323,7 +323,7 @@ export function Matching() {
                 </Button>
                 <Button
                   variant="outline"
-                  size="icon-xs"
+                  size="icon"
                   disabled={workIndex < 0 || workIndex >= list.length - 1}
                   onClick={() => go(1)}
                   aria-label="Sonraki eser (J)"
@@ -376,7 +376,7 @@ export function Matching() {
                               {w.district ?? 'İlçe yok'} · {PRECISION_LABEL[w.location_precision]} · {cs.length} aday
                             </span>
                             {bestPct !== null ? (
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-3">
                                 <Progress
                                   value={bestPct}
                                   aria-label={`En iyi aday puanı yüzde ${bestPct}`}

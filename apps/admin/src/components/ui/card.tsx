@@ -83,7 +83,8 @@ function CardFooter({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card-footer"
       className={cn(
-        "flex items-center rounded-b-xl border-t bg-muted/50 p-(--card-spacing)",
+        // Sezi: kart ızgarada uzayınca alt şerit dibe yapışır (altında beyaz boşluk kalmaz).
+        "mt-auto flex items-center rounded-b-xl border-t bg-muted/50 p-(--card-spacing)",
         className
       )}
       {...props}

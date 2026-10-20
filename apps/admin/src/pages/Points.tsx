@@ -352,7 +352,7 @@ export function Points() {
               if (v) setFilter(v as PointRole | 'all');
             }}
             aria-label="Role göre süz"
-            className="flex-wrap justify-start"
+            className="flex-wrap justify-start gap-y-3"
           >
             <ToggleGroupItem value="all">
               Tümü

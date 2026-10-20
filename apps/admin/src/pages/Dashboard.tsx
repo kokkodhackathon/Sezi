@@ -76,24 +76,25 @@ function Kpis({ d }: { d: Data }) {
   );
 }
 
+/** Özet kartı: etiket, büyük sayı, oran çubuğu (varsa) ve tek satır not; gri alt şerit yok (kartlar düz). */
 function Kpi({ label, value, note, share }: { label: string; value: string; note: string; share?: number }) {
   return (
     <Card>
       <CardHeader>
-        <CardDescription>{label}</CardDescription>
-        <CardTitle className="num font-heading text-4xl font-extrabold">{value}</CardTitle>
+        <CardDescription className="font-semibold">{label}</CardDescription>
+        <CardTitle className="num text-4xl font-extrabold tracking-tight">{value}</CardTitle>
         {share !== undefined ? (
           <CardAction>
-            <Badge variant="secondary" className="num">
+            <Badge variant="success" className="num h-6 px-2.5 text-sm font-bold">
               %{share}
             </Badge>
           </CardAction>
         ) : null}
       </CardHeader>
-      <CardFooter className="flex-col items-stretch gap-2 text-sm text-muted-foreground">
-        {share !== undefined ? <Progress value={share} aria-label={`${label}: yüzde ${share}`} /> : null}
+      <CardContent className="mt-auto flex flex-col gap-2.5 text-sm text-muted-foreground">
+        {share !== undefined ? <Progress value={share} className="h-2" aria-label={`${label}: yüzde ${share}`} /> : null}
         <span>{note}</span>
-      </CardFooter>
+      </CardContent>
     </Card>
   );
 }

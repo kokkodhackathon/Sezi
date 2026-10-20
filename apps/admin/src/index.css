@@ -63,8 +63,9 @@
   --card-foreground: #16151A;
   --popover: #FFFFFF;
   --popover-foreground: #16151A;
-  --primary: #A8E0D6;
-  --primary-foreground: #0F4A44;
+  /* Eylem rengi: masaüstünde beyaz zeminde silik kalmasın diye koyu firuze dolgu + beyaz yazı (kontrast 8:1). Pastel firuze menüde ve rozetlerde. */
+  --primary: #1C5D55;
+  --primary-foreground: #FFFFFF;
   --secondary: #ECE8E1;
   --secondary-foreground: #16151A;
   --muted: #ECE8E1;

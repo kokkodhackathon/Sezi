@@ -487,7 +487,7 @@ function UnlinkedPhotoCard({
         </FieldGroup>
       </CardContent>
 
-      <CardFooter className="flex flex-wrap gap-2">
+      <CardFooter className="flex flex-wrap gap-x-2 gap-y-4">
         <Button
           size="sm"
           className="flex-1"
@@ -659,7 +659,7 @@ function DraftLinkedPhotoCard({
         </FieldGroup>
       </CardContent>
 
-      <CardFooter className="flex flex-wrap gap-2">
+      <CardFooter className="flex flex-wrap gap-x-2 gap-y-4">
         <Button size="sm" className="flex-1" disabled={busy} onClick={() => approve.mutate()}>
           {approve.isPending ? <Spinner data-icon="inline-start" /> : <Check data-icon="inline-start" />}
           Onayla

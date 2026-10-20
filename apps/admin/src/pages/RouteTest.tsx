@@ -260,7 +260,7 @@ export function RouteTest() {
                     }}
                     disabled={!planning}
                     aria-label="Profil"
-                    className="flex-wrap justify-start"
+                    className="flex-wrap justify-start gap-y-3"
                   >
                     {PROFILE_KEYS.map((k) => (
                       <ToggleGroupItem key={k} value={k}>
@@ -335,13 +335,13 @@ export function RouteTest() {
                     </Button>
                   </div>
                   {starts.length > 0 ? (
-                    <div className="flex flex-wrap gap-1.5 pt-1" role="group" aria-label="Hızlı başlangıç noktaları">
+                    <div className="flex flex-wrap gap-x-2 gap-y-4 pt-1" role="group" aria-label="Hızlı başlangıç noktaları">
                       {starts.map((s) => (
                         <Button
                           key={s.id}
                           type="button"
                           variant={selectedStart === s.id ? 'default' : 'outline'}
-                          size="xs"
+                          size="sm"
                           aria-pressed={selectedStart === s.id}
                           disabled={!planning}
                           onClick={() => {
