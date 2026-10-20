@@ -1,6 +1,6 @@
 # Sezi yönetim paneli
 
-Vite + React + TypeScript; Supabase (yalnızca anonim/publishable anahtar, yazma yetkisi RLS'te), TanStack Query, React Router, MapLibre GL. Görsel dil mobil uygulamayla aynı "Çini" token'ları ([DESIGN.md](../../DESIGN.md)).
+Vite + React + TypeScript; Supabase (yalnızca anonim/publishable anahtar, yazma yetkisi RLS'te), TanStack Query, React Router, Mapbox GL. Arayüz shadcn/ui (radix, `components.json`) + Tailwind v4; tema mobil uygulamayla aynı "Çini 2" token'ları (`src/index.css`, [DESIGN.md](../../DESIGN.md)). Bileşen eklemek: `cd apps/admin && npx shadcn@latest add <ad>`.
 
 ## Çalıştırma
 
@@ -25,7 +25,8 @@ Kullanıcı çıkış yapıp yeniden girince rol oturuma yazılır.
 
 | Sayfa | Ne yapar | Uygulamaya etkisi |
 |---|---|---|
-| Eserler | Arama; il, tür, durum, konum, fotoğraf, inceleme süzgeçleri | – |
+| Pano | Açılış sayfası. İllere göre kapsam (kitaptaki eser sayısı, yayında, kesin konum, fotoğraflı, metinli), fotoğraf durumu, pilot alan ve tur kapsamı (fotoğraf / metin / kesin konum), sırada bekleyen işler. Sayılar her açılışta canlı tablolardan (`lib/dashboard.ts`); menüdeki bekleyen sayıları da buradan | – |
+| Eserler | Arama; il, tür, durum, konum, fotoğraf, inceleme süzgeçleri (adres parametreleri: `?city=bursa&review=1` …) | – |
 | Eser düzenleme | TR/EN alanlar, tür, ilçe, durum; haritada konum; fotoğraf onayı ve kapak | `verified` eser ve fotoğraflar uygulamada görünür (aşağı çekip yenileyince) |
 | Yeni eser | Kimlik bilgileriyle taslak açar; benzer adlı eser uyarısı | Yayımlanınca görünür |
 | Konum eşleştirme | Veri hattının konum adaylarını (Wikidata, OSM, önceki eşleşme) haritada ve gerekçeleriyle gösterir; tür/ilçe çelişkisi işaretli. Kabul et / reddet / hiçbiri; klavye J/K, 1–9, Enter | Kabul edilen aday eserin konumu olur (yapı düzeyi → kesin); seed yeniden çalışınca karar ezilmez |

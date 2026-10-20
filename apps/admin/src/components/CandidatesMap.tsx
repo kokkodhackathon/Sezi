@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
-import { createMap, MAP_FONT, mapboxgl } from '../lib/mapbox';
-import { SOURCE_COLOR, type Candidate } from '../lib/review';
+import { createMap, MAP_FONT, mapboxgl } from '@/lib/mapbox';
+import { SOURCE_COLOR, type Candidate } from '@/lib/review';
 
 type Pt = [number, number];
 
@@ -132,5 +132,5 @@ export function CandidatesMap({ workId, current, candidates, selectedId, fallbac
   useEffect(() => sync(true), [workId]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => sync(false), [candidates, selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return <div ref={box} className="map match-map" role="application" aria-label="Aday haritası: numaralı noktalar sağdaki kartlarla aynıdır; tıklayarak seçin" />;
+  return <div ref={box} className="h-[calc(100vh-300px)] min-h-[420px] w-full overflow-hidden rounded-xl border border-border" role="application" aria-label="Aday haritası: numaralı noktalar sağdaki kartlarla aynıdır; tıklayarak seçin" />;
 }

@@ -1,7 +1,7 @@
 import type { FeatureCollection } from 'geojson';
 import { useEffect, useRef } from 'react';
 
-import { createMap, mapboxgl } from '../lib/mapbox';
+import { createMap, mapboxgl } from '@/lib/mapbox';
 
 /** Bildirilen yol parçasını mercan kırmızısı çizgiyle gösterir; seçim değişince haritayı ona kaydırır. */
 export function SegmentMap({ line, center }: { line: [number, number][] | null; center: [number, number] }) {
@@ -51,5 +51,5 @@ export function SegmentMap({ line, center }: { line: [number, number][] | null; 
     if (map.current && ready.current) draw(map.current, line);
   }, [line]);
 
-  return <div ref={box} className="map" role="img" aria-label="Bildirilen yol parçasının haritası" />;
+  return <div ref={box} className="h-[340px] w-full overflow-hidden rounded-xl border bg-muted" role="img" aria-label="Bildirilen yol parçasının haritası" />;
 }

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 
-import type { PointRole, PointRow } from '../lib/data';
-import { createMap, MAP_FONT, mapboxgl } from '../lib/mapbox';
+import type { PointRole, PointRow } from '@/lib/data';
+import { createMap, MAP_FONT, mapboxgl } from '@/lib/mapbox';
 
 type Pt = [number, number];
 
@@ -147,5 +147,5 @@ export function PointsMap({ points, selectedId, draft, draftRadius, center, onSe
     }
   }, [draft]);
 
-  return <div ref={box} className="map" style={{ height: 560 }} role="application" aria-label="Nokta haritası: noktaya tıklayarak seçin, boş yere tıklayarak konum belirleyin" />;
+  return <div ref={box} className="h-[560px] w-full overflow-hidden rounded-lg border" role="application" aria-label="Nokta haritası: noktaya tıklayarak seçin, boş yere tıklayarak konum belirleyin" />;
 }

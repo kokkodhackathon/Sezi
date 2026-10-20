@@ -1,8 +1,8 @@
 import { boundsOf, sliceLine, type LngLat, type NavPoint, type PilotNode, type StartPoint } from '@sezi/shared';
 import { useEffect, useRef } from 'react';
 
-import { createMap, MAP_FONT } from '../lib/mapbox';
-import { PROFILE_LINE, type ProfileKey } from '../lib/route-test';
+import { createMap, MAP_FONT } from '@/lib/mapbox';
+import { PROFILE_LINE, type ProfileKey } from '@/lib/route-test';
 import { ROLE_COLOR, hasRadius } from './PointsMap';
 
 /** Merkez ve yarıçaptan (m) 48 köşeli daire poligonu. */
@@ -212,8 +212,7 @@ export function RouteTestMap(props: Props) {
   return (
     <div
       ref={box}
-      className="map"
-      style={{ height: 600 }}
+      className="h-[600px] w-full overflow-hidden rounded-lg border"
       role="application"
       aria-label="Rota testi haritası: başlangıç noktasına tıklayarak başlangıcı, esere tıklayarak hedefi seçin. Rota ve talimatlar sağdaki listede yazılıdır."
     />

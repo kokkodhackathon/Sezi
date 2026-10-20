@@ -129,6 +129,25 @@ export interface MediaRow {
   source_page: number | null;
 }
 
+export interface WorkSource {
+  title: string;
+  kind: string;
+  volume: number | null;
+  page: string | null;
+  url: string | null;
+}
+
+export interface WorkDetail {
+  work: WorkRecord;
+  lng: number | null;
+  lat: number | null;
+  citySlug: string;
+  sources: WorkSource[];
+  media: MediaRow[];
+  /** Ses kayıtlarının Storage yolları (audio bucket). */
+  audio: { tr: string | null; en: string | null };
+}
+
 export function useWork(slug: string) {
   return useQuery({
     queryKey: ['work', slug],
@@ -146,16 +165,16 @@ export function useWork(slug: string) {
       ]);
       if (view.error) throw view.error;
       if (media.error) throw media.error;
-      return {
+      const detail: WorkDetail = {
         work,
         lng: view.data.lng as number | null,
         lat: view.data.lat as number | null,
         citySlug: view.data.city_slug as string,
-        sources: view.data.sources as { title: string; kind: string; volume: number | null; page: string | null; url: string | null }[],
+        sources: view.data.sources as WorkSource[],
         media: (media.data ?? []) as MediaRow[],
-        /** Ses kayıtlarının Storage yolları (audio bucket). */
         audio: { tr: view.data.audio_tr as string | null, en: view.data.audio_en as string | null },
       };
+      return detail;
     },
   });
 }

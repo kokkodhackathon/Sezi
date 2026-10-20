@@ -1,9 +1,41 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { CircleAlert, MapPin, Plus, Signpost, Trash2, Volume2, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import { toast } from 'sonner';
 
-import { AudioField } from '../components/AudioField';
-import { hasRadius, PointsMap, primaryRole, ROLE_COLOR } from '../components/PointsMap';
-import { LANGS, MAX_AUDIO_BYTES, removeAudio, uploadAudio, type Lang, type Uploaded } from '../lib/audio';
+import { AudioField } from '@/components/AudioField';
+import { PageHeader } from '@/components/page-header';
+import { hasRadius, PointsMap, primaryRole, ROLE_COLOR } from '@/components/PointsMap';
+import { StatusBadge } from '@/components/status-badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
+import { Field, FieldContent, FieldDescription, FieldGroup, FieldLabel, FieldLegend, FieldSet } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
+import { Switch } from '@/components/ui/switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { LANGS, MAX_AUDIO_BYTES, removeAudio, uploadAudio, type Lang, type Uploaded } from '@/lib/audio';
 import {
   AMBIENT_LABEL,
   CITY_CENTER,
@@ -18,9 +50,8 @@ import {
   type PointRole,
   type PointRow,
   type Status,
-} from '../lib/data';
-import { supabase } from '../lib/supabase';
-
+} from '@/lib/data';
+import { supabase } from '@/lib/supabase';
 type Pt = [number, number];
 type WorkHit = Awaited<ReturnType<typeof searchWorks>>[number];
 
@@ -87,9 +118,6 @@ const toForm = (r: PointRow, workName?: string): Form => ({
   rev: Date.now(),
 });
 
-/** Metin ve ses yalnızca anlatım ve varış noktalarında var. */
-const hasText = (roles: PointRole[]) => hasRadius(roles);
-
 /** Bu sayfadaki işlemlerin ortak hata iletisi. */
 const message = (e: unknown) => (typeof e === 'object' && e && 'message' in e ? String(e.message) : String(e));
 
@@ -104,17 +132,9 @@ export function Points() {
   const [filter, setFilter] = useState<PointRole | 'all'>('all');
   const [form, setForm] = useState<Form>(emptyForm);
   const [formError, setFormError] = useState('');
-  const [toast, setToast] = useState('');
   const [workQuery, setWorkQuery] = useState('');
   const [workHits, setWorkHits] = useState<WorkHit[]>([]);
   const qc = useQueryClient();
-
-  useEffect(() => {
-    if (!toast) return;
-    const id = setTimeout(() => setToast(''), 2500);
-    return () => clearTimeout(id);
-  }, [toast]);
-
   // Eser arama: yazmayı bırakınca sorgula.
   useEffect(() => {
     if (form.work) return;
@@ -155,12 +175,14 @@ export function Points() {
     setWorkHits([]);
     if (form.point) return;
     const { data } = await supabase.from('works_view').select('lng, lat').eq('id', w.id).single();
-    if (data?.lng != null && data?.lat != null) setForm((f) => (f.point ? f : { ...f, point: [data.lng as number, data.lat as number] }));
+    const lng = data?.lng;
+    const lat = data?.lat;
+    if (typeof lng === 'number' && typeof lat === 'number') setForm((f) => (f.point ? f : { ...f, point: [lng, lat] }));
   };
 
   const save = useMutation({
     mutationFn: async (f: Form) => {
-      const text = hasText(f.roles);
+      const text = hasRadius(f.roles);
       if (f.roles.length === 0) throw new Error('En az bir rol seçin.');
       if (!f.title.tr.trim()) throw new Error('Türkçe ad boş olamaz.');
       if (!f.point) throw new Error('Haritaya tıklayarak konum seçin.');
@@ -233,7 +255,9 @@ export function Points() {
     },
     onSuccess: ({ id, cleanupFailed, workName }) => {
       setFormError('');
-      setToast(cleanupFailed ? 'Kaydedildi · Eski ses dosyası silinemedi' : 'Kaydedildi');
+      if (cleanupFailed) toast.warning('Kaydedildi · Eski ses dosyası silinemedi');
+      else toast.success('Kaydedildi');
+      void qc.invalidateQueries({ queryKey: ['dashboard'] });
       void qc.invalidateQueries({ queryKey: ['nav_points', city] }).then(() => {
         const rows = qc.getQueryData<PointRow[]>(['nav_points', city]);
         const saved = rows?.find((r) => r.id === id);
@@ -254,7 +278,9 @@ export function Points() {
     },
     onSuccess: (cleanupFailed) => {
       reset();
-      setToast(cleanupFailed ? 'Silindi · Ses dosyası silinemedi' : 'Silindi');
+      if (cleanupFailed) toast.warning('Silindi · Ses dosyası silinemedi');
+      else toast.success('Silindi');
+      void qc.invalidateQueries({ queryKey: ['dashboard'] });
       void qc.invalidateQueries({ queryKey: ['nav_points', city] });
     },
     onError: (e) => setFormError(message(e)),
@@ -270,301 +296,477 @@ export function Points() {
   };
 
   const busy = save.isPending || remove.isPending;
-  const text = hasText(form.roles);
+  const text = hasRadius(form.roles);
+
+  const cities = lookups?.cities ?? [{ id: 'bursa', slug: 'bursa', name: { tr: 'Bursa' } }];
 
   return (
     <>
-      <div className="row">
-        <div className="grow stack" style={{ gap: 4 }}>
-          <h1>Noktalar</h1>
-          <p className="muted" style={{ margin: 0 }}>
-            Rotalar bu noktalardan hesaplanır: kullanıcı bir başlangıçtan hedefe giderken yakındaki anlatım noktalarına uğrar, yer işaretleri talimatlarda anılır.
-          </p>
+      <PageHeader
+        hint="Rotalar bu noktalardan hesaplanır: kullanıcı bir başlangıçtan hedefe giderken yakındaki anlatım noktalarına uğrar, yer işaretleri talimatlarda anılır."
+        actions={
+          <>
+            <Select
+              value={city}
+              onValueChange={(v) => {
+                setCity(v);
+                reset();
+              }}
+            >
+              <SelectTrigger aria-label="İl" className="min-w-36">
+                <SelectValue placeholder="İl seçin" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {cities.map((c) => (
+                    <SelectItem key={c.slug} value={c.slug}>
+                      {c.name.tr}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Button type="button" onClick={reset}>
+              <Plus data-icon="inline-start" />
+              Yeni nokta
+            </Button>
+          </>
+        }
+      />
+
+      {error ? (
+        <Alert variant="destructive">
+          <CircleAlert />
+          <AlertTitle>Noktalar alınamadı</AlertTitle>
+          <AlertDescription>{error instanceof Error ? error.message : String(error)}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(360px,2fr)]">
+        <div className="flex flex-col gap-6">
+          <ToggleGroup
+            type="single"
+            variant="outline"
+            value={filter}
+            onValueChange={(v) => {
+              if (v) setFilter(v as PointRole | 'all');
+            }}
+            aria-label="Role göre süz"
+            className="flex-wrap justify-start"
+          >
+            <ToggleGroupItem value="all">
+              Tümü
+              <Badge variant="secondary" className="num ml-1">
+                {points.length}
+              </Badge>
+            </ToggleGroupItem>
+            {ROLES.map((r) => (
+              <ToggleGroupItem key={r} value={r}>
+                <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: ROLE_COLOR[r] }} />
+                {ROLE_LABEL[r]}
+                <Badge variant="secondary" className="num ml-1">
+                  {counts[r]}
+                </Badge>
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Harita</CardTitle>
+              <CardDescription>
+                Haritada boş yere tıklayınca yeni noktanın konumu seçilir; işaret sürüklenebilir. Soluk noktalar taslaktır, uygulamada görünmez.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PointsMap
+                points={visible}
+                selectedId={form.id}
+                draft={form.id && current ? null : form.point}
+                draftRadius={text ? form.radius : null}
+                center={center}
+                onSelect={(id) => {
+                  const r = points.find((p) => p.id === id);
+                  if (r) select(r);
+                }}
+                onPick={(p) => setForm((f) => ({ ...f, point: p }))}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Nokta listesi</CardTitle>
+              <CardDescription>Düzenlemek için listeden ya da haritadan bir noktaya tıklayın.</CardDescription>
+              <CardAction>
+                <Badge variant="secondary" className="num">
+                  {visible.length} nokta
+                </Badge>
+              </CardAction>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex flex-col gap-2">
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                  <Skeleton className="h-10 w-full" />
+                </div>
+              ) : visible.length === 0 ? (
+                <Empty>
+                  <EmptyHeader>
+                    <EmptyMedia variant="icon">
+                      <Signpost />
+                    </EmptyMedia>
+                    <EmptyTitle>Nokta bulunamadı</EmptyTitle>
+                    <EmptyDescription>Bu ilde bu türde nokta yok.</EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Ad</TableHead>
+                      <TableHead>Roller</TableHead>
+                      <TableHead>Durum</TableHead>
+                      <TableHead>Ses</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {visible.map((p) => (
+                      <TableRow
+                        key={p.id}
+                        tabIndex={0}
+                        aria-selected={p.id === form.id}
+                        data-state={p.id === form.id ? 'selected' : undefined}
+                        className="cursor-pointer"
+                        onClick={() => select(p)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            select(p);
+                          }
+                        }}
+                      >
+                        <TableCell className="font-semibold">
+                          <div className="flex items-center gap-2">
+                            <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: ROLE_COLOR[primaryRole(p.roles)] }} />
+                            <span>{p.title.tr}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {p.roles.map((r) => (
+                              <Badge key={r} variant="outline" className="gap-1.5">
+                                <span aria-hidden className="size-2 rounded-full" style={{ backgroundColor: ROLE_COLOR[r] }} />
+                                {ROLE_LABEL[r]}
+                              </Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={p.status} />
+                        </TableCell>
+                        <TableCell
+                          aria-label={[p.audio_tr ? 'Türkçe ses var' : null, p.audio_en ? 'İngilizce ses var' : null].filter(Boolean).join(', ') || 'Ses yok'}
+                        >
+                          {p.audio_tr || p.audio_en ? (
+                            <div className="flex items-center gap-1">
+                              <Volume2 className="size-3.5 text-muted-foreground" aria-hidden />
+                              <span>{[p.audio_tr ? 'TR' : null, p.audio_en ? 'EN' : null].filter(Boolean).join(' · ')}</span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
         </div>
-        <label className="field">
-          İl
-          <select
-            value={city}
-            onChange={(e) => {
-              setCity(e.target.value);
-              reset();
+
+        <Card>
+          <form
+            className="contents"
+            onSubmit={(e) => {
+              e.preventDefault();
+              save.mutate(form);
             }}
           >
-            {(lookups?.cities ?? [{ id: 'bursa', slug: 'bursa', name: { tr: 'Bursa' } }]).map((c) => (
-              <option key={c.slug} value={c.slug}>
-                {c.name.tr}
-              </option>
-            ))}
-          </select>
-        </label>
-        <button className="btn" onClick={reset}>
-          Yeni nokta
-        </button>
-      </div>
-      {error ? <p className="error">Noktalar alınamadı: {(error as Error).message}</p> : null}
+            <CardHeader>
+              <CardTitle>{form.id ? 'Noktayı düzenle' : 'Yeni nokta'}</CardTitle>
+              <CardDescription className="num flex items-center gap-1.5">
+                <MapPin className="size-3.5 shrink-0" aria-hidden />
+                Konum: {form.point ? `${form.point[1]}, ${form.point[0]}` : 'seçilmedi (haritaya tıklayın)'}
+              </CardDescription>
+              {form.id ? (
+                <CardAction>
+                  <StatusBadge status={form.status} />
+                </CardAction>
+              ) : null}
+            </CardHeader>
 
-      <div className="edit">
-        <div className="stack">
-          <div className="row" role="tablist" aria-label="Role göre süz">
-            {(['all', ...ROLES] as const).map((r) => (
-              <button
-                key={r}
-                role="tab"
-                aria-selected={filter === r}
-                className={`btn small ${filter === r ? '' : 'outline'}`}
-                onClick={() => setFilter(r)}
-              >
-                {r === 'all' ? (
-                  `Tümü · ${points.length}`
-                ) : (
-                  <>
-                    <span aria-hidden className="dot" style={{ background: ROLE_COLOR[r] }} /> {ROLE_LABEL[r]} · {counts[r]}
-                  </>
-                )}
-              </button>
-            ))}
-          </div>
-          <PointsMap
-            points={visible}
-            selectedId={form.id}
-            draft={form.id && current ? null : form.point}
-            draftRadius={text ? form.radius : null}
-            center={center}
-            onSelect={(id) => {
-              const r = points.find((p) => p.id === id);
-              if (r) select(r);
-            }}
-            onPick={(p) => setForm((f) => ({ ...f, point: p }))}
-          />
-          <p className="muted" style={{ margin: 0, fontSize: 13 }}>
-            Haritada boş yere tıklayınca yeni noktanın konumu seçilir; işaret sürüklenebilir. Soluk noktalar taslaktır, uygulamada görünmez.
-          </p>
+            <CardContent>
+              <FieldGroup>
+                <FieldSet>
+                  <FieldLegend variant="label">Roller</FieldLegend>
+                  <FieldGroup data-slot="checkbox-group">
+                    {ROLES.map((r) => (
+                      <Field key={r} orientation="horizontal">
+                        <Checkbox id={`role-${r}`} checked={form.roles.includes(r)} onCheckedChange={() => toggleRole(r)} />
+                        <FieldContent>
+                          <FieldLabel htmlFor={`role-${r}`}>
+                            <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: ROLE_COLOR[r] }} />
+                            {ROLE_LABEL[r]}
+                          </FieldLabel>
+                          <FieldDescription>{ROLE_HINT[r]}</FieldDescription>
+                        </FieldContent>
+                      </Field>
+                    ))}
+                  </FieldGroup>
+                </FieldSet>
 
-          {isLoading ? <p className="muted">Yükleniyor…</p> : null}
-          {!isLoading && visible.length === 0 ? <div className="card muted">Bu ilde bu türde nokta yok.</div> : null}
-          {visible.length > 0 ? (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Ad</th>
-                  <th>Roller</th>
-                  <th>Durum</th>
-                  <th>Ses</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((p) => (
-                  <tr
-                    key={p.id}
-                    className="click"
-                    tabIndex={0}
-                    aria-selected={p.id === form.id}
-                    onClick={() => select(p)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        select(p);
-                      }
-                    }}
-                  >
-                    <td>
-                      <span aria-hidden className="dot" style={{ background: ROLE_COLOR[primaryRole(p.roles)] }} /> <strong>{p.title.tr}</strong>
-                    </td>
-                    <td>{p.roles.map((r) => ROLE_LABEL[r]).join(', ')}</td>
-                    <td>
-                      <span className={`pill ${p.status}`}>{STATUS_LABEL[p.status]}</span>
-                    </td>
-                    <td aria-label={[p.audio_tr ? 'Türkçe ses var' : null, p.audio_en ? 'İngilizce ses var' : null].filter(Boolean).join(', ') || 'Ses yok'}>
-                      {[p.audio_tr ? 'TR' : null, p.audio_en ? 'EN' : null].filter(Boolean).join(' · ') || '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : null}
-        </div>
+                {/* Varışta zorunlu; diğer rollerde isteğe bağlı: yürüyüşte nokta açılınca eserin kısa bilgisi ve sayfası. */}
+                <Field>
+                  <FieldLabel>{form.roles.includes('arrival') ? 'Eser' : 'Bağlı eser (isteğe bağlı)'}</FieldLabel>
+                  {!form.roles.includes('arrival') ? (
+                    <FieldDescription>
+                      Noktanın anlattığı ya da yanında durduğu eser: yürüyüşte nokta açılınca eserin fotoğrafı ve kısa bilgisi gösterilir.
+                    </FieldDescription>
+                  ) : null}
+                  {form.work ? (
+                    <div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/40 px-3 py-2">
+                      <span className="truncate font-semibold">{form.work.name}</span>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setForm({ ...form, work: null })}>
+                        <X data-icon="inline-start" />
+                        {form.roles.includes('arrival') ? 'Değiştir' : 'Kaldır'}
+                      </Button>
+                    </div>
+                  ) : (
+                    <Command shouldFilter={false} className="rounded-lg border">
+                      <CommandInput value={workQuery} onValueChange={setWorkQuery} placeholder="Eser adı yazın" aria-label="Eser ara" />
+                      {workHits.length > 0 ? (
+                        <CommandList>
+                          <CommandGroup>
+                            {workHits.map((w) => (
+                              <CommandItem key={w.id} value={w.id} onSelect={() => void chooseWork(w)}>
+                                <span className="font-medium">{w.name.tr}</span>
+                                <span className="text-muted-foreground">· {w.type_name.tr}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      ) : workQuery.trim() ? (
+                        <CommandEmpty>Eşleşen eser bulunamadı.</CommandEmpty>
+                      ) : null}
+                    </Command>
+                  )}
+                </Field>
 
-        <form
-          className="card stack"
-          onSubmit={(e) => {
-            e.preventDefault();
-            save.mutate(form);
-          }}
-        >
-          <h2>{form.id ? 'Noktayı düzenle' : 'Yeni nokta'}</h2>
-
-          <fieldset className="stack" style={{ gap: 8, border: 0, padding: 0, margin: 0 }}>
-            <legend className="label">Roller</legend>
-            {ROLES.map((r) => (
-              <label key={r} className="check">
-                <input type="checkbox" checked={form.roles.includes(r)} onChange={() => toggleRole(r)} />
-                <span>
-                  <span aria-hidden className="dot" style={{ background: ROLE_COLOR[r] }} /> <strong>{ROLE_LABEL[r]}</strong>
-                  <span className="muted" style={{ display: 'block', fontSize: 13 }}>
-                    {ROLE_HINT[r]}
-                  </span>
-                </span>
-              </label>
-            ))}
-          </fieldset>
-
-          {/* Varışta zorunlu; diğer rollerde isteğe bağlı: yürüyüşte nokta açılınca eserin kısa bilgisi ve sayfası. */}
-          <div className="stack" style={{ gap: 6 }}>
-            <span className="label">{form.roles.includes('arrival') ? 'Eser' : 'Bağlı eser (isteğe bağlı)'}</span>
-            {form.roles.includes('arrival') ? null : (
-              <span className="muted" style={{ fontSize: 13 }}>
-                Noktanın anlattığı ya da yanında durduğu eser: yürüyüşte nokta açılınca eserin fotoğrafı ve kısa bilgisi gösterilir.
-              </span>
-            )}
-            {form.work ? (
-              <div className="row">
-                <strong className="grow">{form.work.name}</strong>
-                <button type="button" className="btn ghost small" onClick={() => setForm({ ...form, work: null })}>
-                  {form.roles.includes('arrival') ? 'Değiştir' : 'Kaldır'}
-                </button>
-              </div>
-            ) : (
-              <>
-                <input value={workQuery} onChange={(e) => setWorkQuery(e.target.value)} placeholder="Eser adı yazın" aria-label="Eser ara" />
-                <ul className="picklist">
-                  {workHits.map((w) => (
-                    <li key={w.id}>
-                      <button type="button" onClick={() => void chooseWork(w)}>
-                        {w.name.tr} <span className="muted">· {w.type_name.tr}</span>
-                      </button>
-                    </li>
+                <Tabs defaultValue="tr">
+                  <div className="flex items-center justify-between gap-2">
+                    <FieldLabel>Başlık ve anlatım metni</FieldLabel>
+                    <TabsList>
+                      <TabsTrigger value="tr">Türkçe (TR)</TabsTrigger>
+                      <TabsTrigger value="en">İngilizce (EN)</TabsTrigger>
+                    </TabsList>
+                  </div>
+                  {LANGS.map((l) => (
+                    <TabsContent key={l} value={l}>
+                      <FieldGroup>
+                        <Field>
+                          <FieldLabel htmlFor={`point-title-${l}`}>Ad ({l.toUpperCase()})</FieldLabel>
+                          <Input
+                            id={`point-title-${l}`}
+                            value={form.title[l]}
+                            onChange={(e) => setForm({ ...form, title: { ...form.title, [l]: e.target.value } })}
+                          />
+                        </Field>
+                        {text ? (
+                          <Field>
+                            <FieldLabel htmlFor={`point-body-${l}`}>Metin ({l.toUpperCase()})</FieldLabel>
+                            <Textarea
+                              id={`point-body-${l}`}
+                              rows={4}
+                              value={form.body[l]}
+                              onChange={(e) => setForm({ ...form, body: { ...form.body, [l]: e.target.value } })}
+                            />
+                          </Field>
+                        ) : null}
+                      </FieldGroup>
+                    </TabsContent>
                   ))}
-                </ul>
-              </>
-            )}
-          </div>
+                </Tabs>
 
-          <div className="pair">
-            {LANGS.map((l) => (
-              <label className="field" key={l}>
-                Ad ({l.toUpperCase()})
-                <input value={form.title[l]} onChange={(e) => setForm({ ...form, title: { ...form.title, [l]: e.target.value } })} />
-              </label>
-            ))}
-          </div>
+                {text ? (
+                  <Field>
+                    <FieldLabel htmlFor="point-radius">Yarıçap (m): yaklaşınca açılma mesafesi</FieldLabel>
+                    <FieldDescription>5 ile 200 metre arasında değer girin.</FieldDescription>
+                    <Input
+                      id="point-radius"
+                      type="number"
+                      min={5}
+                      max={200}
+                      className="num"
+                      value={form.radius}
+                      onChange={(e) => setForm({ ...form, radius: Number(e.target.value) })}
+                    />
+                  </Field>
+                ) : null}
 
-          {text ? (
-            <>
-              <div className="pair">
-                {LANGS.map((l) => (
-                  <label className="field" key={l}>
-                    Metin ({l.toUpperCase()})
-                    <textarea value={form.body[l]} onChange={(e) => setForm({ ...form, body: { ...form.body, [l]: e.target.value } })} />
-                  </label>
-                ))}
-              </div>
-              <label className="field">
-                Yarıçap (m): yaklaşınca açılma mesafesi
-                <input type="number" min={5} max={200} value={form.radius} onChange={(e) => setForm({ ...form, radius: Number(e.target.value) })} />
-              </label>
-            </>
-          ) : null}
+                {form.roles.includes('landmark') ? (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <Field>
+                      <FieldLabel>Belirginlik</FieldLabel>
+                      <Select value={String(form.salience)} onValueChange={(v) => setForm({ ...form, salience: Number(v) })}>
+                        <SelectTrigger aria-label="Belirginlik" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="1">1 · Az görünür</SelectItem>
+                            <SelectItem value="2">2 · Görünür</SelectItem>
+                            <SelectItem value="3">3 · Uzaktan görünür</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Field>
+                      <FieldLabel>Ortam sesi</FieldLabel>
+                      <Select
+                        value={form.ambient || 'none'}
+                        onValueChange={(v) => setForm({ ...form, ambient: v === 'none' ? '' : (v as Ambient) })}
+                      >
+                        <SelectTrigger aria-label="Ortam sesi" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="none">Yok</SelectItem>
+                            {(Object.keys(AMBIENT_LABEL) as Ambient[]).map((a) => (
+                              <SelectItem key={a} value={a}>
+                                {AMBIENT_LABEL[a]}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                  </div>
+                ) : null}
 
-          {form.roles.includes('landmark') ? (
-            <div className="pair">
-              <label className="field">
-                Belirginlik
-                <select value={form.salience} onChange={(e) => setForm({ ...form, salience: Number(e.target.value) })}>
-                  <option value={1}>1 · Az görünür</option>
-                  <option value={2}>2 · Görünür</option>
-                  <option value={3}>3 · Uzaktan görünür</option>
-                </select>
-              </label>
-              <label className="field">
-                Ortam sesi
-                <select value={form.ambient} onChange={(e) => setForm({ ...form, ambient: e.target.value as Ambient | '' })}>
-                  <option value="">Yok</option>
-                  {(Object.keys(AMBIENT_LABEL) as Ambient[]).map((a) => (
-                    <option key={a} value={a}>
-                      {AMBIENT_LABEL[a]}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          ) : null}
+                {form.roles.includes('start') ? (
+                  <Field>
+                    <FieldLabel htmlFor="point-sort-order">Başlangıç listesindeki sıra (en küçük varsayılan)</FieldLabel>
+                    <Input
+                      id="point-sort-order"
+                      type="number"
+                      className="num"
+                      value={form.sortOrder}
+                      onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })}
+                    />
+                  </Field>
+                ) : null}
 
-          {form.roles.includes('start') ? (
-            <label className="field">
-              Başlangıç listesindeki sıra (en küçük varsayılan)
-              <input type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })} />
-            </label>
-          ) : null}
+                <div className="grid items-end gap-4 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel>Durum</FieldLabel>
+                    <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as Status })}>
+                      <SelectTrigger aria-label="Durum" className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
+                            <SelectItem key={s} value={s}>
+                              {STATUS_LABEL[s]}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field orientation="horizontal" className="pb-1.5">
+                    <Switch
+                      id="point-field-checked"
+                      checked={form.fieldChecked}
+                      onCheckedChange={(checked) => setForm({ ...form, fieldChecked: checked })}
+                    />
+                    <FieldLabel htmlFor="point-field-checked">Sahada doğrulandı</FieldLabel>
+                  </Field>
+                </div>
 
-          <div className="pair">
-            <label className="field">
-              Durum
-              <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as Status })}>
-                {(Object.keys(STATUS_LABEL) as Status[]).map((s) => (
-                  <option key={s} value={s}>
-                    {STATUS_LABEL[s]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="check" style={{ alignSelf: 'end' }}>
-              <input type="checkbox" checked={form.fieldChecked} onChange={(e) => setForm({ ...form, fieldChecked: e.target.checked })} />
-              <span>Sahada doğrulandı</span>
-            </label>
-          </div>
-          <label className="field">
-            Kaynak notu (metnin ve konumun kaynağı)
-            <textarea style={{ minHeight: 64 }} value={form.sourceNote} onChange={(e) => setForm({ ...form, sourceNote: e.target.value })} />
-          </label>
-          <p className="muted num" style={{ margin: 0, fontSize: 13 }}>
-            Konum: {form.point ? `${form.point[1]}, ${form.point[0]}` : 'seçilmedi'}
-          </p>
+                <Field>
+                  <FieldLabel htmlFor="point-source-note">Kaynak notu (metnin ve konumun kaynağı)</FieldLabel>
+                  <Textarea
+                    id="point-source-note"
+                    rows={3}
+                    value={form.sourceNote}
+                    onChange={(e) => setForm({ ...form, sourceNote: e.target.value })}
+                  />
+                </Field>
 
-          {text
-            ? LANGS.map((l) => (
-                <AudioField
-                  key={l}
-                  lang={l}
-                  path={l === 'tr' ? current?.audio_tr : current?.audio_en}
-                  file={form.files[l]}
-                  removed={form.removed[l]}
-                  rev={form.rev}
-                  onRemove={() => setForm({ ...form, removed: { ...form.removed, [l]: true } })}
-                  onUndo={() => setForm({ ...form, removed: { ...form.removed, [l]: false } })}
-                  onPick={(f) => pickFile(l, f)}
-                />
-              ))
-            : null}
+                {text
+                  ? LANGS.map((l) => (
+                      <AudioField
+                        key={l}
+                        lang={l}
+                        path={l === 'tr' ? current?.audio_tr : current?.audio_en}
+                        file={form.files[l]}
+                        removed={form.removed[l]}
+                        rev={form.rev}
+                        onRemove={() => setForm({ ...form, removed: { ...form.removed, [l]: true } })}
+                        onUndo={() => setForm({ ...form, removed: { ...form.removed, [l]: false } })}
+                        onPick={(f) => pickFile(l, f)}
+                      />
+                    ))
+                  : null}
 
-          {formError ? (
-            <p role="alert" className="error" style={{ margin: 0 }}>
-              {formError}
-            </p>
-          ) : null}
-          <div className="row">
-            <button className="btn" type="submit" disabled={busy}>
-              {save.isPending ? 'Kaydediliyor…' : 'Kaydet'}
-            </button>
-            {current ? (
-              <button
-                type="button"
-                className="btn outline"
-                disabled={busy}
-                onClick={() => {
-                  if (confirm('Bu nokta silinsin mi?')) remove.mutate(current);
-                }}
-              >
-                Sil
-              </button>
-            ) : null}
-          </div>
-        </form>
+                {formError ? (
+                  <Alert variant="destructive">
+                    <CircleAlert />
+                    <AlertTitle>Kayıt hatası</AlertTitle>
+                    <AlertDescription>{formError}</AlertDescription>
+                  </Alert>
+                ) : null}
+              </FieldGroup>
+            </CardContent>
+
+            <CardFooter className="justify-between gap-2">
+              <Button type="submit" disabled={busy}>
+                {save.isPending ? <Spinner data-icon="inline-start" /> : null}
+                {save.isPending ? 'Kaydediliyor…' : 'Kaydet'}
+              </Button>
+              {current ? (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button type="button" variant="destructive" disabled={busy}>
+                      <Trash2 data-icon="inline-start" />
+                      Sil
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Nokta silinsin mi?</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        “{current.title.tr}” noktası ve varsa ses kayıtları kalıcı olarak silinecek. Bu işlem geri alınamaz.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Vazgeç</AlertDialogCancel>
+                      <AlertDialogAction variant="destructive" onClick={() => remove.mutate(current)}>
+                        Sil
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              ) : null}
+            </CardFooter>
+          </form>
+        </Card>
       </div>
-      {toast ? (
-        <div className="toast" role="status">
-          {toast}
-        </div>
-      ) : null}
     </>
   );
 }

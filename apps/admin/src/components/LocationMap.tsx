@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 
-import { createMap, mapboxgl } from '../lib/mapbox';
+import { createMap, mapboxgl } from '@/lib/mapbox';
 
 /**
  * Konum iğnesi: haritaya tıklamak ya da iğneyi sürüklemek konumu belirler.
@@ -46,5 +46,5 @@ export function LocationMap({ value, fallbackCenter, onChange }: { value: [numbe
     }
   }, [value]);
 
-  return <div ref={box} className="map" role="application" aria-label="Konum haritası: tıklayarak ya da iğneyi sürükleyerek konum seçin" />;
+  return <div ref={box} className="h-85 w-full overflow-hidden rounded-xl border border-border" role="application" aria-label="Konum haritası: tıklayarak ya da iğneyi sürükleyerek konum seçin" />;
 }

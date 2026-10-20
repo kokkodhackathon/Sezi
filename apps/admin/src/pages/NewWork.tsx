@@ -1,9 +1,19 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, CircleAlert, TriangleAlert } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
+import { toast } from 'sonner';
 
-import { searchWorks, slugify, tr, useLookups } from '../lib/data';
-import { supabase } from '../lib/supabase';
+import { PageHeader } from '@/components/page-header';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
+import { searchWorks, slugify, tr, useLookups } from '@/lib/data';
+import { supabase } from '@/lib/supabase';
 
 /**
  * Yeni eser: kimlik bilgileriyle taslak olarak açılır, ayrıntılar düzenleme sayfasında doldurulur.
@@ -11,12 +21,15 @@ import { supabase } from '../lib/supabase';
  */
 export function NewWork() {
   const navigate = useNavigate();
+  const qc = useQueryClient();
   const { data: lookups } = useLookups();
   const [name, setName] = useState({ tr: '', en: '' });
   const [city, setCity] = useState('');
   const [type, setType] = useState('');
   const [district, setDistrict] = useState('');
+  const [submitted, setSubmitted] = useState(false);
   const [problem, setProblem] = useState('');
+
   const cityRow = lookups?.cities.find((c) => c.id === city);
   // Aynı adla kayıtlı eser varsa uyarı (çift kayıt önlenir).
   const similar = useQuery({
@@ -24,6 +37,10 @@ export function NewWork() {
     queryFn: () => searchWorks(name.tr, cityRow?.slug),
     enabled: name.tr.trim().length >= 4,
   });
+
+  const nameTrInvalid = submitted && !name.tr.trim();
+  const cityInvalid = submitted && !city;
+  const typeInvalid = submitted && !type;
 
   const create = useMutation({
     mutationFn: async () => {
@@ -48,83 +65,165 @@ export function NewWork() {
       if (error) throw error;
       return slug;
     },
-    onSuccess: (slug) => navigate(`/eserler/${slug}`),
-    onError: (e) => setProblem((e as Error).message),
+    onSuccess: (slug) => {
+      void qc.invalidateQueries({ queryKey: ['works'] });
+      void qc.invalidateQueries({ queryKey: ['dashboard'] });
+      toast.success('Taslak eser oluşturuldu.');
+      navigate(`/eserler/${slug}`);
+    },
+    onError: (e) => {
+      const msg = e.message;
+      setProblem(msg);
+      toast.error(msg);
+    },
   });
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    setSubmitted(true);
     setProblem('');
+    if (!name.tr.trim() || !city || !type) return;
     create.mutate();
   };
 
   return (
     <>
-      <h1>Yeni eser</h1>
-      <form className="card stack" style={{ maxWidth: 720 }} onSubmit={submit} noValidate>
-        <p className="muted" style={{ margin: 0 }}>
-          Eser taslak olarak açılır ve uygulamada görünmez. Konum, içerik ve fotoğrafları bir sonraki sayfada ekleyip yayımlarsınız.
-        </p>
-        <div className="pair">
-          <label className="field" htmlFor="name-tr">
-            Ad (TR) *
-            <input id="name-tr" value={name.tr} onChange={(e) => setName({ ...name, tr: e.target.value })} required />
-          </label>
-          <label className="field" htmlFor="name-en">
-            Ad (EN)
-            <input id="name-en" value={name.en} onChange={(e) => setName({ ...name, en: e.target.value })} />
-          </label>
-        </div>
-        <div className="pair">
-          <label className="field" htmlFor="city">
-            İl *
-            <select id="city" value={city} onChange={(e) => setCity(e.target.value)} required>
-              <option value="">Seçin</option>
-              {lookups?.cities.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {tr(c.name)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="field" htmlFor="type">
-            Tür *
-            <select id="type" value={type} onChange={(e) => setType(e.target.value)} required>
-              <option value="">Seçin</option>
-              {lookups?.types.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {tr(t.name)}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <label className="field" htmlFor="district">
-          İlçe
-          <input id="district" value={district} onChange={(e) => setDistrict(e.target.value)} />
-        </label>
-        {similar.data && similar.data.length > 0 ? (
-          <div className="card" style={{ background: 'var(--soft)', boxShadow: 'none' }} role="status">
-            <strong>Benzer adlı eserler var:</strong>
-            <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
-              {similar.data.slice(0, 5).map((w) => (
-                <li key={w.id}>
-                  <a href={`/eserler/${w.slug}`}>{tr(w.name)}</a> <span className="muted">· {w.district ?? w.city_slug}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-        {problem ? (
-          <p role="alert" className="error" style={{ margin: 0 }}>
-            {problem}
-          </p>
-        ) : null}
-        <div className="row">
-          <button className="btn" type="submit" disabled={create.isPending}>
-            {create.isPending ? 'Oluşturuluyor…' : 'Taslak olarak oluştur'}
-          </button>
-        </div>
+      <PageHeader
+        actions={
+          <Button variant="outline" asChild>
+            <Link to="/eserler">
+              <ArrowLeft data-icon="inline-start" />
+              Eserler
+            </Link>
+          </Button>
+        }
+      />
+
+      <form onSubmit={submit} noValidate className="max-w-3xl">
+        <Card>
+          <CardHeader>
+            <CardTitle>Kimlik bilgileri</CardTitle>
+            <CardDescription>
+              Eser taslak olarak açılır ve uygulamada görünmez. Konum, içerik ve fotoğrafları bir sonraki sayfada ekleyip yayımlarsınız.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-5">
+            <FieldGroup>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field data-invalid={nameTrInvalid || undefined}>
+                  <FieldLabel htmlFor="name-tr">Ad (TR) *</FieldLabel>
+                  <Input
+                    id="name-tr"
+                    value={name.tr}
+                    onChange={(e) => setName({ ...name, tr: e.target.value })}
+                    placeholder="Örn. Ulu Cami"
+                    aria-invalid={nameTrInvalid || undefined}
+                    required
+                  />
+                  {nameTrInvalid ? <FieldError>Türkçe ad zorunludur.</FieldError> : null}
+                </Field>
+
+                <Field>
+                  <FieldLabel htmlFor="name-en">Ad (EN)</FieldLabel>
+                  <Input
+                    id="name-en"
+                    value={name.en}
+                    onChange={(e) => setName({ ...name, en: e.target.value })}
+                    placeholder="Örn. Grand Mosque"
+                  />
+                  <FieldDescription>İsteğe bağlı; daha sonra da eklenebilir.</FieldDescription>
+                </Field>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field data-invalid={cityInvalid || undefined}>
+                  <FieldLabel htmlFor="city">İl *</FieldLabel>
+                  <Select value={city || undefined} onValueChange={setCity}>
+                    <SelectTrigger id="city" className="w-full" aria-invalid={cityInvalid || undefined}>
+                      <SelectValue placeholder="İl seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {lookups?.cities.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {tr(c.name)}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  {cityInvalid ? <FieldError>İl seçimi zorunludur.</FieldError> : null}
+                </Field>
+
+                <Field data-invalid={typeInvalid || undefined}>
+                  <FieldLabel htmlFor="type">Tür *</FieldLabel>
+                  <Select value={type || undefined} onValueChange={setType}>
+                    <SelectTrigger id="type" className="w-full" aria-invalid={typeInvalid || undefined}>
+                      <SelectValue placeholder="Tür seçin" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {lookups?.types.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {tr(t.name)}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  {typeInvalid ? <FieldError>Tür seçimi zorunludur.</FieldError> : null}
+                </Field>
+              </div>
+
+              <Field>
+                <FieldLabel htmlFor="district">İlçe</FieldLabel>
+                <Input
+                  id="district"
+                  value={district}
+                  onChange={(e) => setDistrict(e.target.value)}
+                  placeholder="Örn. Osmangazi"
+                />
+              </Field>
+            </FieldGroup>
+
+            {similar.data && similar.data.length > 0 ? (
+              <Alert role="status">
+                <TriangleAlert />
+                <AlertTitle>Benzer adlı eserler var</AlertTitle>
+                <AlertDescription>
+                  <p className="mb-1.5">Çift kayıt açmamak için mevcut kayıtları kontrol edin:</p>
+                  <ul className="list-disc pl-5">
+                    {similar.data.slice(0, 5).map((w) => (
+                      <li key={w.id}>
+                        <Link to={`/eserler/${w.slug}`} className="font-medium text-foreground underline underline-offset-4 hover:text-primary">
+                          {tr(w.name)}
+                        </Link>{' '}
+                        <span className="text-muted-foreground">· {w.district ?? w.city_slug}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            ) : null}
+
+            {problem ? (
+              <Alert variant="destructive">
+                <CircleAlert />
+                <AlertTitle>Oluşturulamadı</AlertTitle>
+                <AlertDescription>{problem}</AlertDescription>
+              </Alert>
+            ) : null}
+          </CardContent>
+          <CardFooter className="flex flex-wrap items-center justify-end gap-2">
+            <Button type="button" variant="ghost" asChild>
+              <Link to="/eserler">Vazgeç</Link>
+            </Button>
+            <Button type="submit" disabled={create.isPending}>
+              {create.isPending ? <Spinner data-icon="inline-start" /> : null}
+              {create.isPending ? 'Oluşturuluyor…' : 'Taslak olarak oluştur'}
+            </Button>
+          </CardFooter>
+        </Card>
       </form>
     </>
   );

@@ -7,6 +7,8 @@ interface PilotGraph {
   name: { tr: string; en?: string };
   center: [number, number];
   segments: { id: string; geometry?: [number, number][]; lengthM: number; steps: number }[];
+  /** Eser düğümleri `workSlug` taşır (turlar ve pano kapsamı bunlardan). */
+  nodes: { id: string; name: { tr: string; en?: string }; workSlug?: string; workType?: string }[];
 }
 
 export const PILOT_AREAS: Record<string, PilotGraph> = {

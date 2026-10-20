@@ -1,13 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { createBrowserRouter, Navigate, RouterProvider } from 'react-router';
+import { createBrowserRouter, RouterProvider } from 'react-router';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './index.css';
 
 import { Layout } from './components/Layout';
 import { AuthProvider } from './lib/auth';
 import { Cities } from './pages/Cities';
+import { Dashboard } from './pages/Dashboard';
 import { Inbox } from './pages/Inbox';
 import { Matching } from './pages/Matching';
 import { NewWork } from './pages/NewWork';
@@ -35,7 +36,7 @@ const router = createBrowserRouter([
     path: '/',
     element: <Layout />,
     children: [
-      { index: true, element: <Navigate to="/eserler" replace /> },
+      { index: true, element: <Dashboard /> },
       { path: 'eserler', element: <Works /> },
       { path: 'eserler/yeni', element: <NewWork /> },
       { path: 'eserler/:slug', element: <WorkEdit /> },
