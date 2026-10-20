@@ -2,7 +2,6 @@
 
 import {
   coverOf,
-  formatDistance,
   loc,
   planTour,
   TOURS,
@@ -10,7 +9,6 @@ import {
   type PlannedTour,
   type WorkPhoto,
 } from "@sezi/shared";
-import { ArrowRightIcon, ClockIcon, FootprintsIcon, MapPinIcon, RouteIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -22,8 +20,6 @@ import {
   type ProfileChoice,
 } from "@/components/route/profile-select";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkThumb } from "@/components/work-thumb";
 import type { NavOverlay, WorkListItem } from "@/lib/data";
 import { href, type MessageKey } from "@/lib/i18n";
@@ -122,81 +118,60 @@ export function ToursList({
   const profileQuery = profileChoice !== defaultChoice ? `?profil=${profileChoice}` : "";
 
   return (
-    <div className="flex flex-col gap-8">
-      <Card>
-        <CardContent className="pt-6">
-          <ProfileSelect value={profileChoice} onChange={handleProfileChange} />
-        </CardContent>
-      </Card>
+    <div className="flex flex-col gap-6">
+      <div className="flex items-center justify-between gap-4">
+        <ProfileSelect value={profileChoice} onChange={handleProfileChange} />
+      </div>
 
       {plans.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">
-            {t("tours.none")}
-          </CardContent>
-        </Card>
+        <div className="py-12 text-center text-sm text-muted-foreground">
+          {t("tours.none")}
+        </div>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2">
+        <div className="grid gap-5 sm:grid-cols-2">
           {plans.map((plan) => {
             const keys = TOUR_TEXT_KEYS[plan.id];
             const title = keys ? t(keys.title) : plan.id;
-            const body = keys ? t(keys.body) : "";
             const cover = covers[plan.id];
             const mins = Math.max(1, Math.ceil(plan.lengthM / walkingSpeed(activeProfile) / 60));
             const tourHref = href(lang, `/turlar/${plan.id}${profileQuery}`);
 
             return (
-              <Card key={plan.id} className="flex flex-col overflow-hidden pt-0">
-                <Link href={tourHref} tabIndex={-1} aria-hidden className="block">
-                  <WorkThumb
-                    photo={cover?.photo}
-                    typeSlug={cover?.typeSlug ?? "cami"}
-                    alt={loc(cover?.photo?.alt, lang)}
-                    className="aspect-[16/9] w-full"
-                    sizes="(min-width: 640px) 50vw, 100vw"
-                  />
-                </Link>
-                <CardHeader className="flex-1">
-                  <CardTitle className="text-xl">
-                    <Link href={tourHref} className="inline-flex min-h-12 items-center hover:underline">
-                      {title}
-                    </Link>
-                  </CardTitle>
-                  <CardDescription className="text-sm">{body}</CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-wrap items-center gap-2 pt-0">
-                  <Badge variant="secondary" className="num">
-                    <MapPinIcon className="size-3.5" aria-hidden />
-                    {t("tours.stops", { n: plan.stops.length })}
-                  </Badge>
-                  <Badge variant="outline" className="num">
-                    <RouteIcon className="size-3.5" aria-hidden />
-                    {formatDistance(plan.lengthM, lang)}
-                  </Badge>
-                  <Badge variant="outline" className="num">
-                    <ClockIcon className="size-3.5" aria-hidden />
-                    {t("tours.statWalk", { n: mins })}
-                  </Badge>
-                  <Badge variant={plan.stairs === 0 ? "success" : "warning"} className="num">
-                    <FootprintsIcon className="size-3.5" aria-hidden />
-                    {plan.stairs === 0 ? t("tours.stepFree") : t("tours.stairs", { n: plan.stairs })}
-                  </Badge>
-                </CardContent>
-                <CardFooter className="border-t bg-muted/20 pt-4">
-                  <Button asChild className="w-full sm:w-auto">
-                    <Link href={tourHref}>
-                      {t("tours.openTour")}
-                      <ArrowRightIcon data-icon="inline-end" aria-hidden />
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>
+              <Link
+                key={plan.id}
+                href={tourHref}
+                className="group flex flex-col overflow-hidden rounded-lg border bg-card transition-colors hover:border-primary/50"
+              >
+                <WorkThumb
+                  photo={cover?.photo}
+                  typeSlug={cover?.typeSlug ?? "cami"}
+                  alt={loc(cover?.photo?.alt, lang)}
+                  className="aspect-[16/9] w-full"
+                  sizes="(min-width: 640px) 50vw, 100vw"
+                />
+                <div className="flex flex-1 flex-col justify-between gap-2 p-4">
+                  <h2 className="font-heading text-lg font-bold text-foreground group-hover:underline">
+                    {title}
+                  </h2>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground num">
+                    <Badge variant="secondary">
+                      {t("tours.stops", { n: plan.stops.length })}
+                    </Badge>
+                    <span aria-hidden>·</span>
+                    <span>{t("tours.statWalk", { n: mins })}</span>
+                    {plan.stairs === 0 ? (
+                      <>
+                        <span aria-hidden>·</span>
+                        <Badge variant="success">{t("tours.stepFree")}</Badge>
+                      </>
+                    ) : null}
+                  </div>
+                </div>
+              </Link>
             );
           })}
         </div>
       )}
-
-      <p className="text-xs text-muted-foreground">{t("route.dataNote")}</p>
     </div>
   );
 }

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { PageContainer, PageIntro } from "@/components/page";
 import { RoutePlanner, type InitialRouteParams } from "@/components/route/route-planner";
 import { getNavOverlay } from "@/lib/data";
 import { href, isLang, t } from "@/lib/i18n";
@@ -22,7 +21,7 @@ export async function generateMetadata({
   if (!isLang(lang)) return {};
   return {
     title: t(lang, "route.title"),
-    description: t(lang, "route.lead"),
+    description: t(lang, "route.area"),
     alternates: {
       canonical: href(lang, "/rota"),
       languages: {
@@ -52,14 +51,5 @@ export default async function RoutePage({
     karsilastir: firstParam(sp.karsilastir),
   };
 
-  return (
-    <PageContainer>
-      <PageIntro
-        eyebrow={t(lang, "route.eyebrow")}
-        title={t(lang, "route.title")}
-        lead={t(lang, "route.lead")}
-      />
-      <RoutePlanner overlay={overlay} initial={initial} />
-    </PageContainer>
-  );
+  return <RoutePlanner overlay={overlay} initial={initial} />;
 }

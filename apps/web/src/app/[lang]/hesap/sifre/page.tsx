@@ -8,9 +8,8 @@ import { toast } from "sonner";
 import { CodeField, useCooldown } from "@/components/account/code-input";
 import { FormError } from "@/components/account/form-error";
 import { PasswordField } from "@/components/account/password-field";
-import { PageContainer, PageIntro } from "@/components/page";
+import { PageContainer } from "@/components/page";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { errorKey, sendPasswordChangeCode, setPassword, useAccount } from "@/lib/account";
 import { href } from "@/lib/i18n";
 import { useT } from "@/lib/i18n-client";
@@ -78,63 +77,58 @@ function PasswordContent() {
 
   if (change && !sent) {
     return (
-      <PageContainer className="max-w-lg">
-        <PageIntro title={title} lead={t("account.changePasswordLead", { email: user.email ?? "" })} />
-        <Card>
-          <CardContent className="grid gap-4">
-            <FormError text={errors.form} />
-            <Button onClick={() => void sendCode()} disabled={busy}>
-              {busy ? t("account.sending") : t("account.sendCode")}
-            </Button>
-          </CardContent>
-        </Card>
+      <PageContainer className="max-w-md">
+        <header className="mb-6">
+          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{title}</h1>
+        </header>
+        <div className="grid gap-4 rounded-lg border bg-card p-6">
+          <FormError text={errors.form} />
+          <Button onClick={() => void sendCode()} disabled={busy}>
+            {busy ? t("account.sending") : t("account.sendCode")}
+          </Button>
+        </div>
       </PageContainer>
     );
   }
 
   return (
-    <PageContainer className="max-w-lg">
-      <PageIntro
-        title={title}
-        lead={change ? t("account.codeSent", { email: user.email ?? "" }) : t("account.newPasswordLead")}
-      />
-      <Card>
-        <CardContent>
-          <form
-            noValidate
-            className="grid gap-5"
-            onSubmit={(ev) => {
-              ev.preventDefault();
-              void save();
-            }}
-          >
-            {change ? <CodeField value={code} onChange={setCode} error={errors.code} /> : null}
-            <PasswordField
-              isNew
-              label={t("account.newPassword")}
-              value={password}
-              onChange={setPw}
-              error={errors.password}
-            />
-            <FormError text={errors.form} />
-            <div className="grid gap-2">
-              <Button type="submit" disabled={busy}>
-                {busy ? t("account.saving") : t("account.savePassword")}
-              </Button>
-              {change ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => void sendCode()}
-                  disabled={cooldown.left > 0 || busy}
-                >
-                  {cooldown.left > 0 ? t("account.resendIn", { s: cooldown.left }) : t("account.resend")}
-                </Button>
-              ) : null}
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+    <PageContainer className="max-w-md">
+      <header className="mb-6">
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{title}</h1>
+      </header>
+      <form
+        noValidate
+        className="grid gap-5 rounded-lg border bg-card p-6"
+        onSubmit={(ev) => {
+          ev.preventDefault();
+          void save();
+        }}
+      >
+        {change ? <CodeField value={code} onChange={setCode} error={errors.code} /> : null}
+        <PasswordField
+          isNew
+          label={t("account.newPassword")}
+          value={password}
+          onChange={setPw}
+          error={errors.password}
+        />
+        <FormError text={errors.form} />
+        <div className="grid gap-2">
+          <Button type="submit" disabled={busy}>
+            {busy ? t("account.saving") : t("account.savePassword")}
+          </Button>
+          {change ? (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => void sendCode()}
+              disabled={cooldown.left > 0 || busy}
+            >
+              {cooldown.left > 0 ? t("account.resendIn", { s: cooldown.left }) : t("account.resend")}
+            </Button>
+          ) : null}
+        </div>
+      </form>
     </PageContainer>
   );
 }

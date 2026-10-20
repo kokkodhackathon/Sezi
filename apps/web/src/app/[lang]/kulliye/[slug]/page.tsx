@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { PageContainer, PageIntro, SectionTitle } from "@/components/page";
+import { PageContainer } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { WorkCard } from "@/components/works/work-card";
 import { WorksMapView } from "@/components/works/works-map-view";
@@ -58,58 +58,80 @@ export default async function ComplexDetailPage({
   const cityName = loc(first.city_name, lang);
   const hasAnyLocation = complexWorks.some(hasLocation);
 
+  // Tür sayıları
+  const typeCounts = new Map<string, { label: string; count: number }>();
+  for (const w of complexWorks) {
+    const existing = typeCounts.get(w.type_slug);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      typeCounts.set(w.type_slug, { label: loc(w.type_name, lang), count: 1 });
+    }
+  }
+  const sortedTypes = [...typeCounts.entries()].sort((a, b) => b[1].count - a[1].count);
+
   return (
-    <PageContainer className="grid gap-10">
-      <PageIntro
-        eyebrow={t(lang, "works.complex.eyebrow")}
-        title={complexName}
-        lead={t(lang, "works.complex.lead")}
-      >
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+    <PageContainer className="grid gap-8">
+      {/* Başlık ve küçük anahtar bilgiler */}
+      <header className="grid gap-2">
+        <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">{complexName}</h1>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground num">
           <Link
             href={href(lang, `/il/${first.city_slug}`)}
-            className="inline-flex min-h-12 items-center font-heading font-bold text-link underline"
+            className="font-medium text-foreground hover:underline"
           >
-            {cityName}
+            {[cityName, first.district].filter(Boolean).join(", ")}
           </Link>
-          {first.district ? (
-            <>
-              <span aria-hidden className="text-muted-foreground">
-                ·
-              </span>
-              <span className="text-muted-foreground">{first.district}</span>
-            </>
-          ) : null}
+          <span aria-hidden>·</span>
           <Badge variant="secondary" className="num">
             {t(lang, "works.complex.count", { n: formatNumber(lang, complexWorks.length) })}
           </Badge>
         </div>
-      </PageIntro>
+      </header>
 
-      {hasAnyLocation ? (
-        <section aria-labelledby="complex-map-heading" className="grid gap-4">
-          <SectionTitle id="complex-map-heading" className="mb-0">
-            {t(lang, "works.complex.mapTitle", { name: complexName })}
-          </SectionTitle>
-          <WorksMapView
-            works={complexWorks}
-            totalCount={complexWorks.length}
-            lang={lang}
-            mapLabel={t(lang, "works.complex.mapTitle", { name: complexName })}
-          />
-        </section>
+      {/* Tür çipleri */}
+      {sortedTypes.length > 0 ? (
+        <div className="flex flex-wrap gap-2">
+          {sortedTypes.map(([typeSlug, info]) => (
+            <Link
+              key={typeSlug}
+              href={href(lang, `/?il=${first.city_slug}&tur=${typeSlug}`)}
+              className="inline-flex min-h-12 items-center gap-2 rounded-lg border bg-card px-3.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
+            >
+              <span>{info.label}</span>
+              <Badge variant="secondary" className="num">
+                {formatNumber(lang, info.count)}
+              </Badge>
+            </Link>
+          ))}
+        </div>
       ) : null}
 
-      <section aria-labelledby="complex-works-heading" className="grid gap-4">
-        <SectionTitle id="complex-works-heading" className="mb-0">
-          {t(lang, "works.complex.worksTitle")}
-        </SectionTitle>
+      {/* Yapılar ızgarası */}
+      <section aria-label={complexName} className="grid gap-4">
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {complexWorks.map((work, i) => (
             <WorkCard key={work.slug} work={work} lang={lang} priority={i < 6} />
           ))}
         </div>
       </section>
+
+      {/* Harita: isteğe bağlı katlanmış */}
+      {hasAnyLocation ? (
+        <details className="group rounded-lg border p-4 text-sm">
+          <summary className="cursor-pointer font-heading font-bold text-foreground hover:text-link">
+            {t(lang, "works.complex.mapTitle", { name: complexName })}
+          </summary>
+          <div className="mt-3">
+            <WorksMapView
+              works={complexWorks}
+              totalCount={complexWorks.length}
+              lang={lang}
+              mapLabel={t(lang, "works.complex.mapTitle", { name: complexName })}
+            />
+          </div>
+        </details>
+      ) : null}
     </PageContainer>
   );
 }

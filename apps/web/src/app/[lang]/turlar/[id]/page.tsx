@@ -2,7 +2,7 @@ import { TOURS } from "@sezi/shared";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { PageContainer, PageIntro } from "@/components/page";
+import { PageContainer } from "@/components/page";
 import { TourDetail } from "@/components/tours/tour-detail";
 const TOUR_KEYS: Record<string, { title: "tours.tum.title" | "tours.hanlar.title" | "tours.camiler.title" | "tours.su.title"; body: "tours.tum.body" | "tours.hanlar.body" | "tours.camiler.body" | "tours.su.body" }> = {
   tum: { title: "tours.tum.title", body: "tours.tum.body" },
@@ -57,12 +57,10 @@ export default async function TourDetailPage({
   const initialProfile = Array.isArray(rawProfil) ? rawProfil[0] : rawProfil;
 
   return (
-    <PageContainer>
-      <PageIntro
-        eyebrow={t(lang, "tours.eyebrow")}
-        title={t(lang, keys.title)}
-        lead={t(lang, keys.body)}
-      />
+    <PageContainer className="grid max-w-4xl gap-6">
+      <header>
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t(lang, keys.title)}</h1>
+      </header>
       <TourDetail tourId={id} overlay={overlay} works={works} initialProfile={initialProfile} />
     </PageContainer>
   );

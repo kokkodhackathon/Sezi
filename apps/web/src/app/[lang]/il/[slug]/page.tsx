@@ -1,14 +1,12 @@
 import { loc } from "@sezi/shared";
-import { ArrowRightIcon, BookOpenIcon, CompassIcon, ExternalLinkIcon } from "lucide-react";
+import { CompassIcon, ExternalLinkIcon } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { PageContainer, PageIntro, SectionTitle } from "@/components/page";
+import { PageContainer } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { ExhibitionCard } from "@/components/works/exhibition-card";
 import { WorkCard } from "@/components/works/work-card";
 import { WorksMapView } from "@/components/works/works-map-view";
 import { getCities, getExhibitions, getInventoryBooks, getWorkIndex } from "@/lib/data";
@@ -67,7 +65,6 @@ export default async function CityDetailPage({
   if (!city) notFound();
 
   const cityName = loc(city.name, lang);
-  const note = loc(city.inventory_note, lang);
   const cityWorks = allWorks
     .filter((w) => w.city_slug === city.slug)
     .sort((a, b) => loc(a.name, lang).localeCompare(loc(b.name, lang), "tr"));
@@ -96,71 +93,49 @@ export default async function CityDetailPage({
         ? "secondary"
         : "outline";
 
-  const featuredCityWorks = [
-    ...cityWorks.filter((w) => w.photos.length > 0),
-    ...cityWorks.filter((w) => w.photos.length === 0),
-  ].slice(0, 9);
-
   return (
-    <PageContainer className="grid gap-12">
-      <PageIntro eyebrow={t(lang, "works.city.eyebrow")} title={cityName} lead={note || undefined}>
-        <div className="mt-2 flex flex-wrap items-center gap-3">
-          <Badge variant={statusVariant}>{t(lang, statusKey)}</Badge>
+    <PageContainer className="grid gap-8">
+      {/* Başlık ve 2-3 küçük anahtar sayı */}
+      <header className="grid gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">{cityName}</h1>
           <Button size="sm" asChild>
-            <Link href={href(lang, `/eserler?il=${city.slug}`)}>
+            <Link href={href(lang, `/?il=${city.slug}`)}>
               <CompassIcon aria-hidden />
               <span>{t(lang, "works.city.exploreAll")}</span>
             </Link>
           </Button>
         </div>
-      </PageIntro>
+        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground num">
+          <span className="font-semibold text-foreground">
+            {formatNumber(lang, cityWorks.length)} {t(lang, "works.title").toLowerCase()}
+          </span>
+          {city.inventory_photos ? (
+            <>
+              <span aria-hidden>·</span>
+              <span>{t(lang, "works.city.photos", { n: formatNumber(lang, city.inventory_photos) })}</span>
+            </>
+          ) : null}
+          {city.inventory_year ? (
+            <>
+              <span aria-hidden>·</span>
+              <span>{city.inventory_year}</span>
+            </>
+          ) : null}
+          <span aria-hidden>·</span>
+          <Badge variant={statusVariant}>{t(lang, statusKey)}</Badge>
+        </div>
+      </header>
 
-      {/* Envanter sayıları */}
-      <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border bg-card p-5">
-          <dt className="text-sm text-muted-foreground">{t(lang, "works.city.statYear")}</dt>
-          <dd className="mt-1 font-heading text-3xl font-extrabold num">
-            {city.inventory_year ?? "—"}
-          </dd>
-        </div>
-        <div className="rounded-2xl border bg-card p-5">
-          <dt className="text-sm text-muted-foreground">
-            {t(lang, "works.city.statInventoryWorks")}
-          </dt>
-          <dd className="mt-1 font-heading text-3xl font-extrabold num">
-            {city.inventory_works !== null ? formatNumber(lang, city.inventory_works) : "—"}
-          </dd>
-        </div>
-        <div className="rounded-2xl border bg-card p-5">
-          <dt className="text-sm text-muted-foreground">
-            {t(lang, "works.city.statInventoryPhotos")}
-          </dt>
-          <dd className="mt-1 font-heading text-3xl font-extrabold num">
-            {city.inventory_photos !== null ? formatNumber(lang, city.inventory_photos) : "—"}
-          </dd>
-        </div>
-        <div className="rounded-2xl border bg-card p-5">
-          <dt className="text-sm text-muted-foreground">
-            {t(lang, "works.city.statVerifiedWorks")}
-          </dt>
-          <dd className="mt-1 font-heading text-3xl font-extrabold num">
-            {formatNumber(lang, cityWorks.length)}
-          </dd>
-        </div>
-      </dl>
-
-      {/* Türlere göre eser sayıları (/eserler?il=&tur= bağlantıları) */}
+      {/* Tür çipleri (/?il=&tur=) */}
       {sortedTypes.length > 0 ? (
-        <section aria-labelledby="city-types-heading" className="grid gap-4">
-          <SectionTitle id="city-types-heading" className="mb-0">
-            {t(lang, "works.city.byTypeTitle")}
-          </SectionTitle>
-          <div className="flex flex-wrap gap-2.5">
+        <section aria-label={t(lang, "works.city.byTypeTitle")} className="grid gap-2">
+          <div className="flex flex-wrap gap-2">
             {sortedTypes.map(([typeSlug, info]) => (
               <Link
                 key={typeSlug}
-                href={href(lang, `/eserler?il=${city.slug}&tur=${typeSlug}`)}
-                className="inline-flex min-h-12 items-center gap-2 rounded-xl border bg-card px-4 py-2 font-heading text-sm font-bold text-foreground transition-colors hover:border-primary/50 hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring"
+                href={href(lang, `/?il=${city.slug}&tur=${typeSlug}`)}
+                className="inline-flex min-h-12 items-center gap-2 rounded-lg border bg-card px-3.5 py-2 text-xs font-semibold text-foreground transition-colors hover:bg-muted"
               >
                 <span>{info.label}</span>
                 <Badge variant="secondary" className="num">
@@ -172,99 +147,63 @@ export default async function CityDetailPage({
         </section>
       ) : null}
 
-      {/* Harita */}
+      {/* Eser ızgarası */}
+      <section aria-label={cityName} className="grid gap-4">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {cityWorks.map((work, i) => (
+            <WorkCard key={work.slug} work={work} lang={lang} priority={i < 6} />
+          ))}
+        </div>
+      </section>
+
+      {/* Harita: isteğe bağlı katlanmış */}
       {cityWorks.length > 0 ? (
-        <section aria-labelledby="city-map-heading" className="grid gap-4">
-          <SectionTitle id="city-map-heading" className="mb-0">
+        <details className="group rounded-lg border p-4 text-sm">
+          <summary className="cursor-pointer font-heading font-bold text-foreground hover:text-link">
             {t(lang, "works.city.mapTitle", { city: cityName })}
-          </SectionTitle>
-          <WorksMapView
-            works={cityWorks}
-            totalCount={cityWorks.length}
-            lang={lang}
-            mapLabel={t(lang, "works.city.mapTitle", { city: cityName })}
-          />
-        </section>
+          </summary>
+          <div className="mt-3">
+            <WorksMapView
+              works={cityWorks}
+              totalCount={cityWorks.length}
+              lang={lang}
+              mapLabel={t(lang, "works.city.mapTitle", { city: cityName })}
+            />
+          </div>
+        </details>
       ) : null}
 
-      {/* Envanter kitapları */}
-      {cityBooks.length > 0 ? (
-        <section aria-labelledby="city-books-heading" className="grid gap-4">
-          <SectionTitle id="city-books-heading" className="mb-0">
-            {t(lang, "works.city.booksTitle")}
-          </SectionTitle>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {cityBooks.map((book) => (
-              <Card key={book.id}>
-                <CardContent className="flex h-full flex-col justify-between gap-4 p-5">
-                  <div className="grid gap-1">
-                    <div className="flex items-center gap-2">
-                      <BookOpenIcon className="size-4 text-primary" aria-hidden />
-                      <h3 className="font-heading text-base font-bold">{book.title}</h3>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {[
-                        book.volume !== null
-                          ? t(lang, "works.city.volume", { v: book.volume })
-                          : null,
-                        book.year ? String(book.year) : null,
-                        "Vakıf Katılım",
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                  </div>
-                  {book.url ? (
-                    <div>
-                      <Button variant="outline" size="sm" asChild>
-                        <a href={book.url} target="_blank" rel="noopener noreferrer">
-                          <span>{t(lang, "works.detail.openBookPdf")}</span>
-                          <ExternalLinkIcon aria-hidden />
-                        </a>
-                      </Button>
-                    </div>
-                  ) : null}
-                </CardContent>
-              </Card>
+      {/* Kitaplar ve sergiler: katlanmış kaynaklar */}
+      {cityBooks.length > 0 || cityExhibitions.length > 0 ? (
+        <details className="group rounded-lg border p-4 text-sm">
+          <summary className="cursor-pointer font-heading font-bold text-foreground hover:text-link">
+            {t(lang, "works.city.booksTitle")} & {t(lang, "works.city.exhibitionsTitle")}
+          </summary>
+          <div className="mt-3 grid gap-3 pt-2 text-muted-foreground">
+            {cityBooks.map((b) => (
+              <div key={b.id} className="flex flex-wrap items-center justify-between gap-2">
+                <span>{b.title}</span>
+                {b.url ? (
+                  <a
+                    href={b.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-xs text-link underline"
+                  >
+                    <span>{t(lang, "works.detail.openBookPdf")}</span>
+                    <ExternalLinkIcon className="size-3" aria-hidden />
+                  </a>
+                ) : null}
+              </div>
+            ))}
+            {cityExhibitions.map((e) => (
+              <div key={e.id} className="flex flex-wrap items-center justify-between gap-2 border-t pt-2">
+                <span className="font-medium text-foreground">{loc(e.title, lang)}</span>
+                <span className="text-xs">{loc(e.venue, lang)}</span>
+              </div>
             ))}
           </div>
-        </section>
-      ) : null}
-
-      {/* İldeki sergiler */}
-      {cityExhibitions.length > 0 ? (
-        <section aria-labelledby="city-exhibitions-heading" className="grid gap-4">
-          <SectionTitle id="city-exhibitions-heading" className="mb-0">
-            {t(lang, "works.city.exhibitionsTitle")}
-          </SectionTitle>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {cityExhibitions.map((exh) => (
-              <ExhibitionCard key={exh.id} exhibition={exh} lang={lang} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {/* İlden eserler */}
-      {featuredCityWorks.length > 0 ? (
-        <section aria-labelledby="city-works-heading" className="grid gap-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <SectionTitle id="city-works-heading" className="mb-0">
-              {t(lang, "works.city.featuredTitle")}
-            </SectionTitle>
-            <Button variant="outline" asChild>
-              <Link href={href(lang, `/eserler?il=${city.slug}`)}>
-                <span>{t(lang, "works.city.exploreAll")}</span>
-                <ArrowRightIcon aria-hidden />
-              </Link>
-            </Button>
-          </div>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {featuredCityWorks.map((work) => (
-              <WorkCard key={work.slug} work={work} lang={lang} />
-            ))}
-          </div>
-        </section>
+        </details>
       ) : null}
     </PageContainer>
   );

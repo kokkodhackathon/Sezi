@@ -11,15 +11,7 @@ import {
   type LngLat,
   type TourStop,
 } from "@sezi/shared";
-import {
-  ArrowLeftIcon,
-  ClockIcon,
-  ExternalLinkIcon,
-  FootprintsIcon,
-  MapPinIcon,
-  NavigationIcon,
-  RouteIcon,
-} from "lucide-react";
+import { ArrowLeftIcon, MapPinIcon, NavigationIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -33,7 +25,6 @@ import {
 } from "@/components/route/profile-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WorkThumb } from "@/components/work-thumb";
 import { useAppearance } from "@/lib/appearance";
 import type { NavOverlay, WorkListItem } from "@/lib/data";
@@ -177,178 +168,148 @@ export function TourDetail({
   const firstStop = plan?.stops[0];
 
   return (
-    <div className="flex flex-col gap-8">
-      <div>
+    <div className="flex flex-col gap-6">
+      {/* Üst çubuk: geri dön & profil seçici */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Button asChild variant="outline" size="sm">
           <Link href={href(lang, `/turlar${backQuery}`)}>
             <ArrowLeftIcon data-icon="inline-start" aria-hidden />
             {t("tours.backToTours")}
           </Link>
         </Button>
+        <ProfileSelect value={profileChoice} onChange={handleProfileChange} />
       </div>
 
-      <Card>
-        <CardContent className="pt-6">
-          <ProfileSelect value={profileChoice} onChange={handleProfileChange} />
-        </CardContent>
-      </Card>
-
       {!plan || plan.stops.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-muted-foreground">
-            {t("tours.none")}
-          </CardContent>
-        </Card>
+        <div className="py-12 text-center text-sm text-muted-foreground">
+          {t("tours.none")}
+        </div>
       ) : (
-        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(360px,1fr)]">
-          {/* Sol: özet ve sıralı durak listesi */}
-          <div className="flex flex-col gap-6">
-            <Card>
-              <CardContent className="flex flex-wrap items-center justify-between gap-4 pt-6">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="secondary" className="num">
-                    <MapPinIcon className="size-3.5" aria-hidden />
-                    {t("tours.stops", { n: plan.stops.length })}
-                  </Badge>
-                  <Badge variant="outline" className="num">
-                    <RouteIcon className="size-3.5" aria-hidden />
-                    {formatDistance(plan.lengthM, lang)}
-                  </Badge>
-                  <Badge variant="outline" className="num">
-                    <ClockIcon className="size-3.5" aria-hidden />
-                    {t("tours.statWalk", { n: mins })}
-                  </Badge>
-                  <Badge variant={plan.stairs === 0 ? "success" : "warning"} className="num">
-                    <FootprintsIcon className="size-3.5" aria-hidden />
-                    {plan.stairs === 0 ? t("tours.stepFree") : t("tours.stairs", { n: plan.stairs })}
-                  </Badge>
-                </div>
-                {firstStop ? (
-                  <Button asChild size="sm">
-                    <Link
-                      href={href(
-                        lang,
-                        `/rota?hedef=${encodeURIComponent(firstStop.slug)}${profileSuffix}`,
-                      )}
-                    >
-                      <NavigationIcon data-icon="inline-start" aria-hidden />
-                      {t("tours.start")}
-                    </Link>
-                  </Button>
-                ) : null}
-              </CardContent>
-            </Card>
+        <div className="flex flex-col gap-6">
+          {/* 1. Harita tepede */}
+          <section aria-label={t("tours.mapLabel")}>
+            <SeziMap
+              label={t("tours.mapLabel")}
+              center={planner.center}
+              zoom={15.5}
+              bounds={mapBounds}
+              markers={mapMarkers}
+              lines={mapLines}
+              className="h-[360px] w-full rounded-lg border sm:h-[440px]"
+            />
+          </section>
 
-            <section aria-labelledby="tour-stops-heading" className="flex flex-col gap-4">
-              <h2 id="tour-stops-heading" className="text-2xl font-extrabold tracking-tight">
-                {t("tours.stopsTitle")}
-              </h2>
-              <ol className="flex flex-col gap-4">
-                {legs.map((leg) => {
-                  const w = worksBySlug[leg.stop.slug];
-                  const cover = w ? coverOf(w) : undefined;
-                  const typeSlug = w?.type_slug ?? leg.stop.type;
-                  const typeName = w ? loc(w.type_name, lang) : leg.stop.type;
-                  const name = loc(w?.name ?? leg.stop.name, lang) || leg.stop.slug;
-                  const workUrl = href(lang, `/eser/${leg.stop.slug}`);
-                  const routeUrl = href(
+          {/* 2. Rota özeti tek satır */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-4">
+            <div className="flex flex-wrap items-center gap-2 num text-xs text-muted-foreground">
+              <Badge variant="secondary">
+                <MapPinIcon className="size-3" aria-hidden />
+                {t("tours.stops", { n: plan.stops.length })}
+              </Badge>
+              <span>·</span>
+              <span>{formatDistance(plan.lengthM, lang)}</span>
+              <span>·</span>
+              <span>{t("tours.statWalk", { n: mins })}</span>
+              {plan.stairs === 0 ? (
+                <>
+                  <span aria-hidden>·</span>
+                  <Badge variant="success">{t("tours.stepFree")}</Badge>
+                </>
+              ) : (
+                <>
+                  <span aria-hidden>·</span>
+                  <Badge variant="warning">{t("tours.stairs", { n: plan.stairs })}</Badge>
+                </>
+              )}
+            </div>
+            {firstStop ? (
+              <Button asChild size="sm">
+                <Link
+                  href={href(
                     lang,
-                    `/rota?hedef=${encodeURIComponent(leg.stop.slug)}&lng=${leg.fromLocation[0].toFixed(5)}&lat=${leg.fromLocation[1].toFixed(5)}${profileSuffix}`,
-                  );
+                    `/rota?hedef=${encodeURIComponent(firstStop.slug)}${profileSuffix}`,
+                  )}
+                >
+                  <NavigationIcon data-icon="inline-start" aria-hidden />
+                  <span>{t("tours.start")}</span>
+                </Link>
+              </Button>
+            ) : null}
+          </div>
 
-                  return (
-                    <li key={leg.stop.slug}>
-                      <Card size="sm">
-                        <CardContent className="flex flex-col gap-4 pt-4 sm:flex-row sm:items-center">
-                          <div className="flex items-center gap-3">
-                            <span
-                              className="num inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-primary font-heading text-sm font-extrabold text-primary-foreground"
-                              aria-hidden
-                            >
-                              {leg.index}
-                            </span>
-                            <WorkThumb
-                              photo={cover}
-                              typeSlug={typeSlug}
-                              alt={loc(cover?.alt, lang)}
-                              className="size-20 shrink-0 rounded-lg"
-                              sizes="80px"
-                            />
-                          </div>
+          {/* 3. Numaralı durak listesi */}
+          <section aria-label={t("tours.stopsTitle")} className="flex flex-col gap-3">
+            <h2 className="font-heading text-lg font-bold text-foreground">
+              {t("tours.stopsTitle")}
+            </h2>
+            <ol className="flex flex-col gap-3">
+              {legs.map((leg) => {
+                const w = worksBySlug[leg.stop.slug];
+                const cover = w ? coverOf(w) : undefined;
+                const typeSlug = w?.type_slug ?? leg.stop.type;
+                const typeName = w ? loc(w.type_name, lang) : leg.stop.type;
+                const name = loc(w?.name ?? leg.stop.name, lang) || leg.stop.slug;
+                const workUrl = href(lang, `/eser/${leg.stop.slug}`);
+                const routeUrl = href(
+                  lang,
+                  `/rota?hedef=${encodeURIComponent(leg.stop.slug)}&lng=${leg.fromLocation[0].toFixed(5)}&lat=${leg.fromLocation[1].toFixed(5)}${profileSuffix}`,
+                );
 
-                          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                            <div className="flex flex-wrap items-baseline gap-2">
-                              <h3 className="text-lg font-bold text-foreground">
-                                <span className="sr-only">{leg.index}. </span>
-                                <Link href={workUrl} className="inline-flex min-h-12 items-center hover:underline">
-                                  {name}
-                                </Link>
-                              </h3>
-                              {typeName ? (
-                                <span className="text-xs font-semibold text-muted-foreground">
-                                  · {typeName}
-                                </span>
-                              ) : null}
-                            </div>
-
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                              <span className="num">
-                                {t("tours.leg", { m: Math.round(leg.stop.legM) })}
-                              </span>
-                              <Badge
-                                variant={leg.stop.legStairs === 0 ? "success" : "warning"}
-                                className="num"
-                              >
-                                {leg.stop.legStairs === 0
-                                  ? t("tours.stepFree")
-                                  : t("tours.stairs", { n: leg.stop.legStairs })}
+                return (
+                  <li
+                    key={leg.stop.slug}
+                    className="flex flex-col justify-between gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-center"
+                  >
+                    <div className="flex items-center gap-3">
+                      <span
+                        className="num inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-primary font-heading text-xs font-bold text-primary-foreground"
+                        aria-hidden
+                      >
+                        {leg.index}
+                      </span>
+                      <WorkThumb
+                        photo={cover}
+                        typeSlug={typeSlug}
+                        alt={loc(cover?.alt, lang)}
+                        className="size-14 shrink-0 rounded-lg"
+                        sizes="60px"
+                      />
+                      <div className="grid gap-0.5">
+                        <Link
+                          href={workUrl}
+                          className="font-heading text-base font-bold text-foreground hover:underline"
+                        >
+                          {name}
+                        </Link>
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground num">
+                          <span>{typeName}</span>
+                          <span aria-hidden>·</span>
+                          <span>{t("tours.leg", { m: Math.round(leg.stop.legM) })}</span>
+                          {leg.stop.legStairs === 0 ? (
+                            <>
+                              <span aria-hidden>·</span>
+                              <Badge variant="success" className="text-[10px] py-0">
+                                {t("tours.stepFree")}
                               </Badge>
-                            </div>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
 
-                            <div className="flex flex-wrap items-center gap-2 pt-1">
-                              <Button asChild variant="secondary" size="sm">
-                                <Link href={routeUrl}>
-                                  <NavigationIcon data-icon="inline-start" aria-hidden />
-                                  {t("tours.openLegInRoute")}
-                                </Link>
-                              </Button>
-                              <Button asChild variant="outline" size="sm">
-                                <Link href={workUrl}>
-                                  <ExternalLinkIcon data-icon="inline-start" aria-hidden />
-                                  {t("tours.openWork")}
-                                </Link>
-                              </Button>
-                            </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </li>
-                  );
-                })}
-              </ol>
-            </section>
-          </div>
-
-          {/* Sağ: Numaralı duraklar ve bacak çizgileriyle harita */}
-          <div className="flex flex-col gap-4 lg:sticky lg:top-20">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">{t("tours.mapLabel")}</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <SeziMap
-                  label={t("tours.mapLabel")}
-                  center={planner.center}
-                  zoom={15.5}
-                  bounds={mapBounds}
-                  markers={mapMarkers}
-                  lines={mapLines}
-                  className="h-[420px] w-full rounded-lg sm:h-[520px]"
-                />
-              </CardContent>
-            </Card>
-            <p className="text-xs text-muted-foreground">{t("route.dataNote")}</p>
-          </div>
+                    <div className="flex items-center gap-2 self-end sm:self-center">
+                      <Button asChild variant="outline" size="sm">
+                        <Link href={routeUrl}>
+                          <NavigationIcon data-icon="inline-start" aria-hidden />
+                          <span>{t("tours.openLegInRoute")}</span>
+                        </Link>
+                      </Button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </section>
         </div>
       )}
     </div>

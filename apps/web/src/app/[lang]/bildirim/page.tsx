@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { PageContainer, PageIntro } from "@/components/page";
+import { PageContainer } from "@/components/page";
 import { ReportForm } from "@/components/report/report-form";
 import { getNavOverlay } from "@/lib/data";
 import { isLang, t } from "@/lib/i18n";
@@ -37,8 +37,10 @@ export default async function ReportPage({
   const overlay = await getNavOverlay();
 
   return (
-    <PageContainer>
-      <PageIntro eyebrow={t(lang, "report.eyebrow")} title={t(lang, "report.title")} lead={t(lang, "report.lead")} />
+    <PageContainer className="max-w-2xl">
+      <header className="mb-6">
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t(lang, "report.title")}</h1>
+      </header>
       <ReportForm overlay={overlay} initialWorkSlug={initialWorkSlug} />
     </PageContainer>
   );

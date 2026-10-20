@@ -48,4 +48,28 @@ describe("searchWorks", () => {
     const res = searchWorks("hamam", works);
     expect(res[0]?.type_slug).toBe("hamam");
   });
+
+  it("tek harf, ad kelimelerinin başıyla eşleşir; adın ilk kelimesi önce gelir", () => {
+    const works = [w("Hacı Ali Camii", "cami", "Cami", "Osmangazi"), w("Alaaddin Camii", "cami", "Cami", "Osmangazi"), w("Ulu Cami", "cami", "Cami", "Osmangazi")];
+    const res = searchWorks("a", works);
+    expect(res.map((x) => x.name.tr)).toEqual(["Alaaddin Camii", "Hacı Ali Camii"]);
+  });
+
+  it("tek harf tür adındaki kelimelerle eşleşmez (\"a\" → \"and\" değil)", () => {
+    const works = [w("Halil Ağa Evi", "konak", "Konak ve ev", "Mudanya"), w("Alaaddin Camii", "cami", "Cami", "Osmangazi")];
+    works[0]!.type_name = { tr: "Konak ve ev", en: "Mansion and house" };
+    expect(searchWorks("a", works).map((x) => x.name.tr)).toEqual(["Alaaddin Camii", "Halil Ağa Evi"]);
+  });
+
+  it("yazarken bütün kelimeler eşleşmeli; hiçbir eserde geçmeyen kelime yok sayılır", () => {
+    expect(searchWorks("ulu ca", sample).map((x) => x.name.tr)).toEqual(["Ulu Cami"]);
+    expect(searchWorks("kay", sample).map((x) => x.name.tr)).toEqual(["Kayıhan Hamamı"]);
+    expect(searchWorks("hangi hamamlar", sample).every((x) => x.type_slug === "hamam")).toBe(true);
+  });
+
+  it("iki harfli tür kökü (su) yalnız kendisiyle tür ipucu olur", () => {
+    const works = [w("Sultan Çeşmesi", "cesme", "Çeşme", "Osmangazi"), w("Tophane Sebili", "sebil", "Sebil", "Osmangazi")];
+    expect(searchWorks("sultan", works).map((x) => x.name.tr)).toEqual(["Sultan Çeşmesi"]);
+    expect(searchWorks("su", works)).toHaveLength(2);
+  });
 });

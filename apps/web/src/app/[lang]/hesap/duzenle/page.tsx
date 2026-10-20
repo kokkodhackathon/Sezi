@@ -18,9 +18,8 @@ import { toast } from "sonner";
 import { Avatar, AVATAR_TONE_CLASS } from "@/components/account/avatar";
 import { AccountField, FormError } from "@/components/account/form-error";
 import { ChoiceGroup } from "@/components/choice-group";
-import { PageContainer, PageIntro } from "@/components/page";
+import { PageContainer } from "@/components/page";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAccount } from "@/lib/account";
 import { href } from "@/lib/i18n";
@@ -49,10 +48,12 @@ export default function EditProfilePage() {
 
   if (!identity) {
     return (
-      <PageContainer className="max-w-xl">
-        <PageIntro title={t("account.editProfile")} lead={t("account.editProfileSub")} />
+      <PageContainer className="max-w-md">
+        <header className="mb-6">
+          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t("account.editProfile")}</h1>
+        </header>
         <div role="status" aria-label={t("account.loading")} className="grid gap-4">
-          <Skeleton className="h-64 w-full rounded-xl" />
+          <Skeleton className="h-64 w-full rounded-lg" />
         </div>
       </PageContainer>
     );
@@ -148,18 +149,18 @@ function Editor({
   };
 
   return (
-    <PageContainer className="max-w-xl">
-      <PageIntro title={t("account.editProfile")} lead={t("account.editProfileSub")} />
-      <Card>
-        <CardContent>
-          <form
-            noValidate
-            className="grid gap-6"
-            onSubmit={(ev) => {
-              ev.preventDefault();
-              void submit();
-            }}
-          >
+    <PageContainer className="max-w-md">
+      <header className="mb-6">
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t("account.editProfile")}</h1>
+      </header>
+      <form
+        noValidate
+        className="grid gap-6 rounded-lg border bg-card p-6"
+        onSubmit={(ev) => {
+          ev.preventDefault();
+          void submit();
+        }}
+      >
             <div className="flex flex-col items-center gap-3">
               <Avatar
                 identity={{ display_name: name || identity.display_name, avatar_tone: tone }}
@@ -267,9 +268,7 @@ function Editor({
                 <Link href={href(lang, "/hesap")}>{t("common.cancel")}</Link>
               </Button>
             </div>
-          </form>
-        </CardContent>
-      </Card>
+      </form>
     </PageContainer>
   );
 }

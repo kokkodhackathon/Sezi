@@ -75,30 +75,65 @@ const STOP = new Set([
   "complex",
 ]);
 
+const tokens = (...parts: (string | null | undefined)[]) => normalize(parts.filter(Boolean).join(" ")).split(/\s+/).filter(Boolean);
+
+/**
+ * Yazarken arama: her kelime eserin adında bir kelimenin başıyla eşleşir ("a" → Alaaddin, Ayasofya; "kay" → Kayıhan).
+ * Üç harften uzun kelimelerde ek de tolere edilir ("hamamlar" → hamam). İl / ilçe adı geçiyorsa sonuçlar o yerle
+ * sınırlanır; tür sözcüğü ("medreseler", "fountain") o türdeki eserleri getirir. Bütün kelimeler eşleşmeli (VE);
+ * hiçbir eserde geçmeyen kelime ("hangi", "da") yok sayılır. Sıra: adın ilk kelimesi, ad, tür, yer eşleşmesi.
+ */
 export function searchWorks<W extends SearchableWork>(query: string, works: W[]): W[] {
-  const q = normalize(query);
-  const words = q.split(/\s+/).filter((w) => w.length > 1 && !STOP.has(w));
+  const words = normalize(query)
+    .split(/\s+/)
+    .filter((w) => w.length > 0 && !STOP.has(w));
   if (words.length === 0) return [];
 
-  const types = new Set<string>();
-  for (const w of words) for (const [stem, ts] of TYPE_HINTS) if (w.startsWith(stem)) ts.forEach((x) => types.add(x));
+  // Tür ipucu: kök en az üç harfse ekli hâli de sayılır ("hanlar"); iki harfli kök ("su") yalnız kendisiyle.
+  const hintOf = (w: string) => {
+    const out = new Set<string>();
+    for (const [stem, ts] of TYPE_HINTS) if (w.startsWith(stem) && (stem.length >= 3 || w === stem)) ts.forEach((x) => out.add(x));
+    return out;
+  };
+  const hints = new Map(words.map((w) => [w, hintOf(w)]));
 
-  // İl/ilçe adı geçiyorsa ("Osmangazi'deki hamamlar") sonuçlar o yerle sınırlanır.
-  const placeOf = (w: SearchableWork) => normalize([w.district, w.city_name.tr, w.city_name.en].filter(Boolean).join(" "));
-  const placeWords = words.filter((w) => w.length > 3 && works.some((x) => placeOf(x).split(/\s+/).includes(w)));
-  const pool = placeWords.length ? works.filter((x) => placeWords.every((p) => placeOf(x).split(/\s+/).includes(p))) : works;
+  // İl/ilçe adı tam geçiyorsa ("Osmangazi'deki hamamlar") sonuçlar o yerle sınırlanır.
+  const placeOf = (w: SearchableWork) => tokens(w.district, w.city_name.tr, w.city_name.en);
+  const placeWords = words.filter((w) => w.length > 3 && works.some((x) => placeOf(x).includes(w)));
+  const pool = placeWords.length ? works.filter((x) => placeWords.every((p) => placeOf(x).includes(p))) : works;
   const rest = words.filter((w) => !placeWords.includes(w));
 
-  const scored = pool.map((work) => {
-    const hay = normalize([work.name.tr, work.name.en, work.type_name.tr, work.type_name.en].filter(Boolean).join(" "));
-    let score = 0;
-    for (const w of rest) if (w.length > 2 && hay.includes(w.slice(0, Math.max(3, w.length - 2)))) score += 2;
-    if (types.has(work.type_slug)) score += 3;
-    if (types.size && !types.has(work.type_slug) && score < 4) score = 0;
-    if (placeWords.length && rest.length === 0) score = 1;
-    return { work, score };
-  });
-  return scored
+  const prepared = pool.map((work) => ({
+    work,
+    name: tokens(work.name.tr, work.name.en),
+    type: tokens(work.type_name.tr, work.type_name.en),
+    place: placeOf(work),
+  }));
+
+  /** Kelimenin bu eserdeki eşleşme puanı (ad + tür; yalnız yer eşleşirse 1); 0 eşleşme yok. */
+  const hit = (p: (typeof prepared)[number], w: string): number => {
+    const stem = w.length > 3 ? w.slice(0, Math.max(3, w.length - 2)) : null;
+    const name = p.name[0]?.startsWith(w) ? 6 : p.name.some((t) => t.startsWith(w)) ? 4 : stem && p.name.some((t) => t.startsWith(stem)) ? 2 : 0;
+    // Tür adında kelime başı eşleşmesi en az üç harfle ("a" → "and", "su" → "sufi" gibi gürültü olmasın).
+    const type = hints.get(w)?.has(p.work.type_slug) || (w.length >= 3 && p.type.some((t) => t.startsWith(w))) ? 3 : 0;
+    if (name + type > 0) return name + type;
+    return w.length >= 3 && p.place.some((t) => t.startsWith(w) || (stem !== null && t.startsWith(stem))) ? 1 : 0;
+  };
+
+  // Hiçbir eserde geçmeyen kelime soru sözcüğüdür ya da yazım artığıdır: aramayı daraltmaz.
+  const live = rest.filter((w) => prepared.some((p) => hit(p, w) > 0));
+  if (live.length === 0) return placeWords.length ? pool : [];
+
+  return prepared
+    .map((p) => {
+      let score = 0;
+      for (const w of live) {
+        const s = hit(p, w);
+        if (s === 0) return { work: p.work, score: 0 };
+        score += s;
+      }
+      return { work: p.work, score };
+    })
     .filter((x) => x.score > 0)
     .sort((a, b) => b.score - a.score)
     .map((x) => x.work);

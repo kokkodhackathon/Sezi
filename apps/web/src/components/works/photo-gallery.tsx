@@ -32,75 +32,90 @@ export function PhotoGallery({
 }) {
   const { t, lang } = useT();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0);
 
   if (photos.length === 0) {
     return (
-      <div className="grid gap-2">
+      <div className="w-full">
         <WorkThumb
           photo={undefined}
           typeSlug={typeSlug}
           alt=""
-          className="h-56 w-full rounded-xl border sm:h-72"
+          className="h-28 w-full rounded-lg sm:h-36"
         />
-        <p className="text-sm text-muted-foreground">{t("works.detail.noPhotos")}</p>
       </div>
     );
   }
+
+  const currentPhoto = photos[selectedPhotoIndex] ?? photos[0];
+  if (!currentPhoto) return null;
+  const currentAlt = loc(currentPhoto.alt, lang) || workName;
 
   const activePhoto = activeIndex !== null ? photos[activeIndex] : undefined;
   const activeAlt = activePhoto ? loc(activePhoto.alt, lang) || workName : workName;
 
   return (
-    <section aria-label={t("works.detail.photosTitle")} className="grid gap-4">
-      <div
-        className={
-          photos.length === 1
-            ? "grid"
-            : "grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
-        }
-      >
-        {photos.map((photo, index) => {
-          const alt = loc(photo.alt, lang) || workName;
-          const isHero = index === 0 && photos.length === 1;
-          return (
-            <figure key={photo.id} className="grid gap-1.5">
+    <section aria-label={t("works.detail.photosTitle")} className="grid gap-2">
+      {/* Büyük tepe fotoğrafı */}
+      <figure className="grid gap-1.5">
+        <button
+          type="button"
+          onClick={() => setActiveIndex(selectedPhotoIndex)}
+          aria-label={t("works.detail.openPhoto", { alt: currentAlt })}
+          className="group relative aspect-[16/9] max-h-[480px] w-full overflow-hidden rounded-lg border bg-muted text-left outline-none focus-visible:ring-3 focus-visible:ring-ring sm:aspect-[21/9]"
+        >
+          <Image
+            src={photoUrl(currentPhoto, "full")}
+            alt={currentAlt}
+            fill
+            priority
+            sizes="(min-width: 1024px) 1152px, 100vw"
+            className="object-cover transition-transform duration-200 group-hover:scale-[1.01]"
+          />
+          <span
+            aria-hidden
+            className="absolute bottom-3 right-3 inline-flex size-10 items-center justify-center rounded-lg border bg-card/90 text-foreground"
+          >
+            <ExpandIcon className="size-4" />
+          </span>
+        </button>
+        {currentPhoto.credit ? (
+          <figcaption className="text-right text-xs text-muted-foreground">
+            {t("works.detail.photoCredit", { credit: currentPhoto.credit })}
+          </figcaption>
+        ) : null}
+      </figure>
+
+      {/* Birden çok fotoğraf varsa küçük küçük seçici şerit */}
+      {photos.length > 1 ? (
+        <div className="flex flex-wrap items-center gap-2 pt-1">
+          {photos.map((p, idx) => {
+            const isSelected = idx === selectedPhotoIndex;
+            return (
               <button
+                key={p.id}
                 type="button"
-                onClick={() => setActiveIndex(index)}
-                aria-label={t("works.detail.openPhoto", { alt })}
-                className={`group relative w-full overflow-hidden rounded-xl border bg-muted text-left outline-none focus-visible:ring-3 focus-visible:ring-ring ${
-                  isHero ? "aspect-[16/9] max-h-[460px]" : "aspect-[16/10]"
+                onClick={() => setSelectedPhotoIndex(idx)}
+                aria-current={isSelected ? "true" : undefined}
+                aria-label={loc(p.alt, lang) || `${workName} — ${idx + 1}`}
+                className={`relative h-14 w-20 shrink-0 overflow-hidden rounded-lg border transition-all ${
+                  isSelected
+                    ? "ring-2 ring-primary ring-offset-2"
+                    : "opacity-75 hover:opacity-100"
                 }`}
               >
                 <Image
-                  src={photoUrl(photo, isHero ? "full" : "thumb")}
-                  alt={alt}
+                  src={photoUrl(p, "thumb")}
+                  alt=""
                   fill
-                  priority={index === 0}
-                  sizes={
-                    isHero
-                      ? "(min-width: 1024px) 1100px, 100vw"
-                      : "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-                  }
-                  className="object-cover transition-transform duration-200 group-hover:scale-[1.02]"
+                  sizes="80px"
+                  className="object-cover"
                 />
-                <span
-                  aria-hidden
-                  className="absolute right-3 bottom-3 inline-flex size-10 items-center justify-center rounded-lg border bg-card/90 text-foreground"
-                >
-                  <ExpandIcon className="size-4" />
-                </span>
               </button>
-              <figcaption className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                <span>{alt}</span>
-                {photo.credit ? (
-                  <span>{t("works.detail.photoCredit", { credit: photo.credit })}</span>
-                ) : null}
-              </figcaption>
-            </figure>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      ) : null}
 
       <Dialog open={activeIndex !== null} onOpenChange={(open) => !open && setActiveIndex(null)}>
         <DialogContent className="sm:max-w-4xl">

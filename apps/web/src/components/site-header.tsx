@@ -1,21 +1,13 @@
 "use client";
 
-import { MenuIcon, TypeIcon, UserRoundIcon } from "lucide-react";
+import { ALargeSmallIcon, ContrastIcon, MenuIcon, UserRoundIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Switch } from "@/components/ui/switch";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar } from "@/components/account/avatar";
 import { useAccount } from "@/lib/account";
@@ -26,11 +18,9 @@ import { useIdentity } from "@/lib/identity";
 import { cn } from "@/lib/utils";
 
 const LINKS: { path: string; label: MessageKey }[] = [
-  { path: "/eserler", label: "nav.explore" },
   { path: "/rota", label: "nav.route" },
   { path: "/turlar", label: "nav.tours" },
   { path: "/sergiler", label: "nav.exhibitions" },
-  { path: "/hakkinda", label: "nav.about" },
 ];
 
 function useActive() {
@@ -39,38 +29,58 @@ function useActive() {
   return { pathname, rest, isActive: (path: string) => rest === path || rest.startsWith(`${path}/`) };
 }
 
+/**
+ * Görünüm: yüksek kontrast anahtarı ve üç yazı boyutu (her seçenek kendi boyutunda "A"). Açılır pencere tetikleyiciden
+ * açılır; değişiklik hemen uygulanır.
+ */
 function AppearanceMenu() {
   const { t } = useT();
   const a = useAppearance();
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
+    <Popover>
+      <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" aria-label={t("appearance.open")}>
-          <TypeIcon aria-hidden />
+          <ALargeSmallIcon aria-hidden />
         </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60">
-        <DropdownMenuLabel>{t("appearance.title")}</DropdownMenuLabel>
-        <DropdownMenuCheckboxItem className="min-h-12" checked={a.contrast} onCheckedChange={(v) => setAppearance({ contrast: v === true })}>
-          {t("appearance.contrast")}
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuLabel>{t("appearance.text")}</DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          value={a.text}
-          onValueChange={(v) => {
-            const size = TEXT_SIZES.find((s) => s === v);
-            if (size) setAppearance({ text: size });
-          }}
-        >
-          {TEXT_SIZES.map((s) => (
-            <DropdownMenuRadioItem key={s} value={s} className="min-h-12">
-              {t(`appearance.text.${s}`)}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 gap-0 p-2">
+        <label className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-lg px-2 hover:bg-muted">
+          <span className="flex items-center gap-2.5 text-sm font-semibold">
+            <ContrastIcon className="size-4" aria-hidden />
+            {t("appearance.contrast")}
+          </span>
+          <Switch checked={a.contrast} onCheckedChange={(v) => setAppearance({ contrast: v })} />
+        </label>
+        <div className="px-2 pt-2 pb-1">
+          <p id="text-size-label" className="pb-2 text-sm font-semibold">
+            {t("appearance.text")}
+          </p>
+          <div role="radiogroup" aria-labelledby="text-size-label" className="grid grid-cols-3 gap-1 rounded-lg bg-secondary p-1">
+            {TEXT_SIZES.map((s, i) => {
+              const on = a.text === s;
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  aria-label={t(`appearance.text.${s}`)}
+                  onClick={() => setAppearance({ text: s })}
+                  className={cn(
+                    "flex min-h-12 items-end justify-center rounded-lg pb-2.5 font-heading font-extrabold leading-none transition-[background-color,transform] duration-150 ease-out active:scale-[0.97]",
+                    on ? "bg-card text-foreground shadow-sm contrast:outline-2 contrast:outline-border" : "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  <span style={{ fontSize: `${0.875 + i * 0.25}rem` }} aria-hidden>
+                    A
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 

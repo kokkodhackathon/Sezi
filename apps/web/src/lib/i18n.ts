@@ -19,8 +19,8 @@ export function t(lang: Lang, key: MessageKey, vars?: Vars): string {
   return text.replace(/\{(\w+)\}/g, (m, name: string) => (name in vars ? String(vars[name]) : m));
 }
 
-/** Dil önekli site içi adres: `href('tr', '/eserler')` → `/tr/eserler`. */
-export const href = (lang: Lang, path = ""): string => `/${lang}${path}`;
+/** Dil önekli site içi adres: `href('tr', '/rota')` → `/tr/rota`. */
+export const href = (lang: Lang, path = ""): string => `/${lang}${path.startsWith("/?") ? path.slice(1) : path === "/" ? "" : path}`;
 
 /** Sayı biçimi (Türkçede binlik ayırıcı nokta). */
 export const formatNumber = (lang: Lang, n: number): string => n.toLocaleString(lang === "tr" ? "tr-TR" : "en-GB");

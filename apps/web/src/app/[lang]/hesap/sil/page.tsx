@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { AccountNote, FormError } from "@/components/account/form-error";
-import { PageContainer, PageIntro } from "@/components/page";
+import { PageContainer } from "@/components/page";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,7 +19,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { deleteAccount, errorKey, useAccount } from "@/lib/account";
 import { href } from "@/lib/i18n";
 import { useT } from "@/lib/i18n-client";
@@ -58,38 +57,38 @@ export default function DeleteAccountPage() {
   };
 
   return (
-    <PageContainer className="max-w-lg">
-      <PageIntro title={t("account.deleteTitle")} lead={t("account.deleteLead")} />
-      <Card>
-        <CardContent className="grid gap-5">
-          <AccountNote text={t("account.deleteKeeps")} />
-          <FormError text={error} />
-          <div className="grid gap-2">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive" disabled={busy}>
+    <PageContainer className="max-w-md">
+      <header className="mb-6">
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t("account.deleteTitle")}</h1>
+      </header>
+      <div className="grid gap-5 rounded-lg border bg-card p-6">
+        <AccountNote text={t("account.deleteKeeps")} />
+        <FormError text={error} />
+        <div className="grid gap-2">
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" disabled={busy}>
+                {busy ? t("account.deleting") : t("account.deleteConfirm")}
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{t("account.deleteAsk")}</AlertDialogTitle>
+                <AlertDialogDescription>{t("account.deleteAskBody")}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+                <AlertDialogAction variant="destructive" onClick={() => void run()} disabled={busy}>
                   {busy ? t("account.deleting") : t("account.deleteConfirm")}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>{t("account.deleteAsk")}</AlertDialogTitle>
-                  <AlertDialogDescription>{t("account.deleteAskBody")}</AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
-                  <AlertDialogAction variant="destructive" onClick={() => void run()} disabled={busy}>
-                    {busy ? t("account.deleting") : t("account.deleteConfirm")}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-            <Button variant="ghost" asChild>
-              <Link href={href(lang, "/hesap")}>{t("common.cancel")}</Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Button variant="ghost" asChild>
+            <Link href={href(lang, "/hesap")}>{t("common.cancel")}</Link>
+          </Button>
+        </div>
+      </div>
     </PageContainer>
   );
 }

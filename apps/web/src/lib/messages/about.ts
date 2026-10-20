@@ -1,6 +1,5 @@
 /** Hakkında sayfası: proje, ekip, veri ve kaynaklar: TR + EN metinleri (EN tipi her anahtarı zorunlu kılar). */
 export const tr = {
-  "about.eyebrow": "Proje, ekip ve kaynaklar",
   "about.title": "Hakkında",
   "about.lead":
     "Sezi, vakıf eserlerini kaynaklı envanter verisiyle sunan ve Kevin Lynch'in bilişsel haritalama yaklaşımıyla erişilebilir yönlendirme yapan bir keşif uygulamasıdır.",
@@ -9,16 +8,11 @@ export const tr = {
   "about.lynch.title": "Proje amacı ve Kevin Lynch yaklaşımı",
   "about.lynch.p1":
     "Klasik harita uygulamaları kültürel mirası soyut koordinatlara ve “100 metre sonra sağa dönün” gibi mekanik komutlara indirger. Sezi ise kent plancısı Kevin Lynch'in bilişsel haritalama öğelerini — yer işareti (landmark), düğüm (node), yol (path) ve bölge (district) — temel alır.",
-  "about.lynch.p2":
-    "Bursa Ulu Cami ve Hanlar Bölgesi pilotunda yön tarifi mekânın kendi işaretlerinden okunur: şadırvanın su sesi, çarşı uğultusu, zemin dokusu ve belirgin yapılar rotanın referans noktalarıdır. Kullanıcı tek bir eseri bulmakla kalmaz; külliyenin ve tarihî çarşının parçalarını bir bütün olarak deneyimler.",
 
   // Erişilebilirlik yaklaşımı
   "about.a11y.title": "Erişilebilirlik yaklaşımı",
   "about.a11y.p1":
     "Erişilebilirlik Sezi'de sonradan eklenen bir katman değil, rota motorunun ve arayüzün çekirdeğidir. Rotalar kullanıcının görme, hareket ve işitme profiline göre gerçek yaya grafiği üzerinde ayrı ayrı hesaplanır:",
-  "about.a11y.wheelchair": "Tekerlekli sandalye profili: basamaklı, dik eğimli ve dar geçitleri hiç kullanmaz; arnavut kaldırımından mümkün olduğunca kaçınır.",
-  "about.a11y.blind": "Görme engelli ve bastonlu profil: yer işaretlerinin ve ortam seslerinin duyulabildiği daha sakin sokakları tercih eder; gürültülü ana caddelerden kaçınır.",
-  "about.a11y.deaf": "Duymayan ve az duyan profil: her sesli ipucunun görsel ve haptik (titreşim) karşılığı vardır; tüm anlatımlar yazılı metin olarak ekranda yer alır.",
   "about.a11y.wcag":
     "Web ve mobil arayüzde WCAG 2.2 AA kontrast standardı, az gören kullanıcılar için yüksek kontrast (AAA) modu, ölçeklenebilir yazı boyutu ve en az 48×48 px dokunma hedefleri uygulanır; renk hiçbir zaman tek başına bilgi taşımaz.",
 
@@ -28,9 +22,6 @@ export const tr = {
   "about.team.eda.role": "Frontend",
   "about.team.inci.role": "Tasarım",
   "about.team.zehra.role": "Veri",
-  "about.hackathon.title": "42 Türkiye x Vakıf Katılım KÖK&KOD Hackathon",
-  "about.hackathon.body":
-    "Sezi, 42 Türkiye ve Vakıf Katılım iş birliğiyle düzenlenen KÖK&KOD Hackathonu kapsamında takım LAHMACUN tarafından geliştirilmektedir. Temel veri kaynağımız olan Vakıf Katılım Vakıf Eserleri Envanter Projesi, 2022'de Hatay ile başlamış; Konya, Bursa ve Kütahya ile devam etmiş ve Brandverse Awards 2026 Kültür ve Sanat Projeleri kategorisinde gümüş ödül almıştır.",
 
   // Veri politikası ve telif
   "about.copyright.title": "Veri politikası ve telif",
@@ -41,11 +32,6 @@ export const tr = {
 
   // Kaynaklar
   "about.sources.title": "Kaynaklar ve açık veri atıfları",
-  "about.sources.booksTitle": "Vakıf Katılım Vakıf Eserleri Envanteri kitapları",
-  "about.sources.citiesTitle": "Envanter illeri",
-  "about.sources.openBook": "PDF kitabı aç",
-  "about.sources.volume": "Cilt {v}",
-  "about.sources.otherTitle": "Coğrafi ve açık veri kaynakları",
   "about.sources.vakifTitle": "Vakıf Katılım — Vakıf Eserleri Envanteri",
   "about.sources.vakifBody": "Hatay, Konya ve Bursa vakıf eserleri envanter kitapları, sergi katalogları ve fotoğraf arşivi.",
   "about.sources.wikidataTitle": "Wikidata (CC0)",
@@ -57,7 +43,6 @@ export const tr = {
 };
 
 export const en: Record<keyof typeof tr, string> = {
-  "about.eyebrow": "Project, team and sources",
   "about.title": "About",
   "about.lead":
     "Sezi is a heritage discovery application that presents foundation works with sourced inventory data and provides accessible guidance through Kevin Lynch's cognitive mapping approach.",
@@ -66,16 +51,11 @@ export const en: Record<keyof typeof tr, string> = {
   "about.lynch.title": "Project purpose and the Kevin Lynch approach",
   "about.lynch.p1":
     "Conventional map apps reduce cultural heritage to abstract coordinates and mechanical commands such as “turn right in 100 metres”. Sezi builds on urban planner Kevin Lynch's elements of cognitive mapping — landmarks, nodes, paths and districts.",
-  "about.lynch.p2":
-    "In the Bursa Grand Mosque and Inns Quarter pilot, directions are read from the place itself: the sound of water at a fountain, the murmur of the bazaar, surface texture and prominent buildings serve as reference points. Visitors do not merely locate a single monument; they experience the parts of a complex and historic district as a connected whole.",
 
   // Accessibility approach
   "about.a11y.title": "Accessibility approach",
   "about.a11y.p1":
     "In Sezi, accessibility is not an afterthought layered on top — it is the core of both the routing engine and the user interface. Routes are computed on the real pedestrian graph according to each visitor's vision, mobility and hearing profile:",
-  "about.a11y.wheelchair": "Wheelchair profile: never uses stepped, steep or narrow passages, and avoids cobblestone wherever possible.",
-  "about.a11y.blind": "Blind and cane profile: prefers quieter streets where landmark and ambient sound cues remain audible, avoiding noisy arterial roads.",
-  "about.a11y.deaf": "Deaf and hard-of-hearing profile: every audio cue has a visual and haptic (vibration) counterpart, and all narrations are presented in full text.",
   "about.a11y.wcag":
     "Across web and mobile, Sezi enforces WCAG 2.2 AA contrast, a high-contrast (AAA) mode for low-vision users, scalable text sizes and minimum 48×48 px touch targets; colour is never the sole carrier of meaning.",
 
@@ -85,9 +65,6 @@ export const en: Record<keyof typeof tr, string> = {
   "about.team.eda.role": "Frontend",
   "about.team.inci.role": "Design",
   "about.team.zehra.role": "Data",
-  "about.hackathon.title": "42 Türkiye x Vakıf Katılım KÖK&KOD Hackathon",
-  "about.hackathon.body":
-    "Sezi is developed by team LAHMACUN for the KÖK&KOD Hackathon organised by 42 Türkiye and Vakıf Katılım. Our primary data source, the Vakıf Katılım Foundation Works Inventory Project, began in Hatay in 2022, continued with Konya, Bursa and Kütahya, and won the Silver Award in Culture and Arts Projects at the Brandverse Awards 2026.",
 
   // Data policy and copyright
   "about.copyright.title": "Data policy and copyright",
@@ -98,11 +75,6 @@ export const en: Record<keyof typeof tr, string> = {
 
   // Sources
   "about.sources.title": "Sources and open-data attributions",
-  "about.sources.booksTitle": "Vakıf Katılım Foundation Works Inventory books",
-  "about.sources.citiesTitle": "Inventory provinces",
-  "about.sources.openBook": "Open PDF book",
-  "about.sources.volume": "Volume {v}",
-  "about.sources.otherTitle": "Geographic and open-data sources",
   "about.sources.vakifTitle": "Vakıf Katılım — Foundation Works Inventory",
   "about.sources.vakifBody": "Hatay, Konya and Bursa foundation works inventory books, exhibition catalogues and photograph archive.",
   "about.sources.wikidataTitle": "Wikidata (CC0)",

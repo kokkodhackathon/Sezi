@@ -4,7 +4,7 @@ import { boundsOf, hasLocation, loc, toneForType, type LngLat } from "@sezi/shar
 import { useMemo, useState } from "react";
 
 import { SeziMap, type MapMarker } from "@/components/map";
-import type { WorkListItem } from "@/lib/data";
+import type { ExploreItem } from "@/lib/explore";
 import { formatNumber, t, type Lang } from "@/lib/i18n";
 
 import { WorkCard } from "./work-card";
@@ -21,7 +21,7 @@ export function WorksMapView({
   lang,
   mapLabel,
 }: {
-  works: WorkListItem[];
+  works: ExploreItem[];
   totalCount?: number;
   lang: Lang;
   mapLabel?: string;
@@ -61,7 +61,7 @@ export function WorksMapView({
 
   if (located.length === 0) {
     return (
-      <div role="status" className="rounded-xl border bg-card p-6 text-center text-muted-foreground">
+      <div role="status" className="rounded-lg border bg-card p-6 text-center text-muted-foreground">
         {t(lang, "works.map.noLocated")}
       </div>
     );
@@ -85,7 +85,7 @@ export function WorksMapView({
           bounds={bounds}
           markers={markers}
           onMarkerClick={(id) => setPickedSlug(id)}
-          className="h-[440px] w-full"
+          className="h-[480px] w-full rounded-lg"
         />
         <div className="grid gap-4" aria-live="polite">
           <div>
@@ -94,7 +94,7 @@ export function WorksMapView({
           </div>
           {activeWork ? <WorkCard work={activeWork} lang={lang} /> : null}
           {located.length > 1 ? (
-            <div className="max-h-52 overflow-y-auto rounded-xl border bg-card p-2">
+            <div className="max-h-52 overflow-y-auto rounded-lg border bg-card p-2">
               <ul className="grid gap-1">
                 {located.map((w) => {
                   const selected = w.slug === activeWork?.slug;

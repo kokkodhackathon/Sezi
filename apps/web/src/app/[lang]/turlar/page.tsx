@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { PageContainer, PageIntro } from "@/components/page";
+import { PageContainer } from "@/components/page";
 import { ToursList } from "@/components/tours/tours-list";
 import { getNavOverlay, getWorkIndex } from "@/lib/data";
 import { href, isLang, t } from "@/lib/i18n";
@@ -49,12 +49,10 @@ export default async function ToursPage({
   const initialProfile = Array.isArray(rawProfil) ? rawProfil[0] : rawProfil;
 
   return (
-    <PageContainer>
-      <PageIntro
-        eyebrow={t(lang, "tours.eyebrow")}
-        title={t(lang, "tours.title")}
-        lead={t(lang, "tours.subtitle")}
-      />
+    <PageContainer className="grid max-w-4xl gap-6">
+      <header>
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t(lang, "tours.title")}</h1>
+      </header>
       <ToursList overlay={overlay} works={works} initialProfile={initialProfile} />
     </PageContainer>
   );

@@ -8,11 +8,10 @@ import { toast } from "sonner";
 
 import { Avatar } from "@/components/account/avatar";
 import { AccountNote, FormError } from "@/components/account/form-error";
-import { PageContainer, PageIntro } from "@/components/page";
+import { PageContainer } from "@/components/page";
 import { ProfileDialog } from "@/components/profile-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { errorKey, signOut, useAccount } from "@/lib/account";
 import { href } from "@/lib/i18n";
@@ -26,7 +25,7 @@ import { useProfile } from "@/lib/profile";
  */
 export default function AccountPage() {
   const { t, lang } = useT();
-  const { ready, user, pending } = useAccount();
+  const { ready, user } = useAccount();
   const { identity, avatar } = useIdentity();
   const savedProfile = useProfile();
   const profile = savedProfile ?? profileFor("walker", lang);
@@ -38,11 +37,13 @@ export default function AccountPage() {
 
   if (!ready) {
     return (
-      <PageContainer className="max-w-xl">
-        <PageIntro title={t("account.title")} />
+      <PageContainer className="max-w-md">
+        <header className="mb-6">
+          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t("account.title")}</h1>
+        </header>
         <div role="status" aria-label={t("account.loading")} className="grid gap-4">
-          <Skeleton className="h-28 w-full rounded-xl" />
-          <Skeleton className="h-24 w-full rounded-xl" />
+          <Skeleton className="h-28 w-full rounded-lg" />
+          <Skeleton className="h-24 w-full rounded-lg" />
         </div>
       </PageContainer>
     );
@@ -50,33 +51,20 @@ export default function AccountPage() {
 
   if (!user) {
     return (
-      <PageContainer className="max-w-xl">
-        <PageIntro title={t("account.title")} lead={t("account.intro")} />
+      <PageContainer className="max-w-md">
+        <header className="mb-6">
+          <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t("account.title")}</h1>
+        </header>
         <div className="grid gap-6">
-          <Card>
-            <CardContent className="grid gap-4">
-              <div className="grid gap-1">
-                <h2 className="font-heading text-base font-bold">{t("account.benefitSync")}</h2>
-                <p className="text-sm text-muted-foreground">{t("account.benefitSyncSub")}</p>
-              </div>
-              <div className="border-t pt-4 grid gap-1">
-                <h2 className="font-heading text-base font-bold">{t("account.benefitSoon")}</h2>
-                <p className="text-sm text-muted-foreground">{t("account.benefitSoonSub")}</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="flex flex-wrap items-center justify-between gap-4">
-              <div className="grid gap-1">
-                <h2 className="font-heading text-base font-bold">{t("profile.title")}</h2>
-                <p className="text-sm text-muted-foreground">{profileSummary}</p>
-              </div>
-              <Button variant="outline" onClick={() => setProfileOpen(true)}>
-                {t("profile.change")}
-              </Button>
-            </CardContent>
-          </Card>
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-card p-4">
+            <div className="grid gap-0.5">
+              <h2 className="font-heading text-sm font-bold">{t("profile.title")}</h2>
+              <p className="text-xs text-muted-foreground">{profileSummary}</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setProfileOpen(true)}>
+              {t("profile.change")}
+            </Button>
+          </div>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <Button asChild>
@@ -110,100 +98,86 @@ export default function AccountPage() {
   const name = identity?.display_name ?? user.email ?? "";
 
   return (
-    <PageContainer className="max-w-xl">
-      <PageIntro title={t("account.title")} />
+    <PageContainer className="max-w-md">
+      <header className="mb-6">
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t("account.title")}</h1>
+      </header>
       <div className="grid gap-6">
-        <Card>
-          <CardContent className="grid gap-4">
-            <div className="flex items-center gap-4">
-              <Avatar identity={identity} src={avatar} size={72} />
-              <div className="min-w-0 flex-1 grid gap-1">
-                <h2 className="truncate font-heading text-xl font-extrabold">{name}</h2>
-                <p className="truncate text-sm text-muted-foreground">
-                  {identity?.username ? `@${identity.username}` : user.email}
-                </p>
-                {identity ? (
-                  <div className="pt-1">
-                    <Badge variant="secondary">
-                      {t(identity.visibility === "public" ? "account.visPublic" : "account.visPrivate")}
-                    </Badge>
-                  </div>
-                ) : null}
-              </div>
+        <div className="grid gap-4 rounded-lg border bg-card p-4">
+          <div className="flex items-center gap-4">
+            <Avatar identity={identity} src={avatar} size={64} />
+            <div className="min-w-0 flex-1 grid gap-0.5">
+              <h2 className="truncate font-heading text-lg font-bold">{name}</h2>
+              <p className="truncate text-xs text-muted-foreground">
+                {identity?.username ? `@${identity.username}` : user.email}
+              </p>
+              {identity ? (
+                <div className="pt-0.5">
+                  <Badge variant="secondary" className="text-[10px] py-0">
+                    {t(identity.visibility === "public" ? "account.visPublic" : "account.visPrivate")}
+                  </Badge>
+                </div>
+              ) : null}
             </div>
-            <div className="border-t pt-3">
-              <Link
-                href={href(lang, "/hesap/duzenle")}
-                className="flex min-h-12 items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-muted"
-              >
-                <span className="flex items-center gap-3">
-                  <PencilIcon className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-                  <span className="grid">
-                    <span className="font-heading text-sm font-bold">{t("account.editProfile")}</span>
-                    <span className="text-xs text-muted-foreground">{t("account.editProfileSub")}</span>
-                  </span>
-                </span>
-                <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <UserCheckIcon className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden />
-              <div className="grid gap-1">
-                <h2 className="font-heading text-base font-bold">{t("profile.title")}</h2>
-                <p className="text-sm text-muted-foreground">{profileSummary}</p>
-              </div>
-            </div>
-            <Button variant="outline" onClick={() => setProfileOpen(true)}>
-              {t("profile.change")}
-            </Button>
-          </CardContent>
-        </Card>
-
-        <AccountNote text={t(pending ? "account.syncPending" : "account.syncDone")} />
-
-        <Card>
-          <CardContent className="grid gap-2">
+          </div>
+          <div className="border-t pt-2">
             <Link
-              href={href(lang, "/hesap/sifre?mod=degistir")}
-              className="flex min-h-12 items-center justify-between gap-3 rounded-lg px-2 py-2 hover:bg-muted"
+              href={href(lang, "/hesap/duzenle")}
+              className="flex min-h-12 items-center justify-between gap-3 rounded-lg px-2 py-1.5 hover:bg-muted"
             >
-              <span className="flex items-center gap-3 font-heading text-sm font-bold">
-                <KeyRoundIcon className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-                {t("account.changePassword")}
+              <span className="flex items-center gap-3">
+                <PencilIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                <span className="font-heading text-sm font-bold">{t("account.editProfile")}</span>
               </span>
-              <ChevronRightIcon className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+              <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
             </Link>
+          </div>
+        </div>
 
-            <div className="border-t pt-3 grid gap-2">
-              <Button variant="outline" onClick={() => void handleSignOut()} disabled={leaving} className="justify-center">
-                <LogOutIcon aria-hidden />
-                {leaving ? t("account.signingOut") : t("account.signOut")}
-              </Button>
-              <p className="text-center text-xs text-muted-foreground">{t("account.signOutHint")}</p>
-              <FormError text={outError} />
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-card p-4">
+          <div className="flex items-center gap-3">
+            <UserCheckIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <div className="grid gap-0.5">
+              <h2 className="font-heading text-sm font-bold">{t("profile.title")}</h2>
+              <p className="text-xs text-muted-foreground">{profileSummary}</p>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => setProfileOpen(true)}>
+            {t("profile.change")}
+          </Button>
+        </div>
 
-        <Card>
-          <CardContent>
-            <Link
-              href={href(lang, "/hesap/sil")}
-              className="flex min-h-12 items-center justify-between gap-3 rounded-lg px-2 py-2 text-destructive hover:bg-destructive/5"
-            >
-              <span className="flex items-center gap-3 font-heading text-sm font-bold">
-                <Trash2Icon className="size-5 shrink-0" aria-hidden />
-                {t("account.delete")}
-              </span>
-              <ChevronRightIcon className="size-5 shrink-0" aria-hidden />
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="grid gap-1 rounded-lg border bg-card p-2">
+          <Link
+            href={href(lang, "/hesap/sifre?mod=degistir")}
+            className="flex min-h-12 items-center justify-between gap-3 rounded-lg px-3 py-2 hover:bg-muted"
+          >
+            <span className="flex items-center gap-3 font-heading text-sm font-bold">
+              <KeyRoundIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+              {t("account.changePassword")}
+            </span>
+            <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          </Link>
+
+          <Link
+            href={href(lang, "/hesap/sil")}
+            className="flex min-h-12 items-center justify-between gap-3 rounded-lg px-3 py-2 text-destructive hover:bg-destructive/5"
+          >
+            <span className="flex items-center gap-3 font-heading text-sm font-bold">
+              <Trash2Icon className="size-4 shrink-0" aria-hidden />
+              {t("account.delete")}
+            </span>
+            <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+          </Link>
+        </div>
+
+        <div className="grid gap-2">
+          <Button variant="outline" onClick={() => void handleSignOut()} disabled={leaving} className="justify-center">
+            <LogOutIcon aria-hidden />
+            {leaving ? t("account.signingOut") : t("account.signOut")}
+          </Button>
+          <FormError text={outError} />
+        </div>
       </div>
       <ProfileDialog open={profileOpen} onOpenChange={setProfileOpen} />
     </PageContainer>

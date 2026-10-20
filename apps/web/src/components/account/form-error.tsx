@@ -15,7 +15,7 @@ export function FormError({ text, className }: { text?: string | null; className
       role="alert"
       aria-live="assertive"
       className={cn(
-        "flex items-start gap-3 rounded-xl border-2 border-destructive bg-destructive/5 p-4 text-sm font-medium text-destructive",
+        "flex items-start gap-3 rounded-lg border-2 border-destructive bg-destructive/5 p-4 text-sm font-medium text-destructive",
         className,
       )}
     >
@@ -31,7 +31,7 @@ export function AccountNote({ text, live, className }: { text: string; live?: bo
     <div
       role={live ? "status" : undefined}
       aria-live={live ? "polite" : undefined}
-      className={cn("flex items-start gap-3 rounded-xl border bg-muted/60 p-4 text-sm text-muted-foreground", className)}
+      className={cn("flex items-start gap-3 rounded-lg border bg-muted/60 p-4 text-sm text-muted-foreground", className)}
     >
       <InfoIcon className="mt-0.5 size-5 shrink-0 text-muted-foreground" aria-hidden />
       <span>{text}</span>

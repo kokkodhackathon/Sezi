@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
-import { PageContainer, PageIntro } from "@/components/page";
+import { PageContainer } from "@/components/page";
 import { ExhibitionCard } from "@/components/works/exhibition-card";
 import { getExhibitions } from "@/lib/data";
 import { isLang, t } from "@/lib/i18n";
@@ -38,22 +38,22 @@ export default async function ExhibitionsPage({
   const exhibitions = await getExhibitions();
 
   return (
-    <PageContainer className="grid gap-8">
-      <PageIntro
-        eyebrow={t(lang, "works.exhibitions.eyebrow")}
-        title={t(lang, "works.exhibitions.title")}
-        lead={t(lang, "works.exhibitions.lead")}
-      />
+    <PageContainer className="grid max-w-4xl gap-6">
+      <header>
+        <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+          {t(lang, "works.exhibitions.title")}
+        </h1>
+      </header>
 
       {exhibitions.length === 0 ? (
         <div
           role="status"
-          className="rounded-2xl border bg-card p-8 text-center text-muted-foreground"
+          className="py-16 text-center text-sm text-muted-foreground"
         >
           {t(lang, "works.exhibitions.empty")}
         </div>
       ) : (
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="grid gap-3">
           {exhibitions.map((exhibition) => (
             <ExhibitionCard key={exhibition.id} exhibition={exhibition} lang={lang} />
           ))}

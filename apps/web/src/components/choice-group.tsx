@@ -21,17 +21,19 @@ export function ChoiceGroup<V extends string>({
   onChange,
   choices,
   className,
+  legendHidden,
 }: {
   legend: string;
   value: V;
   onChange: (v: V) => void;
   choices: Choice<V>[];
   className?: string;
+  legendHidden?: boolean;
 }) {
   const id = useId();
   return (
     <div className={cn("grid gap-2", className)}>
-      <p id={`${id}-legend`} className="font-heading text-sm font-bold">
+      <p id={`${id}-legend`} className={cn("font-heading text-sm font-bold", legendHidden && "sr-only")}>
         {legend}
       </p>
       <RadioGroup

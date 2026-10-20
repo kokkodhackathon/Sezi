@@ -1,17 +1,16 @@
 "use client";
 
 import { A11yReportType, boundsOf, loc, toneForType, type LngLat } from "@sezi/shared";
-import { AlertCircle, CheckCircle2, MapPin } from "lucide-react";
+import { AlertCircle, CheckCircle2, LandmarkIcon, MapPin } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { z } from "zod";
 
 import { ChoiceGroup, type Choice } from "@/components/choice-group";
+import { PlacePicker } from "@/components/route/place-picker";
 import { SeziMap, type MapMarker } from "@/components/map";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import type { NavOverlay } from "@/lib/data";
 import type { MessageKey } from "@/lib/i18n";
@@ -248,137 +247,130 @@ export function ReportForm({
 
   if (sent) {
     return (
-      <Card className="mx-auto max-w-2xl">
-        <CardContent className="grid gap-4 p-6" role="status" aria-live="polite">
-          <div className="flex items-start gap-3">
-            <CheckCircle2 aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-primary" />
-            <div className="grid gap-1">
-              <h2 className="font-heading text-xl font-extrabold">{t("report.sent")}</h2>
-              <p className="text-sm text-muted-foreground">{t("report.sentBody")}</p>
-            </div>
+      <div className="grid gap-4 rounded-lg border bg-card p-6" role="status" aria-live="polite">
+        <div className="flex items-start gap-3">
+          <CheckCircle2 aria-hidden="true" className="mt-0.5 size-6 shrink-0 text-primary" />
+          <div className="grid gap-1">
+            <h2 className="font-heading text-xl font-extrabold">{t("report.sent")}</h2>
+            <p className="text-sm text-muted-foreground">{t("report.sentBody")}</p>
           </div>
-          <div>
-            <Button type="button" onClick={handleReset}>
-              {t("report.new")}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+        <div>
+          <Button type="button" onClick={handleReset}>
+            {t("report.new")}
+          </Button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] lg:items-start">
-      <Card>
-        <CardContent className="p-6">
-          <form onSubmit={handleSubmit} noValidate className="grid gap-6">
-            <div className="grid gap-2">
-              <Label htmlFor="report-work" className="font-heading text-sm font-bold">
-                {t("report.workLabel")}
-              </Label>
-              <p id="report-where-help" className="text-xs text-muted-foreground">
-                {t("report.whereHelp")}
-              </p>
-              <select
-                id="report-work"
-                value={workSlug}
-                onChange={(e) => selectWork(e.target.value)}
-                aria-describedby={locationError ? "report-where-help report-location-error" : "report-where-help"}
-                aria-invalid={Boolean(locationError)}
-                className="min-h-12 w-full rounded-lg border border-input bg-card px-3 py-2 text-sm font-medium text-foreground outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 aria-invalid:border-destructive"
-              >
-                <option value="">{t("report.workPlaceholder")}</option>
-                {works.map((w) => (
-                  <option key={w.slug} value={w.slug}>
-                    {w.name}
-                  </option>
-                ))}
-              </select>
-
-              {segmentKey ? (
-                <div className="flex flex-wrap items-center gap-2 pt-1 text-sm">
-                  <MapPin aria-hidden="true" className="size-4 shrink-0 text-link" />
-                  <span className="font-medium">
-                    {selectedWork ? t("report.near", { name: selectedWork.name }) : t("report.pickedOnMap")}
-                  </span>
-                  <Badge variant="outline">{t("report.segmentLabel", { segment: segmentKey })}</Badge>
-                </div>
-              ) : null}
-
-              {locationError ? (
-                <Alert id="report-location-error" variant="destructive">
-                  <AlertCircle aria-hidden="true" />
-                  <AlertDescription>{locationError}</AlertDescription>
-                </Alert>
-              ) : null}
+    <form onSubmit={handleSubmit} noValidate className="grid gap-8">
+      {/* Adım 1: Konum (Where) */}
+      <section aria-labelledby="step-where-heading" className="grid gap-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <h2 id="step-where-heading" className="font-heading text-base font-bold text-foreground">
+            1. {t("report.where")}
+          </h2>
+          {segmentKey ? (
+            <div className="flex items-center gap-1.5 text-xs text-primary font-medium">
+              <MapPin aria-hidden="true" className="size-3.5" />
+              <span>{selectedWork ? t("report.near", { name: selectedWork.name }) : t("report.pickedOnMap")}</span>
             </div>
+          ) : null}
+        </div>
 
-            <ChoiceGroup
-              legend={t("report.type")}
-              value={type}
-              onChange={(next) => {
-                setType(next);
-                setSubmitError(null);
-              }}
-              choices={choices}
-            />
-
-            <div className="grid gap-2">
-              <div className="flex items-center justify-between gap-2">
-                <Label htmlFor="report-note" className="font-heading text-sm font-bold">
-                  {t("report.note")}
-                </Label>
-                <span id="report-note-count" className="text-xs text-muted-foreground" aria-live="off">
-                  {t("report.noteCount", { n: note.length })}
-                </span>
-              </div>
-              <Textarea
-                id="report-note"
-                value={note}
-                onChange={(e) => setNote(e.target.value.slice(0, NOTE_MAX))}
-                maxLength={NOTE_MAX}
-                rows={4}
-                placeholder={t("report.notePlaceholder")}
-                aria-describedby="report-note-help report-note-count"
-              />
-              <p id="report-note-help" className="text-xs text-muted-foreground">
-                {t("report.noteHelp")}
-              </p>
-            </div>
-
-            <p className="text-xs text-muted-foreground">{t("report.noAccountNote")}</p>
-
-            {submitError ? (
-              <Alert variant="destructive">
-                <AlertCircle aria-hidden="true" />
-                <AlertTitle>{t("report.title")}</AlertTitle>
-                <AlertDescription>{submitError}</AlertDescription>
-              </Alert>
-            ) : null}
-
-            <Button type="submit" size="lg" disabled={submitting} className="w-full sm:w-auto">
-              {submitting ? t("report.submitting") : t("report.submit")}
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
-      <div className="grid gap-2">
-        <SeziMap
-          label={t("report.mapLabel")}
-          center={selectedWork?.location ?? pickedPoint ?? planner.center}
-          zoom={16}
-          bounds={bounds}
-          markers={markers}
-          highlight={highlight}
-          onMarkerClick={(id) => {
-            if (id !== "__picked__") selectWork(id);
-          }}
-          onMapClick={handleMapClick}
-          className="h-[420px] w-full"
+        <PlacePicker
+          id="report-work"
+          label={t("report.workLabel")}
+          marker={<MapPin className="size-5 text-accent-text" />}
+          value={workSlug}
+          display={selectedWork?.name ?? t("report.workPlaceholder")}
+          options={works.map((w) => ({ value: w.slug, label: w.name, icon: <LandmarkIcon aria-hidden /> }))}
+          onChange={selectWork}
         />
-        <p className="text-xs text-muted-foreground">{t("report.mapHelp")}</p>
+
+        <div className="overflow-hidden rounded-lg border">
+          <SeziMap
+            label={t("report.mapLabel")}
+            center={selectedWork?.location ?? pickedPoint ?? planner.center}
+            zoom={16}
+            bounds={bounds}
+            markers={markers}
+            highlight={highlight}
+            onMarkerClick={(id) => {
+              if (id !== "__picked__") selectWork(id);
+            }}
+            onMapClick={handleMapClick}
+            className="h-[280px] w-full sm:h-[320px]"
+          />
+        </div>
+
+        {segmentKey ? (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <Badge variant="outline">{t("report.segmentLabel", { segment: segmentKey })}</Badge>
+          </div>
+        ) : null}
+
+        {locationError ? (
+          <Alert variant="destructive">
+            <AlertCircle aria-hidden="true" />
+            <AlertDescription>{locationError}</AlertDescription>
+          </Alert>
+        ) : null}
+      </section>
+
+      {/* Adım 2: Engel Türü (What) */}
+      <section aria-labelledby="step-what-heading" className="grid gap-3 border-t pt-6">
+        <h2 id="step-what-heading" className="font-heading text-base font-bold text-foreground">
+          2. {t("report.type")}
+        </h2>
+        <ChoiceGroup
+          legend={t("report.type")}
+          legendHidden
+          value={type}
+          onChange={(next) => {
+            setType(next);
+            setSubmitError(null);
+          }}
+          choices={choices}
+        />
+      </section>
+
+      {/* Adım 3: Açıklama (Note) */}
+      <section aria-labelledby="step-note-heading" className="grid gap-3 border-t pt-6">
+        <div className="flex items-center justify-between gap-2">
+          <h2 id="step-note-heading" className="font-heading text-base font-bold text-foreground">
+            3. {t("report.note")}
+          </h2>
+          <span className="text-xs text-muted-foreground num" aria-live="off">
+            {t("report.noteCount", { n: note.length })}
+          </span>
+        </div>
+        <Textarea
+          id="report-note"
+          value={note}
+          onChange={(e) => setNote(e.target.value.slice(0, NOTE_MAX))}
+          maxLength={NOTE_MAX}
+          rows={3}
+          placeholder={t("report.notePlaceholder")}
+          aria-label={t("report.note")}
+        />
+      </section>
+
+      {submitError ? (
+        <Alert variant="destructive">
+          <AlertCircle aria-hidden="true" />
+          <AlertTitle>{t("report.title")}</AlertTitle>
+          <AlertDescription>{submitError}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="pt-2">
+        <Button type="submit" size="lg" disabled={submitting} className="w-full sm:w-auto">
+          {submitting ? t("report.submitting") : t("report.submit")}
+        </Button>
       </div>
-    </div>
+    </form>
   );
 }

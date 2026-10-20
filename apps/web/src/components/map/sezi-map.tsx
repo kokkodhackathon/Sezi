@@ -43,6 +43,8 @@ export interface SeziMapProps {
   zoom?: number;
   /** [batı, güney, doğu, kuzey]: verilirse harita buna sığdırılır. */
   bounds?: [number, number, number, number] | null;
+  /** Sığdırırken kenar boşluğu (px); haritanın üstündeki panel için. */
+  fitPadding?: { top: number; right: number; bottom: number; left: number };
   markers?: MapMarker[];
   lines?: MapLine[];
   /** Vurgulanan yol parçası (bildirim). */
@@ -95,6 +97,7 @@ export default function SeziMap(props: SeziMapProps) {
       }
     }
     setData(m, "highlight", fc(p.highlight ? [lineFeature(p.highlight)] : []));
+    m.getCanvas().style.cursor = p.onMapClick ? "crosshair" : "";
     setData(
       m,
       "markers",
@@ -122,7 +125,7 @@ export default function SeziMap(props: SeziMapProps) {
           [w, s],
           [e, n],
         ],
-        { padding: 48, duration: 0, maxZoom: 17.5 },
+        { padding: p.fitPadding ?? 48, duration: 0, maxZoom: 17.5 },
       );
     }
   };
@@ -221,10 +224,10 @@ export default function SeziMap(props: SeziMapProps) {
 
   if (!MAPBOX_TOKEN) {
     return (
-      <div role="note" className={`grid place-items-center rounded-xl border bg-muted p-6 text-center text-sm text-muted-foreground ${props.className ?? ""}`}>
+      <div role="note" className={`grid place-items-center bg-muted p-6 text-center text-sm text-muted-foreground ${props.className ?? "rounded-lg border"}`}>
         {t("map.noToken")}
       </div>
     );
   }
-  return <div ref={box} role="region" aria-label={props.label || t("map.label")} className={`overflow-hidden rounded-xl border ${props.className ?? ""}`} />;
+  return <div ref={box} role="region" aria-label={props.label || t("map.label")} className={`overflow-hidden ${props.className ?? "rounded-lg border"}`} />;
 }
