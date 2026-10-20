@@ -13,6 +13,7 @@ Durum: 13 Ekim 2026. Bu belge **bugün çalışan** sistemi anlatır. Hedefler v
 │        └─ lib/navigation/session.ts ─ @sezi/shared: followRoute · walker ─ ses/haptik ▲    │
 └────────────────────────────────────────────────────────────────────────────────────│────────┘
 apps/admin (Vite + React) ─ Rota testi: aynı planlayıcı + sanal yürüyüş ── authenticated + admin ┘
+apps/web (Next.js, sezi.info) ─ sunucu sayfaları + ISR (anon, verified) ─ rota/tur/bildirim: aynı planlayıcı ┘
 data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets/pilot/*-nav.json
 ```
 
@@ -20,6 +21,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 |---|---|---|
 | `apps/mobile` | Kullanıcı uygulaması | Tüm final ekranları var, bir kısmı mock (aşağıda) |
 | `apps/admin` | İçerik girişi, onay, moderasyon | shadcn/ui + Tailwind v4 (Çini 2 token'ları). Pano (veri kapsamı, bekleyen işler), eserler, yeni eser, eser metinleri, fotoğraf kutusu, konum eşleştirme, noktalar, rota testi, bildirimler, iller (apps/admin/README.md) |
+| `apps/web` | Halka açık web sitesi (`sezi.info`) | Next.js 16 App Router, `/tr` ve `/en`. Eser sayfaları sunucuda üretilir, 10 dk'da bir yenilenir (ISR, SEO, JSON-LD). Keşfet (arama + filtre + harita), eser / il / külliye, sergiler, hakkında; pilot alanda rota planlama (önizleme, talimat listesi, profil karşılaştırması), turlar, hesapsız erişilebilirlik bildirimi; isteğe bağlı hesap (mobille aynı). Saf mantık `@sezi/shared`'den; harita kütüphanesi yalnız `src/components/map` |
 | `packages/shared` | zod şemaları, geo, rota ve yönlendirme motoru, tema token'ları | Testli (19 test) |
 | `supabase` | Migration'lar, seed'ler | 3 migration uygulandı; güvenlik uyarısı yok |
 | `data` | Ham veri → model dönüşümü | Envanter pipeline'ı ve nav grafiği üretici |
@@ -65,9 +67,12 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 **Hesap (isteğe bağlı)**
 - Uygulama hesapsız tam çalışır; hesap açılışta sorulmaz (Profil → Hesap). İleride hesaplılara açılacak özelliklerin sahibi bu yapıdır.
 - Kimlik: Supabase Auth, e-posta + şifre (en az 8 karakter, harf ve rakam). Doğrulama, şifre sıfırlama ve girişliyken şifre değişimi e-postaya gelen 6 haneli kodla; derin bağlantı yok. Şifre değişimini sunucu zorlar (`secure_password_change`: `reauthenticate` kodu `nonce` olarak). E-posta değiştirme yok: çift onay kod akışında çalışmıyor (supabase/supabase#32909) ve kapatılması güvenli değil.
-- `accounts` (RLS: yalnız sahibi okur/ekler/günceller; anon erişemez): `display_name`, `prefs` (erişilebilirlik profili + taşınan ayarlar, ≤ 8 KB), `prefs_updated_at`. Satırı istemci ilk girişte ekler; auth.users üzerinde tetikleyici yok.
+- `accounts` (RLS: yalnız sahibi okur/ekler/günceller; anon erişemez): `prefs` (erişilebilirlik profili + taşınan ayarlar, ≤ 8 KB), `prefs_updated_at`. Satırı istemci ilk girişte ekler; auth.users üzerinde tetikleyici yok.
+- `profiles` (kimlik, `lib/identity.ts`): `display_name`, `username` (benzersiz, `^[a-z0-9_]{3,20}$`, isteğe bağlı), `avatar_path` (yalnız `avatars/<uid>/…`), `avatar_tone` (Çini 2 tonu), `visibility` (`private` / `public`). RLS: sahibi yazar; girişli kullanıcı kendisini ve `public` profilleri okur, anon hiçbirini. Arkadaş ekleme ve kişisel galeri bu tabloya bağlanacak. Tercihler bu tabloda değil; açık profilde e-posta ve tercih görünmez. Satırı istemci ilk girişte kayıttaki adla açar.
+- Profil fotoğrafı: özel `avatars` kovası (yalnız JPEG, ≤ 1 MB). Uygulama seçilen kareyi 512 px'e küçültür, her yüklemede yeni dosya adı (önbellek dosyaya bağlı), eskisini siler. Okuma oturum anahtarıyla `storage/v1/object/authenticated/…` (`lib/supabase.ts › privateObject`); sahibi ve açık profilde girişli kullanıcılar okur.
 - Tercih eşitleme (`lib/account.tsx`): cihaz kaynaktır. Yeni girişte hesaptaki tercih cihaza gelir; sonra en yeni değişiklik kazanır (`prefs_updated_at`). İnternetsiz değişiklik bekler, öne gelince gider. E-posta şablonu dili `user_metadata.lang`'dan.
-- Hesap silme: edge function `delete-account` (oturum anahtarını Auth sunucusunda doğrular, `reports/<uid>/` fotoğraflarını ve kullanıcıyı siler). `accounts` cascade ile gider; `a11y_reports.user_id` ve `reviewed_by` boşalır (bildirim ve onay kalır).
+- Hesap silme: edge function `delete-account` (oturum anahtarını Auth sunucusunda doğrular, `reports/<uid>/` ve `avatars/<uid>/` dosyalarını ve kullanıcıyı siler). `accounts` ve `profiles` cascade ile gider; `a11y_reports.user_id` ve `reviewed_by` boşalır (bildirim ve onay kalır).
+- Çıkış: `signOut({ scope: 'local' })`. İnternet yokken geçerli oturum yine yerelde silinir (sunucu hatası yok sayılır); süresi dolmuş oturum yenilenemediği için supabase-js onu yerinde bırakır. Başarı yalnız cihazdaki oturum anahtarı (`lib/supabase.ts › SESSION_KEY`) gerçekten silindiyse bildirilir: o zaman hesap ve kimlik önbelleği temizlenir, Profil'e dönülür; değilse kullanıcı girişli kalır ve "bağlantı gelince tekrar deneyin" görür.
 - E-posta: Resend SMTP (`config.toml [auth.email.smtp]`, gönderici `no-reply@sezi.info`, anahtar `supabase/.env › RESEND_API_KEY`); şablonlar `supabase/templates/` (TR/EN, Çini 2 renkleri). Ücretsiz planda şablon değişikliği özel SMTP ister. Gönderim: `set -a; . supabase/.env; set +a; npx supabase@latest config push --project-ref jejsvycpzulpleftkssj` (yalnız auth'a "y"). Auth her şablonu ilk kullanımda önbelleğe alır (`TemplateMaxAge`, varsayılan 10 dk): değişiklikten sonraki ilk dakikalarda eski şablon gidebilir; gerçek içerik Resend `GET /emails/{id}` ile denetlenir.
 
 **Seslendirme (Chirp 3 HD)**
@@ -143,7 +148,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 | `exhibitions` | Envanter fotoğraf sergileri | `exhibitions` |
 | `search` | Ad, tür, ilçe ve il araması | `works_view` |
 | `report/new`, `reports` | Erişilebilirlik bildirimi: cihazda kuyruk → sunucu (hesapsız, RLS); onaylanınca "onaylandı" | `a11y_reports`, `segment_overrides` |
-| `account/*` | İsteğe bağlı hesap: `index` (girişsiz tanıtım / girişli ad, e-posta, eşitleme, çıkış), `sign-up`, `sign-in`, `verify` (6 haneli kod: kayıt, sıfırlama), `forgot`, `password` (sıfırlama sonrası ya da kodla değişim), `name`, `delete` | Supabase Auth, `accounts`, `delete-account` |
+| `account/*` | İsteğe bağlı hesap: `index` (girişsiz tanıtım / girişli profil kartı, eşitleme, çıkış), `sign-up`, `sign-in`, `verify` (kayıt kodu), `reset-code` (sıfırlama kodu; ikisi `components/code-verify.tsx`, başlıklar `_layout.tsx`'te sabit), `forgot`, `password` (sıfırlama sonrası ya da kodla değişim), `edit` (fotoğraf, ad, @kullanıcı adı, renk, görünürlük), `delete` | Supabase Auth, `accounts`, `profiles`, `avatars`, `delete-account` |
 | `complex/[slug]` | Külliye ekranı; Bursa verisinde külliye bağlantısı henüz yok | `works_view` |
 | `settings`, `about`, `lab` | Ayarlar, proje ve envanter bilgisi, cihaz testleri (ses, pusula, haptik) | – |
 

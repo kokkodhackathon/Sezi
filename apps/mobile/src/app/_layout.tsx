@@ -89,8 +89,9 @@ function AppStack() {
           <Stack.Screen name="account/sign-up" options={{ title: tr('account.signUp') }} />
           <Stack.Screen name="account/verify" options={{ title: tr('account.verifyTitle') }} />
           <Stack.Screen name="account/forgot" options={{ title: tr('account.forgotTitle') }} />
+          <Stack.Screen name="account/reset-code" options={{ title: tr('account.forgotTitle') }} />
           <Stack.Screen name="account/password" options={{ title: tr('account.newPasswordTitle') }} />
-          <Stack.Screen name="account/name" options={{ title: tr('account.editName') }} />
+          <Stack.Screen name="account/edit" options={{ title: tr('account.editProfile') }} />
           <Stack.Screen name="account/delete" options={{ title: tr('account.deleteTitle') }} />
           <Stack.Screen name="settings" options={{ title: tr('settings.title') }} />
           <Stack.Screen name="about" options={{ title: tr('about.title') }} />

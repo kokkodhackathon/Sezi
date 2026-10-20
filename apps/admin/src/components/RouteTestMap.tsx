@@ -1,8 +1,8 @@
-import { boundsOf, sliceLine, type LngLat, type NavPoint, type PilotNode, type StartPoint } from '@sezi/shared';
+import { boundsOf, sliceLine, type LngLat, type NavPoint, type PilotNode, type ProfileKey, type StartPoint } from '@sezi/shared';
 import { useEffect, useRef } from 'react';
 
 import { createMap, MAP_FONT } from '@/lib/mapbox';
-import { PROFILE_LINE, type ProfileKey } from '@/lib/route-test';
+import { PROFILE_LINE } from '@/lib/route-test';
 import { ROLE_COLOR, hasRadius } from './PointsMap';
 
 /** Merkez ve yarıçaptan (m) 48 köşeli daire poligonu. */

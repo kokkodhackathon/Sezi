@@ -1,3 +1,4 @@
+import { loc, type WorkPhoto } from '@sezi/shared';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -6,7 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CloseIcon } from '@/design/icons';
 import { space, type } from '@/design/type';
 import { useT } from '@/lib/i18n';
-import { loc, photoUrl, type WorkPhoto } from '@/lib/works';
+import { photoUrl } from '@/lib/works';
 
 /**
  * Tam ekran fotoğraf görüntüleyici: yatay kaydırma, alt metin ve telif satırı.

@@ -50,6 +50,7 @@ Anahtarlar repoda yok (gitignore). Supabase anahtarlarını takımdan (Ediz) öz
 ```bash
 cp .env.example apps/mobile/.env
 cp .env.example apps/admin/.env
+cp .env.example apps/web/.env.local
 ```
 
 Doldurulacak alanlar:
@@ -61,7 +62,11 @@ Doldurulacak alanlar:
 | | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Eski anon key (publishable yoksa) |
 | `apps/admin/.env` | `VITE_SUPABASE_URL` | Aynı URL |
 | | `VITE_SUPABASE_ANON_KEY` | Publishable ya da anon key |
-| her ikisi | `EXPO_PUBLIC_MAPBOX_TOKEN` (mobil), `VITE_MAPBOX_TOKEN` (admin) | Mapbox public token (`pk.…`), account.mapbox.com → Tokens. Ücretsiz plan: mobilde ayda 25.000 aktif kullanıcı, webde 50.000 harita açılışı |
+| `apps/web/.env.local` | `NEXT_PUBLIC_SUPABASE_URL` | Aynı URL |
+| | `NEXT_PUBLIC_SUPABASE_KEY` | Publishable key |
+| | `NEXT_PUBLIC_MAPBOX_TOKEN` | Mapbox public token (web için `sezi.info`'ya kısıtlı ayrı token) |
+| | `NEXT_PUBLIC_SITE_URL` | Yerelde `http://localhost:3001`, yayında `https://sezi.info` |
+| hepsi | `EXPO_PUBLIC_MAPBOX_TOKEN` (mobil), `VITE_MAPBOX_TOKEN` (admin) | Mapbox public token (`pk.…`), account.mapbox.com → Tokens. Ücretsiz plan: mobilde ayda 25.000 aktif kullanıcı, webde 50.000 harita açılışı |
 
 Mapbox token'ı için: yayına çıkarken mobil ve admin için **ayrı** token kullanın. URL kısıtı yalnızca web isteklerinde işe yarar; mobil token'a URL kısıtı eklemeyin (mobil haritada 403 verir). Android derlemesi için gizli indirme token'ı (`sk.…`) gerekmez.
 `service_role` anahtarı ve veritabanı parolası **hiçbir .env'e konmaz, hiçbir yere commit'lenmez**.
@@ -96,12 +101,31 @@ Panel statik bir sitedir: `apps/admin/Dockerfile` derler, nginx sunar (`apps/adm
 
 1. Coolify → **New Resource** → GitHub deposu (`kokkodhackathon/Sezi`, dal `main`). Coolify depoyu çeker: yayına girecek commit'ler push edilmiş olmalı.
 2. **Build Pack:** Dockerfile. **Base Directory:** `/` (depo kökü; panel ortak paketi ve mobilin pilot grafiğini kullanır). **Dockerfile Location:** `/apps/admin/Dockerfile`. **Port:** `80`.
-3. **Domains:** `https://panel.alanadiniz.com` gibi tam adres; Coolify sertifikayı kendisi alır.
+3. **Domains:** `https://admin.sezi.info`; Coolify sertifikayı kendisi alır.
 4. **Environment Variables:** `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_MAPBOX_TOKEN`; üçünde de **Build Variable** işaretli olmalı (değerler derlemede pakete gömülür). Değer değişince yeniden deploy edilir. `service_role` anahtarı ya da veritabanı parolası **asla** buraya girmez.
-5. **Supabase → Authentication → URL Configuration:** **Redirect URLs** listesine panelin adresini ekleyin (`https://panel.alanadiniz.com/**`). Eklenmezse e-postadaki giriş bağlantısı localhost'a döner. Yerelde de giriş yapılacaksa **Site URL** `http://localhost:3000` kalabilir.
+5. **Supabase → Authentication → URL Configuration:** **Redirect URLs** listesine panelin adresini ekleyin (`https://admin.sezi.info/**`). Eklenmezse e-postadaki giriş bağlantısı localhost'a döner. Yerelde de giriş yapılacaksa **Site URL** `http://localhost:3000` kalabilir.
 6. **Mapbox:** paneldeki token'ı yalnızca bu adrese kısıtlamak isterseniz admin için ayrı bir token açın (URL kısıtı mobil haritayı bozar; bkz. yukarıdaki Mapbox notu).
 
 Yerelde denemek için: `docker build -f apps/admin/Dockerfile --build-arg VITE_SUPABASE_URL=… --build-arg VITE_SUPABASE_ANON_KEY=… --build-arg VITE_MAPBOX_TOKEN=… -t sezi-admin .` → `docker run -p 8080:80 sezi-admin`.
+
+## 4b. Web sitesi (sezi.info)
+
+```bash
+pnpm dev:web
+```
+
+Tarayıcıda **http://localhost:3001** açılır (`/` tarayıcı diline göre `/tr` ya da `/en`'e yönlenir). Next.js; sayfalar sunucuda üretilir ve 10 dakikada bir yenilenir (ISR). Yalnız yayındaki (`verified`) içerik görünür.
+
+### Yayına alma (Coolify)
+
+1. Coolify → **New Resource** → aynı GitHub deposu, dal `main`.
+2. **Build Pack:** Dockerfile. **Base Directory:** `/`. **Dockerfile Location:** `/apps/web/Dockerfile`. **Port:** `3000`.
+3. **Domains:** `https://sezi.info,https://www.sezi.info`; `www` kök adrese yönlendirilir (Coolify → **Redirect to non-www**).
+4. **Environment Variables:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_KEY`, `NEXT_PUBLIC_MAPBOX_TOKEN`, `NEXT_PUBLIC_SITE_URL=https://sezi.info`; dördünde de **Build Variable** işaretli olmalı (değerler derlemede pakete gömülür).
+5. **Mapbox:** web için `sezi.info`'ya URL kısıtlı ayrı bir `pk.` token açın.
+6. **Supabase:** ek ayar gerekmez. Web'de kayıt, giriş ve şifre işlemleri e-postadaki 6 haneli kodla yapılır (yönlendirme adresi yok). Hesap silme `delete-account` fonksiyonunu tarayıcıdan çağırır (CORS açık).
+
+Yerelde denemek için: `docker build -f apps/web/Dockerfile --build-arg NEXT_PUBLIC_SUPABASE_URL=… --build-arg NEXT_PUBLIC_SUPABASE_KEY=… --build-arg NEXT_PUBLIC_MAPBOX_TOKEN=… -t sezi-web .` → `docker run -p 3000:3000 sezi-web`.
 
 ## 5. Mobil uygulama (geliştirme)
 

@@ -1,20 +1,18 @@
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { Code, Password } from '@sezi/shared';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { AccessibilityInfo, Text } from 'react-native';
+import { AccessibilityInfo } from 'react-native';
 
-import { CodeField, FormScreen, PasswordField, useCooldown } from '@/components/account-fields';
+import { CodeField, FormError, FormScreen, PasswordField, useCooldown } from '@/components/account-fields';
 import { Button } from '@/components/ui';
-import { type } from '@/design/type';
-import { useSweetTheme } from '@/hooks/use-sweet-theme';
-import { Code, errorKey, Password, sendPasswordChangeCode, setPassword, useAccount } from '@/lib/account';
+import { errorKey, sendPasswordChangeCode, setPassword, useAccount } from '@/lib/account';
 import { useT } from '@/lib/i18n';
 
 /**
- * Yeni şifre. `recovery`: sıfırlama kodu doğrulandıktan hemen sonra (yeni oturum, ek kod yok).
- * `change`: girişliyken; sunucu `secure_password_change` ister: önce e-postaya onay kodu gider.
+ * Yeni şifre (başlık `_layout.tsx`'te sabit). `recovery`: sıfırlama kodu doğrulandıktan hemen sonra (yeni oturum,
+ * ek kod yok). `change`: girişliyken; sunucu `secure_password_change` ister: önce e-postaya onay kodu gider.
  */
 export default function PasswordScreen() {
-  const t = useSweetTheme();
   const { t: tr } = useT();
   const { user } = useAccount();
   const { mode } = useLocalSearchParams<{ mode: 'recovery' | 'change' }>();
@@ -61,17 +59,12 @@ export default function PasswordScreen() {
     }
   };
 
-  const formError = errors.form ? (
-    <Text style={[type.body, { color: t.danger }]} accessibilityLiveRegion="polite">
-      {errors.form}
-    </Text>
-  ) : null;
+  const formError = <FormError text={errors.form} />;
 
   // Değişim, ilk adım: onay kodu iste.
   if (change && !sent) {
     return (
       <FormScreen lead={tr('account.changePasswordLead', { email: user?.email ?? '' })}>
-        <Stack.Screen options={{ title: tr('account.changePassword') }} />
         {formError}
         <Button label={tr('account.sendCode')} onPress={sendCode} disabled={busy} />
       </FormScreen>
@@ -80,11 +73,10 @@ export default function PasswordScreen() {
 
   return (
     <FormScreen lead={change ? tr('account.codeSent', { email: user?.email ?? '' }) : tr('account.newPasswordLead')}>
-      <Stack.Screen options={{ title: tr(change ? 'account.changePassword' : 'account.newPasswordTitle') }} />
       {change ? <CodeField value={code} onChange={setCode} error={errors.code} /> : null}
-      <PasswordField isNew label={tr('account.newPassword')} help={tr('account.passwordHelp')} error={errors.password} value={password} onChangeText={setPw} onSubmitEditing={save} />
+      <PasswordField isNew label={tr('account.newPassword')} error={errors.password} value={password} onChangeText={setPw} onSubmitEditing={save} />
       {formError}
-      <Button label={tr('account.savePassword')} onPress={save} disabled={busy} />
+      <Button label={busy ? tr('account.saving') : tr('account.savePassword')} onPress={save} disabled={busy} />
       {change ? (
         <Button
           variant="ghost"

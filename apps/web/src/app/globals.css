@@ -1,0 +1,130 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+/*
+ * Sezi web: mobil ve admin ile aynı "Çini 2" token'ları. Renk değerleri burada değil, `src/lib/theme.ts`
+ * içinde ortak temadan üretilip <head>'e basılır (:root açık tema, [data-contrast="high"] yüksek kontrast).
+ * Kartlar gölgesiz; yüksek kontrastta her yüzey 2 px çerçeveyle ayrılır.
+ */
+
+@custom-variant contrast (&:where([data-contrast="high"], [data-contrast="high"] *));
+/* Site yalnız açık temadır: bileşenlerdeki `dark:` sınıfları işletim sisteminin koyu modunda devreye girmesin. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --font-heading: var(--font-nunito), "Segoe UI", system-ui, sans-serif;
+  --font-sans: var(--font-atkinson), "Segoe UI", system-ui, sans-serif;
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-background: var(--background);
+  --color-link: var(--link);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-accent-text: var(--accent-text);
+  /* Durum tonları (Badge): renk tek başına anlam taşımaz, yanında hep metin olur. */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  /* Eser türü tonları (dolgu + mürekkep). */
+  --color-tone-cobalt: var(--tone-cobalt-fill);
+  --color-tone-cobalt-ink: var(--tone-cobalt-ink);
+  --color-tone-teal: var(--tone-teal-fill);
+  --color-tone-teal-ink: var(--tone-teal-ink);
+  --color-tone-coral: var(--tone-coral-fill);
+  --color-tone-coral-ink: var(--tone-coral-ink);
+  --color-tone-saffron: var(--tone-saffron-fill);
+  --color-tone-saffron-ink: var(--tone-saffron-ink);
+  --color-tone-sage: var(--tone-sage-fill);
+  --color-tone-sage-ink: var(--tone-sage-ink);
+  --color-tone-plum: var(--tone-plum-fill);
+  --color-tone-plum-ink: var(--tone-plum-ink);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --radius: 0.75rem;
+}
+
+/* Yazı büyütme (görünüm menüsü): rem tabanlı her ölçü birlikte büyür. */
+html[data-text="lg"] {
+  font-size: 112.5%;
+}
+html[data-text="xl"] {
+  font-size: 125%;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    line-height: 1.55;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1,
+  h2,
+  h3 {
+    @apply font-heading;
+    text-wrap: balance;
+  }
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  :focus-visible {
+    outline: 3px solid var(--ring);
+    outline-offset: 2px;
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+  .num {
+    font-variant-numeric: tabular-nums;
+  }
+  [data-contrast="high"] [data-slot="card"] {
+    box-shadow: none;
+    outline: 2px solid var(--border);
+    outline-offset: -2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}

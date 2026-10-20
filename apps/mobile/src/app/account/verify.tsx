@@ -1,80 +1,9 @@
-import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
-import { AccessibilityInfo, Text } from 'react-native';
+import { useLocalSearchParams } from 'expo-router';
 
-import { CodeField, FormScreen, useCooldown } from '@/components/account-fields';
-import { Button, Note } from '@/components/ui';
-import { InfoIcon } from '@/design/icons';
-import { type } from '@/design/type';
-import { useSweetTheme } from '@/hooks/use-sweet-theme';
-import { Code, errorKey, requestPasswordReset, resendSignupCode, verifyPasswordReset, verifySignup } from '@/lib/account';
-import { useT } from '@/lib/i18n';
+import { CodeVerify } from '@/components/code-verify';
 
-/**
- * E-postadaki 6 haneli kod. `signup`: hesap doğrulanır ve oturum açılır. `recovery`: oturum açılır,
- * yeni şifre ekranına geçilir. Kod 6 haneye ulaşınca kendiliğinden gönderilir.
- */
-export default function Verify() {
-  const t = useSweetTheme();
-  const { t: tr } = useT();
-  const { mode, email = '' } = useLocalSearchParams<{ mode: 'signup' | 'recovery'; email: string }>();
-  const [code, setCode] = useState('');
-  const [error, setError] = useState<string | undefined>();
-  const [info, setInfo] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const cooldown = useCooldown();
-
-  const submit = async (value = code) => {
-    const c = Code.safeParse(value);
-    if (!c.success) return setError(tr('account.err.invalid_code'));
-    setError(undefined);
-    setBusy(true);
-    try {
-      if (mode === 'recovery') {
-        await verifyPasswordReset(email, c.data);
-        router.replace({ pathname: '/account/password', params: { mode: 'recovery' } });
-      } else {
-        await verifySignup(email, c.data);
-        AccessibilityInfo.announceForAccessibility(tr('account.verified'));
-        router.dismissTo('/account');
-      }
-    } catch (err) {
-      setError(tr(errorKey(err)));
-      setCode('');
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const resend = async () => {
-    setError(undefined);
-    try {
-      if (mode === 'recovery') await requestPasswordReset(email);
-      else await resendSignupCode(email);
-      cooldown.restart();
-      setInfo(tr('account.resent'));
-    } catch (err) {
-      setError(tr(errorKey(err)));
-    }
-  };
-
-  return (
-    <FormScreen lead={tr('account.verifyLead', { email })}>
-      <Stack.Screen options={{ title: tr(mode === 'recovery' ? 'account.forgotTitle' : 'account.verifyTitle') }} />
-      <CodeField value={code} onChange={setCode} error={error} onComplete={(c) => void submit(c)} />
-      <Button label={tr('account.verify')} onPress={() => void submit()} disabled={busy} />
-      <Button
-        variant="ghost"
-        label={cooldown.left > 0 ? tr('account.resendIn', { s: cooldown.left }) : tr('account.resend')}
-        onPress={resend}
-        disabled={cooldown.left > 0}
-      />
-      {info ? (
-        <Text style={[type.meta, { color: t.textMuted }]} accessibilityLiveRegion="polite">
-          {info}
-        </Text>
-      ) : null}
-      <Note text={tr(mode === 'recovery' ? 'account.noCodeRecovery' : 'account.noCode')} icon={<InfoIcon color={t.textMuted} />} />
-    </FormScreen>
-  );
+/** Kayıt kodu: hesap doğrulanır ve oturum açılır. */
+export default function VerifySignup() {
+  const { email = '' } = useLocalSearchParams<{ email: string }>();
+  return <CodeVerify mode="signup" email={email} />;
 }

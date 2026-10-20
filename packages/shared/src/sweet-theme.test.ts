@@ -40,6 +40,13 @@ describe("Çini 2 kontrastı (WCAG AA ≥ 4.5)", () => {
     });
   }
 
+  // Web ve admin eylem rengi: açık temada koyu firuze dolgu (`tones.teal.ink`) üstünde yüzey rengi yazı (apps/web/src/lib/theme.ts).
+  it("web eylem dolgusu (tones.teal.ink) üstünde yüzey rengi yazı AA'yı geçer", () => {
+    const t = sweetThemes.light;
+    expect(contrastRatio(t.surface, t.tones.teal.ink)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(t.tones.teal.ink, t.background)).toBeGreaterThanOrEqual(3);
+  });
+
   it("yüksek kontrast çerçeveli çizilir ve AAA (≥ 7) metin sağlar", () => {
     const t = sweetThemes.highContrast;
     expect(t.outlined).toBe(true);

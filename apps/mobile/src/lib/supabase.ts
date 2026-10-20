@@ -9,13 +9,16 @@ const key = process.env.EXPO_PUBLIC_SUPABASE_KEY || process.env.EXPO_PUBLIC_SUPA
 if (!url || !key) {
   throw new Error('EXPO_PUBLIC_SUPABASE_URL ve EXPO_PUBLIC_SUPABASE_KEY apps/mobile/.env içinde tanımlı olmalı');
 }
+const apiKey: string = key;
+/** Oturumun cihazdaki anahtarı: supabase-js varsayılanıyla aynı (mevcut oturumlar korunur); çıkış doğrulaması okur. */
+export const SESSION_KEY = `sb-${new URL(url).hostname.split('.')[0]}-auth-token`;
 
 /**
  * Keşif hesapsız (anon) çalışır. Hesap isteğe bağlıdır: oturum cihazda (kv-store) saklanır, uygulama
  * öndeyken anahtar yenilenir. E-posta akışları kodla yürüdüğü için URL'den oturum okunmaz.
  */
 export const supabase = createClient(url, key, {
-  auth: { storage: Storage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, lock: processLock },
+  auth: { storage: Storage, storageKey: SESSION_KEY, persistSession: true, autoRefreshToken: true, detectSessionInUrl: false, lock: processLock },
 });
 
 // Arka planda yenileme durur (React Native'de zamanlayıcı güvenilmez); öne gelince sürer.
@@ -26,3 +29,8 @@ AppState.addEventListener('change', (state) => {
 
 /** Admin panelinden yüklenen ses kayıtlarının (nokta, eser) genel adresi. */
 export const AUDIO_BASE = `${url}/storage/v1/object/public/audio/`;
+
+/** Özel kovadaki dosya (ör. profil fotoğrafı): oturum anahtarıyla okunur; adres dosya başına sabit, önbellek ona bağlı. */
+export function privateObject(bucket: string, path: string, accessToken: string) {
+  return { uri: `${url}/storage/v1/object/authenticated/${bucket}/${path}`, headers: { Authorization: `Bearer ${accessToken}`, apikey: apiKey } };
+}

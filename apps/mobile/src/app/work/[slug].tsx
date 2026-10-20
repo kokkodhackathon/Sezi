@@ -1,4 +1,4 @@
-import type { SweetTheme } from '@sezi/shared';
+import { coverOf, hasLocation, inventorySource, loc, toneForType, type SweetTheme, type WorkRow } from '@sezi/shared';
 import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -12,7 +12,6 @@ import { ReadMore } from '@/components/read-more';
 import { Badge, Button, Card, EmptyState, ListRow } from '@/components/ui';
 import { ChevronIcon, ExternalIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
 import { outline, SoftPressable, sweetShadow } from '@/design/sweet/components';
-import { toneForType } from '@/design/sweet/tones';
 import { radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
@@ -24,7 +23,7 @@ import { useSettings } from '@/lib/settings';
 import { AUDIO_BASE } from '@/lib/supabase';
 import { createClipPlayer } from '@/lib/voice/clip-player';
 import { NARRATION_WAIT_MS, say, silence } from '@/lib/voice/speech';
-import { coverOf, hasLocation, inventorySource, loc, photoUrl, useWork, type WorkRow } from '@/lib/works';
+import { photoUrl, useWork } from '@/lib/works';
 
 /** Eser ses kaydı oynatıcısı (admin panelinden yüklenen kayıt). */
 const workClip = createClipPlayer();

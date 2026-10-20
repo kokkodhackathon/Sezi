@@ -1,4 +1,4 @@
-import type { SweetTheme } from '@sezi/shared';
+import { loc, type SweetTheme } from '@sezi/shared';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
@@ -9,7 +9,7 @@ import { space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { ExternalIcon } from '@/design/icons';
 import { useT } from '@/lib/i18n';
-import { loc, useCities, useInventoryBooks } from '@/lib/works';
+import { useCities, useInventoryBooks } from '@/lib/works';
 
 export default function About() {
   const t = useSweetTheme();

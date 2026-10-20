@@ -1,5 +1,7 @@
+import { z } from "zod";
+
 import { distanceM } from "./geo";
-import type { LngLat, LocalizedText } from "./schemas";
+import { LocalizedText, type LngLat } from "./schemas";
 import type { LocationFix } from "./tracking";
 
 /**
@@ -32,6 +34,50 @@ export interface NavPoint {
   sortOrder: number;
   /** `audio` bucket'ı içindeki storage_path. */
   audio: { tr?: string; en?: string };
+}
+
+export const NAV_POINT_COLUMNS = "id, city_slug, roles, title, body, lng, lat, radius_m, work_slug, salience, ambient, sort_order, audio_tr, audio_en";
+
+export const NavPointRow = z.object({
+  id: z.string(),
+  city_slug: z.string(),
+  roles: z.array(z.enum(["start", "landmark", "story", "arrival"])).min(1),
+  title: LocalizedText,
+  body: LocalizedText.nullable(),
+  lng: z.number(),
+  lat: z.number(),
+  radius_m: z.number(),
+  work_slug: z.string().nullable(),
+  salience: z.number().nullable(),
+  ambient: z.enum(["water", "market", "chime"]).nullable(),
+  sort_order: z.number(),
+  audio_tr: z.string().nullable(),
+  audio_en: z.string().nullable(),
+});
+export type NavPointRow = z.infer<typeof NavPointRow>;
+
+export function toNavPoints(rows: unknown[]): NavPoint[] {
+  return rows.flatMap((r) => {
+    const p = NavPointRow.safeParse(r);
+    if (!p.success) return [];
+    const d = p.data;
+    return [
+      {
+        id: d.id,
+        citySlug: d.city_slug,
+        roles: d.roles,
+        title: d.title,
+        body: d.body ?? undefined,
+        location: [d.lng, d.lat],
+        radiusM: d.radius_m,
+        workSlug: d.work_slug ?? undefined,
+        salience: d.salience ?? undefined,
+        ambient: d.ambient ?? undefined,
+        sortOrder: d.sort_order,
+        audio: { tr: d.audio_tr ?? undefined, en: d.audio_en ?? undefined },
+      },
+    ];
+  });
 }
 
 /** Kullanıcı yaklaşınca açılan (metni olan) nokta: anlatım ya da eser varışı. */

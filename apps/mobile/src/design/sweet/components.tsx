@@ -1,4 +1,4 @@
-import type { SweetTheme, SweetTone } from '@sezi/shared';
+import { coverOf, hasLocation, loc, toneForType, type SweetTheme, type SweetTone, type WorkRow } from '@sezi/shared';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useState, type ReactNode } from 'react';
@@ -22,10 +22,9 @@ import { WorkGlyphInline } from '@/design/work-glyph';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT, type Lang, type Translate } from '@/lib/i18n';
-import { coverOf, hasLocation, loc, photoUrl, type WorkRow } from '@/lib/works';
+import { photoUrl } from '@/lib/works';
 
 import { duration, ease, pressScale, selectSpring, stagger } from './motion';
-import { toneForType } from './tones';
 
 /** Yalnız yüzen öğeler için (sekme çubuğu, pilot kartı): çok hafif, dağınık gölge. Yüksek kontrastta 2 dp çerçeve. */
 export function sweetShadow(t: SweetTheme): ViewStyle {

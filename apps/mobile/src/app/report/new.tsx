@@ -1,4 +1,4 @@
-import type { SweetTheme } from '@sezi/shared';
+import { loc, toneForType, type SweetTheme } from '@sezi/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -6,14 +6,13 @@ import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } fr
 import { Button, Card, EmptyState, Field, Note } from '@/components/ui';
 import { CheckIcon, InfoIcon } from '@/design/icons';
 import { outline, SoftPressable } from '@/design/sweet/components';
-import { toneForType } from '@/design/sweet/tones';
 import { font, radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
 import { landmarkNodeForWork, nearestSegmentId } from '@/lib/nav';
 import { addReport } from '@/lib/reports';
-import { loc, useWork } from '@/lib/works';
+import { useWork } from '@/lib/works';
 
 const TYPES = ['stairs', 'ramp_blocked', 'narrow_path', 'surface_damage', 'construction', 'other'] as const;
 

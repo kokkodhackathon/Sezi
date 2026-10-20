@@ -1,4 +1,4 @@
-import type { SweetTheme } from '@sezi/shared';
+import { coverOf, loc, type SweetTheme } from '@sezi/shared';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -11,7 +11,7 @@ import { radius, space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings';
-import { coverOf, loc, photoUrl, useCities, useExhibitions, useInventoryBooks, useWorks } from '@/lib/works';
+import { photoUrl, useCities, useExhibitions, useInventoryBooks, useWorks } from '@/lib/works';
 import { Image } from 'expo-image';
 
 export default function CityScreen() {

@@ -1,4 +1,4 @@
-import type { SweetTheme } from '@sezi/shared';
+import { coverOf, planTour, toneForType, type SweetTheme } from '@sezi/shared';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -6,17 +6,15 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Badge, Button, EmptyState, SectionTitle } from '@/components/ui';
 import { ChevronIcon, TurnIcon } from '@/design/icons';
 import { outline, SoftPressable } from '@/design/sweet/components';
-import { toneForType } from '@/design/sweet/tones';
 import { radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
 import { Image } from 'expo-image';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
-import { defaultStart, useNavVersion, walkingSpeed } from '@/lib/nav';
+import { defaultStart, planner, useNavVersion, walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
-import { planTour } from '@/lib/tours';
-import { coverOf, photoUrl, useWorks } from '@/lib/works';
+import { photoUrl, useWorks } from '@/lib/works';
 
 export default function TourDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,7 +25,7 @@ export default function TourDetail() {
   const { visited } = useSettings();
   const navVersion = useNavVersion();
   const plan = useMemo(
-    () => (profile ? planTour(id, profile, defaultStart()) : null),
+    () => (profile ? planTour(planner, id, profile, defaultStart()) : null),
     // navVersion: başlangıç noktaları ve onaylı bildirimler değişince tur yeniden hesaplanır.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [id, profile, navVersion],

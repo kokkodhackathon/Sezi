@@ -1,4 +1,4 @@
-import type { SweetTheme } from '@sezi/shared';
+import { loc, type SweetTheme } from '@sezi/shared';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -8,7 +8,7 @@ import { space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
 import { syncReports, useReports } from '@/lib/reports';
-import { loc, useWorks } from '@/lib/works';
+import { useWorks } from '@/lib/works';
 
 export default function Reports() {
   const t = useSweetTheme();

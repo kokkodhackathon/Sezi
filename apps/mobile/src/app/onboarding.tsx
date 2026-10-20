@@ -1,4 +1,4 @@
-import { sweetThemes, type SweetTheme, type UserProfile } from '@sezi/shared';
+import { defaultSenses, sweetThemes, type SweetTheme, type UserProfile } from '@sezi/shared';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -11,7 +11,7 @@ import { FadeInItem, outline, SoftPressable } from '@/design/sweet/components';
 import { font, radius, space, type } from '@/design/type';
 import { useSettings } from '@/lib/settings';
 import { translate, type Lang, type MessageKey } from '@/lib/i18n';
-import { defaultSenses, useProfile } from '@/lib/profile';
+import { useProfile } from '@/lib/profile';
 
 type Step = 'welcome' | 'lang' | 'vision' | 'hearing' | 'mobility' | 'senses' | 'summary';
 const STEPS: Step[] = ['welcome', 'lang', 'vision', 'hearing', 'mobility', 'senses', 'summary'];

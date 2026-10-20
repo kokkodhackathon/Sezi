@@ -1,3 +1,4 @@
+import { coverOf, loc, toneForType } from '@sezi/shared';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -8,13 +9,12 @@ import { CheckIcon, ChevronIcon, InfoIcon, PlayIcon, SearchIcon } from '@/design
 import { useTabBarSpace } from '@/components/app-tabs';
 import { Button } from '@/components/ui';
 import { FadeInItem, outline, PhotoTile, Skeleton, SoftPressable, SweetSheet, sweetShadow, TypeTile } from '@/design/sweet/components';
-import { toneForType } from '@/design/sweet/tones';
 import { radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings';
-import { coverOf, loc, photoUrl, useCities, useWorks } from '@/lib/works';
+import { photoUrl, useCities, useWorks } from '@/lib/works';
 
 const HIGHLIGHT_W = 248;
 const HIGHLIGHT_H = 300;

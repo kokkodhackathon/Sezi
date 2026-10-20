@@ -1,14 +1,14 @@
+import { coverOf, loc, toneForType, type WorkRow } from '@sezi/shared';
 import { Image } from 'expo-image';
 import { StyleSheet, Text, View } from 'react-native';
 
 import { ChevronIcon } from '@/design/icons';
 import { outline, SoftPressable } from '@/design/sweet/components';
-import { toneForType } from '@/design/sweet/tones';
 import { radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT, type Lang } from '@/lib/i18n';
-import { coverOf, loc, photoUrl, type WorkRow } from '@/lib/works';
+import { photoUrl } from '@/lib/works';
 
 /**
  * Eserin kısa önizlemesi (arama sonucu, yürüyüşte nokta kartı). Tam bilgi eser sayfasında;

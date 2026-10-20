@@ -126,6 +126,14 @@ export const UserProfile = z.object({
 });
 export type UserProfile = z.infer<typeof UserProfile>;
 
+/** Görme profiline göre önerilen duyu kanalları; kullanıcı onboarding'de değiştirebilir. */
+export function defaultSenses(vision: UserProfile["vision"], hearing: UserProfile["hearing"] = "full"): UserProfile["senses"] {
+  if (hearing === "deaf") return { audio: false, haptic: true, visual: vision !== "blind" };
+  if (vision === "blind") return { audio: true, haptic: true, visual: false };
+  if (vision === "low") return { audio: true, haptic: true, visual: true };
+  return { audio: true, haptic: false, visual: true };
+}
+
 // --- Topluluk: erişilebilirlik bildirimi ---
 
 export const A11yReportType = z.enum([

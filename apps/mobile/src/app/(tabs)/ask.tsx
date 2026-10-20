@@ -1,4 +1,4 @@
-import type { SweetTheme } from '@sezi/shared';
+import { loc, searchWorks, type SweetTheme, type WorkRow } from '@sezi/shared';
 import { router } from 'expo-router';
 import { useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -13,9 +13,8 @@ import { radius, space, type } from '@/design/type';
 import { WorkGlyph } from '@/design/work-glyph';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
-import { searchWorks } from '@/lib/ask';
 import { useT } from '@/lib/i18n';
-import { loc, useWorks, type WorkRow } from '@/lib/works';
+import { useWorks } from '@/lib/works';
 
 type Message = { id: number; role: 'user' | 'sezi'; text: string; works?: WorkRow[] };
 

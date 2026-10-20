@@ -1,22 +1,28 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Text, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Text, View } from 'react-native';
 
-import { FormScreen } from '@/components/account-fields';
-import { Button, Card, ListRow, Note } from '@/components/ui';
+import { FormError, FormScreen } from '@/components/account-fields';
+import { Avatar } from '@/components/avatar';
+import { Badge, Button, Card, ListRow, Note } from '@/components/ui';
 import { InfoIcon } from '@/design/icons';
 import { space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { errorKey, signOut, useAccount } from '@/lib/account';
 import { useT } from '@/lib/i18n';
+import { useIdentity } from '@/lib/identity';
 
-/** Hesap: girişsizken neden açılacağı ve iki düğme; girişliyken ad, e-posta, eşitleme durumu ve hesap işlemleri. */
+/**
+ * Hesap: girişsizken neden açılacağı ve iki düğme; girişliyken profil kartı (fotoğraf, ad, @kullanıcı adı,
+ * görünürlük), eşitleme durumu ve hesap işlemleri. Çıkış her durumda bu cihazdaki oturumu kapatır ve Profil'e döner.
+ */
 export default function AccountHome() {
   const t = useSweetTheme();
   const { t: tr } = useT();
-  const { ready, user, account, pending } = useAccount();
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { ready, user, pending } = useAccount();
+  const { identity, avatar } = useIdentity();
+  const [leaving, setLeaving] = useState(false);
+  const [outError, setOutError] = useState<string | null>(null);
 
   if (!ready) {
     return (
@@ -42,37 +48,43 @@ export default function AccountHome() {
     );
   }
 
+  // Başarı yalnız cihazdaki oturum gerçekten silindiyse: süresi dolmuş oturum internetsiz kapatılamaz, kullanıcı girişli kalır.
   const out = async () => {
-    setBusy(true);
-    setError(null);
+    setLeaving(true);
+    setOutError(null);
     try {
       await signOut();
+      AccessibilityInfo.announceForAccessibility(tr('account.signedOut'));
+      if (router.canGoBack()) router.back();
     } catch (e) {
-      setError(tr(errorKey(e)));
+      setOutError(tr(errorKey(e) === 'account.err.network' ? 'account.signOutOffline' : 'account.err.generic'));
     } finally {
-      setBusy(false);
+      setLeaving(false);
     }
   };
 
+  const name = identity?.display_name ?? user.email ?? '';
   return (
     <FormScreen>
-      <View style={{ gap: space.xs }} accessible accessibilityRole="header">
-        <Text style={[type.title, { color: t.text }]}>{account?.display_name ?? user.email}</Text>
-        {account ? <Text style={[type.body, { color: t.textMuted }]}>{user.email}</Text> : null}
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.lg }}>
+        <Avatar identity={identity} source={avatar} size={72} />
+        <View style={{ flex: 1, gap: 2 }} accessible accessibilityRole="header">
+          <Text style={[type.title, { color: t.text }]} numberOfLines={2}>
+            {name}
+          </Text>
+          <Text style={[type.body, { color: t.textMuted }]} numberOfLines={1}>
+            {identity?.username ? `@${identity.username}` : user.email}
+          </Text>
+        </View>
       </View>
-      <Note text={tr(pending ? 'account.syncPending' : 'account.syncDone')} icon={<InfoIcon color={t.textMuted} />} />
+      {identity ? <Badge label={tr(identity.visibility === 'public' ? 'account.visPublic' : 'account.visPrivate')} /> : null}
       <Card padded={false}>
-        <ListRow first title={tr('account.editName')} subtitle={account?.display_name} onPress={() => router.push('/account/name')} />
+        <ListRow first title={tr('account.editProfile')} subtitle={tr('account.editProfileSub')} onPress={() => router.push('/account/edit')} />
         <ListRow title={tr('account.changePassword')} onPress={() => router.push({ pathname: '/account/password', params: { mode: 'change' } })} />
       </Card>
-      <View style={{ gap: space.sm }}>
-        <Button variant="outline" label={tr('account.signOut')} hint={tr('account.signOutHint')} onPress={out} disabled={busy} />
-        {error ? (
-          <Text style={[type.meta, { color: t.danger }]} accessibilityLiveRegion="polite">
-            {error}
-          </Text>
-        ) : null}
-      </View>
+      <Note text={tr(pending ? 'account.syncPending' : 'account.syncDone')} icon={<InfoIcon color={t.textMuted} />} />
+      <Button variant="outline" label={leaving ? tr('account.signingOut') : tr('account.signOut')} hint={tr('account.signOutHint')} onPress={out} disabled={leaving} />
+      <FormError text={outError} />
       <Card padded={false}>
         <ListRow first danger title={tr('account.delete')} onPress={() => router.push('/account/delete')} />
       </Card>

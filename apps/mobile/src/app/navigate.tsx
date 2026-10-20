@@ -1,4 +1,4 @@
-import { sliceLine, type LngLat, type NavPoint, type SweetTheme } from '@sezi/shared';
+import { coverOf, loc, sliceLine, type LngLat, type NavPoint, type SweetTheme } from '@sezi/shared';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -23,7 +23,7 @@ import { navigation, useNavigation, type NavConfig, type NavState } from '@/lib/
 import { useNavPoints, useWorkPoints } from '@/lib/points';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
-import { coverOf, loc, photoUrl, useWork } from '@/lib/works';
+import { photoUrl, useWork } from '@/lib/works';
 
 /** Hedef seçenekleri: pilot alandaki eserler, ada göre. */
 const DESTINATIONS = [...pilotWorks].sort((a, b) => (a.name?.tr ?? '').localeCompare(b.name?.tr ?? '', 'tr'));

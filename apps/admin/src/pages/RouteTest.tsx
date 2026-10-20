@@ -1,4 +1,4 @@
-import { formatDistance, walkingSpeed, type LngLat } from '@sezi/shared';
+import { formatDistance, PROFILE_KEYS, profileFor, walkingSpeed, type LngLat, type ProfileKey } from '@sezi/shared';
 import { cn } from 'cn';
 import { Ban, CircleAlert, CornerUpRight, Info, MapPin, Pause, Play, ScrollText, Square, Volume2 } from 'lucide-react';
 import { Fragment, useMemo, useState } from 'react';
@@ -21,14 +21,11 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { pilotPlanner } from '@/lib/pilot';
 import {
-  PROFILE_KEYS,
   PROFILE_LABEL,
   PROFILE_LINE,
   PROFILE_WHY,
-  profileFor,
   useRouteTest,
   type LogKind,
-  type ProfileKey,
   type ProfileRoute,
   type RouteTestState,
 } from '@/lib/route-test';

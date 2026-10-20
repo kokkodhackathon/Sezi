@@ -59,7 +59,15 @@
         }
       ],
       "expo-audio",
-      "@rnmapbox/maps"
+      "@rnmapbox/maps",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Sezi, profil fotoğrafınızı seçmek için fotoğraflarınıza erişir.",
+          "cameraPermission": "Sezi, profil fotoğrafı çekmek için kameranızı kullanır.",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

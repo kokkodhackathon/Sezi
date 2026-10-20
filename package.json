@@ -6,6 +6,7 @@
     "test": "pnpm -r --if-present test",
     "typecheck": "pnpm -r --if-present typecheck",
     "dev:mobile": "pnpm --filter @sezi/mobile start",
-    "dev:admin": "pnpm --filter @sezi/admin dev"
+    "dev:admin": "pnpm --filter @sezi/admin dev",
+    "dev:web": "pnpm --filter @sezi/web dev"
   }
 }

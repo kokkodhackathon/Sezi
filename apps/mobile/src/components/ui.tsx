@@ -3,10 +3,10 @@
  * tek dokunma alanı ölçüsü (≥ 48 dp), tek köşe ölçeği (`radius`), tek tipografi ölçeği (`type`).
  * Yüzeyler düz: kart ve alanlar dolgu tonuyla ayrılır; yüksek kontrastta 2 dp çerçeve (`outline`).
  */
-import type { ReactNode } from 'react';
-import { StyleSheet, Switch, Text, TextInput, useWindowDimensions, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
+import { createContext, useContext, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { Pressable, StyleSheet, Switch, Text, TextInput, useWindowDimensions, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
 
-import { ChevronIcon } from '@/design/icons';
+import { ChevronIcon, InfoIcon } from '@/design/icons';
 import { outline, SoftPressable } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
@@ -243,31 +243,80 @@ export function EmptyState({ title, body, icon, action }: { title: string; body?
   );
 }
 
-/** Yazı alanı: görünür etiket, gri dolgu, 16 köşe; hata durumunda tehlike rengi çerçeve ve yazı. */
-export function Field({ label, error, help, ...input }: TextInputProps & { label: string; error?: string; help?: string }) {
+/**
+ * Kaydırılabilir form kabı (`FormScreen`) sağlar: odaklanan alanı klavyenin üstüne getirir. Kabın dışında
+ * kullanılan alanda yoktur (no-op).
+ */
+export const RevealContext = createContext<((target: View) => void) | null>(null);
+
+/**
+ * Metin alanı: üstte etiket, gri dolgulu 56 dp kutu, altında yardım ya da hata.
+ * - Odakta kutu koyu firuze 2 dp çerçeve alır (renk tek başına değil: zemin de beyazlaşır); hata tehlike rengi + ikon + metin.
+ * - `icon`: solda alanın ne istediğini gösteren küçük simge. `trailing`: sağda alan içi eylem (ör. şifreyi göster, ≥ 48 dp).
+ * - Kutunun herhangi bir yerine dokunmak alanı odaklar; etiket ekran okuyucuda alanın adıdır.
+ */
+export function Field({
+  label,
+  error,
+  help,
+  icon,
+  trailing,
+  onFocus,
+  onBlur,
+  inputRef,
+  ...input
+}: TextInputProps & {
+  label: string;
+  error?: string;
+  help?: string;
+  icon?: (color: string) => ReactNode;
+  trailing?: ReactNode;
+  /** Klavyeden sonraki alana geçmek için ("İleri"). */
+  inputRef?: RefObject<TextInput | null>;
+}) {
   const t = useSweetTheme();
+  const reveal = useContext(RevealContext);
+  const box = useRef<View>(null);
+  const own = useRef<TextInput>(null);
+  const ref = inputRef ?? own;
+  const [focused, setFocused] = useState(false);
+  const border = error ? t.danger : focused ? t.primaryText : t.outlined ? t.border : t.soft;
   return (
-    <View style={{ gap: space.xs }}>
-      <Text style={[type.itemTitle, { color: t.text, fontSize: 16 }]} nativeID={`lbl-${label}`}>
-        {label}
-      </Text>
-      <TextInput
-        placeholderTextColor={t.textMuted}
-        accessibilityLabel={label}
-        accessibilityHint={help}
-        {...input}
+    <View ref={box} style={{ gap: space.sm }} collapsable={false}>
+      <Text style={[type.itemTitle, { color: t.text, fontSize: 16 }]}>{label}</Text>
+      <Pressable
+        onPress={() => ref.current?.focus()}
+        accessible={false}
         style={[
-          type.body,
-          styles.input,
-          { color: t.text, backgroundColor: t.soft, borderColor: error ? t.danger : t.outlined ? t.border : t.soft },
-          t.outlined && { borderWidth: 2 },
-          input.multiline && { minHeight: 120, textAlignVertical: 'top' },
-        ]}
-      />
+          styles.field,
+          { backgroundColor: focused ? t.surface : t.soft, borderColor: border },
+          input.multiline && { minHeight: 120, alignItems: 'flex-start', paddingTop: space.md },
+        ]}>
+        {icon ? icon(focused ? t.primaryText : t.textMuted) : null}
+        <TextInput
+          ref={ref}
+          placeholderTextColor={t.textMuted}
+          accessibilityLabel={label}
+          accessibilityHint={error ?? help}
+          {...input}
+          onFocus={(e) => {
+            setFocused(true);
+            if (box.current) reveal?.(box.current);
+            onFocus?.(e);
+          }}
+          onBlur={(e) => {
+            setFocused(false);
+            onBlur?.(e);
+          }}
+          style={[type.body, styles.input, { color: t.text }, input.multiline && { minHeight: 100, textAlignVertical: 'top' }]}
+        />
+        {trailing}
+      </Pressable>
       {error ? (
-        <Text style={[type.meta, { color: t.danger }]} accessibilityLiveRegion="polite">
-          {error}
-        </Text>
+        <View style={styles.fieldMsg} accessibilityLiveRegion="polite">
+          <InfoIcon color={t.danger} size={18} />
+          <Text style={[type.meta, { color: t.danger, flex: 1 }]}>{error}</Text>
+        </View>
       ) : help ? (
         <Text style={[type.meta, { color: t.textMuted }]}>{help}</Text>
       ) : null}
@@ -328,6 +377,18 @@ const styles = StyleSheet.create({
   },
   badge: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8 },
   empty: { alignItems: 'center', gap: space.md, paddingVertical: space.xxl, paddingHorizontal: space.lg },
-  input: { minHeight: 54, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.md, borderCurve: 'continuous', borderWidth: 1 },
+  field: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    minHeight: 56,
+    paddingLeft: space.lg,
+    paddingRight: space.xs,
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    borderWidth: 2,
+  },
+  input: { flex: 1, minHeight: 52, paddingVertical: space.sm, paddingRight: space.md },
+  fieldMsg: { flexDirection: 'row', alignItems: 'center', gap: space.xs },
   note: { flexDirection: 'row', gap: space.md, padding: space.lg, borderRadius: radius.md, borderCurve: 'continuous' },
 });

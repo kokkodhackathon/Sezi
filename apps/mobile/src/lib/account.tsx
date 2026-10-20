@@ -1,55 +1,35 @@
-import { UserProfile } from '@sezi/shared';
+import { AccountRowSchema, KNOWN_AUTH_ERRORS, PrefsSchema, type AccountRow, type KnownAuthError, type Prefs, type UserProfile } from '@sezi/shared';
 import { isAuthApiError, isAuthRetryableFetchError, type Session, type User } from '@supabase/supabase-js';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Storage from 'expo-sqlite/kv-store';
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AppState } from 'react-native';
 import { z } from 'zod';
 
 import type { Lang, MessageKey } from './i18n';
 import { useProfile } from './profile';
-import { SyncedSettings, useSettings } from './settings';
-import { supabase } from './supabase';
+import { useSettings } from './settings';
+import { SESSION_KEY, supabase } from './supabase';
 
 /**
  * İsteğe bağlı hesap. Uygulama hesapsız tam çalışır; hesap açılışta sorulmaz, Profil → Hesap'tan açılır.
  *
  * - Kimlik: e-posta + şifre; doğrulama, şifre sıfırlama ve şifre değişimi e-postaya gelen 6 haneli kodla
  *   (derin bağlantı yok). Oturum cihazda saklanır (`lib/supabase.ts`).
- * - `accounts` satırı (RLS: yalnız sahibi): görünen ad ve tercihler. İlk girişte istemci ekler.
+ * - `accounts` satırı (RLS: yalnız sahibi): tercihler. İlk girişte istemci ekler. Ad, @kullanıcı adı ve fotoğraf
+ *   ayrı tabloda (`profiles`, `lib/identity.ts`).
  * - Tercihler (erişilebilirlik profili + `SyncedSettings`) cihazlar arasında taşınır. Cihaz her zaman
  *   kaynaktır; sunucu eşidir. Yeni girişte hesaptaki tercih bu cihaza gelir; sonra en yeni değişiklik kazanır.
  *   İnternet yoksa değişiklik `dirty` kalır, uygulama öne gelince gönderilir.
  */
 
-export const PrefsSchema = z.object({ profile: UserProfile, settings: SyncedSettings });
-export type Prefs = z.infer<typeof PrefsSchema>;
-
-const AccountRowSchema = z.object({
-  user_id: z.string(),
-  display_name: z.string(),
-  prefs: z.unknown().nullable(),
-  prefs_updated_at: z.string().nullable(),
-});
-export type AccountRow = z.infer<typeof AccountRowSchema>;
-const COLUMNS = 'user_id, display_name, prefs, prefs_updated_at';
-
-export const NAME_MAX = 60;
-export const PASSWORD_MIN = 8;
-export const CODE_LENGTH = 6;
-/** Sunucudaki `max_frequency`: aynı adrese iki kod arasında en az bu kadar beklenir. */
-export const RESEND_SECONDS = 60;
-
-export const Email = z.string().trim().toLowerCase().email();
-export const DisplayName = z.string().trim().min(1).max(NAME_MAX);
-/** Sunucu kuralıyla aynı: en az 8 karakter, harf ve rakam (`password_requirements = letters_digits`). */
-export const Password = z.string().min(PASSWORD_MIN).regex(/\p{L}/u).regex(/\d/);
-export const Code = z.string().regex(new RegExp(`^\\d{${CODE_LENGTH}}$`));
-
+const COLUMNS = 'user_id, prefs, prefs_updated_at';
 // ---------- Cihazdaki eşitleme kaydı ----------
 
 const META_KEY = 'sezi.prefs.meta.v1';
 const ACCOUNT_KEY = 'sezi.account.v1';
+/** Kimlik önbelleği (`lib/identity.ts`): çıkışta ve silmede bununla birlikte temizlenir. */
+export const IDENTITY_KEY = 'sezi.identity.v1';
 const MetaSchema = z.object({
   /** Son eşitlenen ya da yerelde değişen tercihlerin JSON'u. */
   snapshot: z.string().nullable(),
@@ -97,19 +77,7 @@ let freshSignIn = false;
 
 // ---------- Hata iletileri ----------
 
-const KNOWN_ERRORS = [
-  'invalid_credentials',
-  'email_not_confirmed',
-  'weak_password',
-  'otp_expired',
-  'same_password',
-  'over_email_send_rate_limit',
-  'over_request_rate_limit',
-  'email_address_invalid',
-  'reauthentication_not_valid',
-] as const;
-type KnownError = (typeof KNOWN_ERRORS)[number];
-const isKnown = (c: string | undefined): c is KnownError => !!c && (KNOWN_ERRORS as readonly string[]).includes(c);
+const isKnown = (c: string | undefined): c is KnownAuthError => !!c && (KNOWN_AUTH_ERRORS as readonly string[]).includes(c);
 
 /** Auth hatasını kullanıcı iletisine çevirir; bilinmeyen hata genel iletiye düşer. */
 export function errorKey(e: unknown): MessageKey {
@@ -130,7 +98,7 @@ export async function signUp(input: { name: string; email: string; password: str
   const { error } = await supabase.auth.signUp({
     email: input.email,
     password: input.password,
-    // lang: e-posta şablonlarının dili; display_name ilk girişte accounts satırına taşınır.
+    // lang: e-posta şablonlarının dili; display_name ilk girişte profiles satırına taşınır.
     options: { data: { display_name: input.name, lang: input.lang } },
   });
   if (error) throw error;
@@ -186,11 +154,16 @@ export async function setPassword(password: string, nonce?: string) {
   if (error) throw error;
 }
 
-/** Yalnız bu cihazda çıkış; tercihler cihazda kalır. */
+/**
+ * Yalnız bu cihazda çıkış; tercihler cihazda kalır. İnternet yokken Supabase sunucuya haber veremez:
+ * oturum geçerliyse yine de yerelde siler (hata yok sayılır), süresi dolmuşsa yenileyemediği için oturumu
+ * yerinde bırakır. Bu yüzden başarı yalnız cihazdaki oturum gerçekten silindiyse bildirilir; değilse hata atılır.
+ */
 export async function signOut() {
   const { error } = await supabase.auth.signOut({ scope: 'local' });
-  if (error) throw error;
+  if (Storage.getItemSync(SESSION_KEY)) throw error ?? new Error('sign-out: local session kept');
   Storage.removeItemSync(ACCOUNT_KEY);
+  Storage.removeItemSync(IDENTITY_KEY);
 }
 
 /** Hesap ve hesaba bağlı veriler sunucudan silinir (edge function `delete-account`); cihazdaki tercihler kalır. */
@@ -200,6 +173,7 @@ export async function deleteAccount() {
   // Kullanıcı sunucuda yok: yerel oturumu kapat (sunucuya istek atmaz).
   await supabase.auth.signOut({ scope: 'local' });
   Storage.removeItemSync(ACCOUNT_KEY);
+  Storage.removeItemSync(IDENTITY_KEY);
 }
 
 // ---------- Bağlam ----------
@@ -213,16 +187,9 @@ interface AccountContextValue {
   account: AccountRow | null;
   /** Yerel tercih değişikliği sunucuya henüz gitmedi. */
   pending: boolean;
-  rename: (name: string) => Promise<void>;
 }
 
 const Ctx = createContext<AccountContextValue | null>(null);
-
-function nameFromUser(user: User): string {
-  const meta = DisplayName.safeParse(user.user_metadata?.display_name);
-  if (meta.success) return meta.data;
-  return DisplayName.safeParse(user.email?.split('@')[0]).data ?? 'Sezi';
-}
 
 export function AccountProvider({ children }: { children: ReactNode }) {
   const qc = useQueryClient();
@@ -312,7 +279,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
         const at = local.updatedAt ?? new Date().toISOString();
         const { data, error } = await supabase
           .from('accounts')
-          .insert({ user_id: uid, display_name: nameFromUser(user), prefs: localPrefs, prefs_updated_at: at })
+          .insert({ user_id: uid, prefs: localPrefs, prefs_updated_at: at })
           .select(COLUMNS)
           .single();
         if (cancelled) return;
@@ -351,21 +318,9 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     return () => sub.remove();
   }, [uid, qc]);
 
-  const rename = useCallback(
-    async (name: string) => {
-      if (!uid) return;
-      const { data, error } = await supabase.from('accounts').update({ display_name: DisplayName.parse(name) }).eq('user_id', uid).select(COLUMNS).single();
-      if (error) throw error;
-      const next = AccountRowSchema.parse(data);
-      Storage.setItemSync(ACCOUNT_KEY, JSON.stringify(next));
-      qc.setQueryData(['account', uid], next);
-    },
-    [uid, qc],
-  );
-
   const value = useMemo<AccountContextValue>(
-    () => ({ ready, session, user, account: accountQuery.data ?? null, pending: !!uid && meta.dirty, rename }),
-    [ready, session, user, accountQuery.data, uid, meta.dirty, rename],
+    () => ({ ready, session, user, account: accountQuery.data ?? null, pending: !!uid && meta.dirty }),
+    [ready, session, user, accountQuery.data, uid, meta.dirty],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

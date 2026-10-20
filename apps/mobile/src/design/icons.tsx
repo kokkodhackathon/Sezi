@@ -177,3 +177,52 @@ export function PersonIcon({ color, size = 24, filled }: TabIconProps) {
     </Svg>
   );
 }
+
+// ---------- Form alanları ----------
+
+export function MailIcon({ color, size = 20 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Rect x="3" y="5.5" width="18" height="13" rx="2.5" stroke={color} strokeWidth={2} fill="none" />
+      <Path d="M4 7.5 L12 13 L20 7.5" stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function LockIcon({ color, size = 20 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Rect x="5" y="10.5" width="14" height="10" rx="2.5" stroke={color} strokeWidth={2} fill="none" />
+      <Path d="M8 10.5 V7.5 A4 4 0 0 1 16 7.5 V10.5" stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+export function AtIcon({ color, size = 20 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Circle cx="12" cy="12" r="3.6" stroke={color} strokeWidth={2} fill="none" />
+      <Path d="M15.6 12 V13.6 A2.4 2.4 0 0 0 20.4 13.6 V12 A8.4 8.4 0 1 0 17 18.7" stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+/** Şifre göster/gizle: `off` gizliyken gösterilen (çizgili) göz. */
+export function EyeIcon({ color, size = 22, off }: IconProps & { off?: boolean }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Path d="M2.5 12 C5 7 8.5 5 12 5 C15.5 5 19 7 21.5 12 C19 17 15.5 19 12 19 C8.5 19 5 17 2.5 12 Z" stroke={color} strokeWidth={2} fill="none" strokeLinejoin="round" />
+      <Circle cx="12" cy="12" r="3" stroke={color} strokeWidth={2} fill="none" />
+      {off ? <Path d="M4 4 L20 20" stroke={color} strokeWidth={2} strokeLinecap="round" /> : null}
+    </Svg>
+  );
+}
+
+export function CameraIcon({ color, size = 20 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Path d="M4 8.5 A2 2 0 0 1 6 6.5 H8 L9.5 4.5 H14.5 L16 6.5 H18 A2 2 0 0 1 20 8.5 V17.5 A2 2 0 0 1 18 19.5 H6 A2 2 0 0 1 4 17.5 Z" stroke={color} strokeWidth={2} fill="none" strokeLinejoin="round" />
+      <Circle cx="12" cy="13" r="3.4" stroke={color} strokeWidth={2} fill="none" />
+    </Svg>
+  );
+}

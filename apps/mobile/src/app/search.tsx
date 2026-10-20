@@ -1,4 +1,4 @@
-import type { SweetTheme } from '@sezi/shared';
+import { hasLocation, inventorySource, loc, normalize, toneForType, type SweetTheme, type WorkRow } from '@sezi/shared';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -9,13 +9,11 @@ import { WorkThumb, workEra, workExcerpt, workPlace } from '@/components/work-pr
 import { ChevronIcon } from '@/design/icons';
 import { outline, SoftPressable } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
-import { toneForType } from '@/design/sweet/tones';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
-import { normalize } from '@/lib/ask';
 import { useT } from '@/lib/i18n';
 import { hasRouteTo } from '@/lib/nav';
 import { useSettings } from '@/lib/settings';
-import { hasLocation, inventorySource, loc, useWorks, type WorkRow } from '@/lib/works';
+import { useWorks } from '@/lib/works';
 
 export default function Search() {
   const t = useSweetTheme();

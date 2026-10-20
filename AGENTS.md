@@ -17,6 +17,7 @@ Bu dosyayı işe başlamadan önce okuyun. Son durum ve sıradaki işler: [HANDO
 pnpm install
 pnpm test                         # packages/shared (Vitest): rota, rehberlik, tema kontrastı, pilot grafiği
 pnpm typecheck                    # tüm paketler
+pnpm dev:web                      # web sitesi (apps/web, Next.js) http://localhost:3001
 cd apps/mobile && npx expo start --dev-client   # Metro (dev build telefonda/emülatörde kurulu olmalı)
 cd apps/mobile && npx expo run:android          # native modül eklendiyse yeniden build (~9 dk)
 ```

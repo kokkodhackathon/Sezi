@@ -9,16 +9,14 @@ import { ScreenHeader } from '@/components/screen-header';
 import { EmptyState } from '@/components/ui';
 import { SoundIcon } from '@/design/icons';
 import { outline, SoftPressable } from '@/design/sweet/components';
-import { toneForType } from '@/design/sweet/tones';
 import { radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
-import { defaultStart, formatDistance, useNavVersion, walkingSpeed } from '@/lib/nav';
+import { defaultStart, formatDistance, planner, useNavVersion, walkingSpeed } from '@/lib/nav';
 import { useNavPoints } from '@/lib/points';
 import { useProfile } from '@/lib/profile';
-import { TOURS } from '@sezi/shared';
-import { planTour } from '@/lib/tours';
+import { planTour, toneForType, TOURS } from '@sezi/shared';
 import { photoUrl, useWorks } from '@/lib/works';
 
 /** Turlar: her tur bir fotoğraf kartı; açıklama ekran okuyucu etiketinde, görünen metin tek satır. */
@@ -31,7 +29,7 @@ export default function Tours() {
   const navVersion = useNavVersion();
   const stories = useNavPoints().filter((p) => p.roles.includes('story')).length;
   const plans = useMemo(
-    () => (profile ? TOURS.map((d) => planTour(d.id, profile, defaultStart())) : []),
+    () => (profile ? TOURS.map((d) => planTour(planner, d.id, profile, defaultStart())) : []),
     // navVersion: başlangıç noktaları ve onaylı bildirimler değişince turlar yeniden hesaplanır.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [profile, navVersion],

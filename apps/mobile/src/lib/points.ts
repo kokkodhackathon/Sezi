@@ -1,4 +1,4 @@
-import { LocalizedText, workPoint, type NavPoint } from '@sezi/shared';
+import { LocalizedText, NAV_POINT_COLUMNS, toNavPoints, workPoint, type NavPoint } from '@sezi/shared';
 import { useQuery } from '@tanstack/react-query';
 import { Directory, File, Paths } from 'expo-file-system';
 import Storage from 'expo-sqlite/kv-store';
@@ -17,47 +17,6 @@ import { prefetchWorks } from './works';
  * Her değişiklik rota grafiğine de uygulanır (nav.ts › setNavPoints).
  */
 const KEY = 'sezi.points.v1';
-const COLUMNS = 'id, city_slug, roles, title, body, lng, lat, radius_m, work_slug, salience, ambient, sort_order, audio_tr, audio_en';
-
-const Row = z.object({
-  id: z.string(),
-  city_slug: z.string(),
-  roles: z.array(z.enum(['start', 'landmark', 'story', 'arrival'])).min(1),
-  title: LocalizedText,
-  body: LocalizedText.nullable(),
-  lng: z.number(),
-  lat: z.number(),
-  radius_m: z.number(),
-  work_slug: z.string().nullable(),
-  salience: z.number().nullable(),
-  ambient: z.enum(['water', 'market', 'chime']).nullable(),
-  sort_order: z.number(),
-  audio_tr: z.string().nullable(),
-  audio_en: z.string().nullable(),
-});
-
-function toPoints(rows: unknown[]): NavPoint[] {
-  return rows.flatMap((r) => {
-    const p = Row.safeParse(r);
-    if (!p.success) return [];
-    const d = p.data;
-    return [{
-      id: d.id,
-      citySlug: d.city_slug,
-      roles: d.roles,
-      title: d.title,
-      body: d.body ?? undefined,
-      location: [d.lng, d.lat],
-      radiusM: d.radius_m,
-      workSlug: d.work_slug ?? undefined,
-      salience: d.salience ?? undefined,
-      ambient: d.ambient ?? undefined,
-      sortOrder: d.sort_order,
-      audio: { tr: d.audio_tr ?? undefined, en: d.audio_en ?? undefined },
-    }];
-  });
-}
-
 let points: NavPoint[] = [];
 const listeners = new Set<() => void>();
 
@@ -70,7 +29,7 @@ function setPoints(next: NavPoint[]) {
 // Açılışta son bilinen liste cihazdan yüklenir.
 try {
   const cached = z.array(z.unknown()).safeParse(JSON.parse(Storage.getItemSync(KEY) ?? '[]'));
-  if (cached.success) setPoints(toPoints(cached.data));
+  if (cached.success) setPoints(toNavPoints(cached.data));
 } catch {
   // Bozuk önbellek yok sayılır; sunucudan yeniden alınır.
 }
@@ -207,7 +166,7 @@ export function usePointsSync() {
   const { data, refetch } = useQuery({
     queryKey: ['nav_points'],
     queryFn: async () => {
-      const { data: rows, error } = await supabase.from('nav_points_view').select(COLUMNS).eq('status', 'verified');
+      const { data: rows, error } = await supabase.from('nav_points_view').select(NAV_POINT_COLUMNS).eq('status', 'verified');
       if (error) throw error;
       return (rows ?? []) as unknown[];
     },
@@ -217,7 +176,7 @@ export function usePointsSync() {
 
   useEffect(() => {
     if (!data) return;
-    const list = toPoints(data);
+    const list = toNavPoints(data);
     setPoints(list);
     Storage.setItemSync(KEY, JSON.stringify(data));
     void cacheAudio(list);

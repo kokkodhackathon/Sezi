@@ -112,7 +112,11 @@ Roller: `hero` 34 (ana sayfada şehir adı), `screenTitle` 30, `editorial` 28 (e
 
 ## Bileşenler
 
-- `apps/mobile/src/components/ui.tsx`: `Button` (`primary` firuze, `secondary` gri dolgu, `outline`, `ghost` yalnız yazı, `danger`), `Card` (beyaz, 22 köşe, gölgesiz), `ListRow` / `ToggleRow` (kart içinde ince çizgiyle ayrılır), `Segmented` (gri ray, seçili parça beyaz), `Chip` (gri; seçili firuze + kalın), `Badge`, `EmptyState`, `Field` (gri dolgu, 16 köşe; hata durumunda tehlike rengi ve polite live region), `Note`, `SectionTitle`, `Eyebrow`.
+- `apps/mobile/src/components/ui.tsx`: `Button` (`primary` firuze, `secondary` gri dolgu, `outline`, `ghost` yalnız yazı, `danger`), `Card` (beyaz, 22 köşe, gölgesiz), `ListRow` / `ToggleRow` (kart içinde ince çizgiyle ayrılır), `Segmented` (gri ray, seçili parça beyaz), `Chip` (gri; seçili firuze + kalın), `Badge`, `EmptyState`, `Field`, `Note`, `SectionTitle`, `Eyebrow`.
+- `Field`: üstte etiket, 56 dp gri dolgulu kutu (16 köşe, 2 dp çerçeve yeri hep ayrılır, odakta kayma olmaz), altında yardım ya da hata. Odakta zemin beyazlaşır ve çerçeve koyu firuze olur; hata tehlike rengi çerçeve + ikon + metin (polite live region). Solda isteğe bağlı alan simgesi (`MailIcon`, `LockIcon`, `AtIcon`, `PersonIcon`; odakta firuze), sağda alan içi eylem yuvası (≥ 48 dp, ör. şifre göz düğmesi). Kutunun her yeri alanı odaklar. Sıradaki alana "İleri" ile geçilir (`inputRef`). Her alanda örnek gösteren yer tutucu olur (ör. `ornek@eposta.com`); etiketin yerine geçmez, etiket hep görünür.
+- Klavye: `FormScreen` içindeki alan odaklanınca, klavyenin ekranı ne kadar örttüğü ölçülür, içerik o kadar alt boşluk alır ve alan altındaki 112 dp payla (şifre kuralları, sıradaki düğme) görünür alana kaydırılır (`RevealContext`). Android edge-to-edge'de pencere küçülmediği için `KeyboardAvoidingView` kullanılmaz.
+- `apps/mobile/src/components/account-fields.tsx`: hesap formları. `PasswordField` (göz düğmesi; yeni şifrede kurallar yazdıkça tek tek işaretlenir: onay simgesi + metin, renk tek başına değil), `CodeField` (altı kutu, tek gizli alan; otomatik doldurma ve yapıştırma çalışır, sıradaki kutu çerçeveli), `FormError` (sunucu/ağ hatası: tehlike çerçeveli kutu, assertive), `FormScreen`. Bekleyen düğme yazısı ne olduğunu söyler ("Gönderiliyor…"). "Şifremi unuttum" şifre alanının altında küçük bağlantı; ana düğmenin hemen altına konmaz.
+- `apps/mobile/src/components/avatar.tsx`: profil dairesi; fotoğraf yoksa seçilen tonda (`fill` / `ink`) baş harfler, ad yoksa kişi simgesi (boş daire hiç görünmez). Dekoratiftir, kimin olduğu yanındaki adla söylenir. Renk seçimi 48 dp yuvarlak örnekler; seçili örnekte onay simgesi ve koyu çerçeve, ekran okuyucu ton adını okur. Profil sekmesinin üstünde hesap kartı: girişliyken fotoğraf + ad + @kullanıcı adı (dokununca hesap); girişsizken kısa başlık, tek cümle ve "Hesap oluştur" / "Giriş yap" düğmeleri (kesilen tek satır yok).
 - `apps/mobile/src/components/screen-header.tsx`: tek başlık (`screenTitle`) ve isteğe bağlı alt açıklama; yinelenen üst etiket ve dekoratif şerit yok.
 - `apps/mobile/src/components/read-more.tsx`: uzun metin (eser tarihçesi, mimari). 600 karakterden uzunsa önce ilk paragraflardan ≤ 360 karakterlik, tam cümlede kesilmiş kısa hâli görünür. "Devamını oku · N dk" tamamını paragraf boşluklarıyla açar; açılan kısım yalnız saydamlıkla gelir. "Kısalt" metni kapatır ve sayfayı bölüm başlığına döndürür. Dinleme düğmesi her zaman metnin tamamını okur.
 - `apps/mobile/src/design/sweet/components.tsx`: `SoftPressable`, `IconBubble` (48 dp gri yuvarlak ikon düğmesi), `TypeTile`, `PhotoTile` (köşeli fotoğraf ya da tür glifi, altında ad, UNESCO yıldızı), `FadeInItem`, `Skeleton`, `SweetSheet`, `sweetShadow` (yalnız yüzen öğeler), `outline` (yüksek kontrast çerçevesi), `a11yLabel`.
@@ -131,6 +135,14 @@ Yön işareti ve `display` (Atkinson) talimat ana odağı oluşturur; kalan mesa
 - Durum `StatusBadge` (Doğrulandı / Taslak / Arşivde); renk yanında hep metin. Geri alınamaz işlem `AlertDialog` ile onaylanır; sonuç `sonner` bildirimi.
 - Açılış sayfası Pano: kapsam kartları, il grafiği ve tablosu, fotoğraf durumu, pilot alan ve tur kapsamı, sırada bekleyen işler.
 - Ham renk ya da bileşen renklerini ezen sınıf yazılmaz; yeni bileşen `npx shadcn@latest add` ile eklenir.
+
+## Web sitesi
+
+`apps/web` (sezi.info): admin ile aynı shadcn bileşenleri ve ölçüler (40 px görsel yükseklik, 48×48 dokunma alanı). Renk değerleri CSS'te yazılmaz: `src/lib/theme.ts` ortak temadan (`sweetThemes.light`, `highContrast`) CSS değişkenleri üretir. Eylem rengi admin gibi koyu firuze dolgu (`tones.teal.ink`) + beyaz yazı; tür tonları `bg-tone-<ad>` / `text-tone-<ad>-ink`.
+- Koyu tema yok. Üst çubuktaki **Görünüm** menüsü: yüksek kontrast (zemin beyaz, metin siyah, yüzeyler 2 px çerçeveli, harita tek renk) ve yazı boyutu (%100 / %112,5 / %125). Tercih tarayıcıda; ilk boyamadan önce uygulanır.
+- Az yazı, önce fotoğraf: kartlarda kapak ya da tür tonunda glif karosu (`WorkThumb`). Uzun kitap metni "Devamını oku · N dk" ile açılır, altında her zaman kitap atfı.
+- Harita destekleyicidir: haritadaki her bilgi sayfadaki listede de yazılıdır; profil çizgileri renk yanında kalınlık ve kesiklikle ayrılır.
+- Her sayfada tek `h1`, "İçeriğe atla" bağlantısı, görünür odak çerçevesi (3 px `--ring`).
 
 ## Yap / Yapma
 

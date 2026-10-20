@@ -1,3 +1,4 @@
+import { loc, type ExhibitionRow } from '@sezi/shared';
 import { Linking, StyleSheet, Text, View } from 'react-native';
 
 import { Badge } from '@/components/ui';
@@ -6,7 +7,6 @@ import { outline, SoftPressable } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
-import { loc, type ExhibitionRow } from '@/lib/works';
 
 function formatDate(iso: string, lang: 'tr' | 'en') {
   return new Date(iso).toLocaleDateString(lang === 'tr' ? 'tr-TR' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' });

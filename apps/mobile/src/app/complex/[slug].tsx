@@ -1,4 +1,4 @@
-import type { SweetTheme } from '@sezi/shared';
+import { hasLocation, loc, toneForType, type SweetTheme } from '@sezi/shared';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -7,13 +7,12 @@ import { PointsLayer, SeziMap } from '@/components/map';
 import { Button, Card, Eyebrow, ListRow, SectionTitle } from '@/components/ui';
 import { TurnIcon } from '@/design/icons';
 import { outline } from '@/design/sweet/components';
-import { toneForType } from '@/design/sweet/tones';
 import { radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings';
-import { hasLocation, loc, useWorks } from '@/lib/works';
+import { useWorks } from '@/lib/works';
 
 export default function ComplexScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();

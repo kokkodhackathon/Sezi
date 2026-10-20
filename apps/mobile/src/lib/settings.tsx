@@ -1,3 +1,4 @@
+import { SyncedSettings } from '@sezi/shared';
 import Storage from 'expo-sqlite/kv-store';
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 import { z } from 'zod';
@@ -7,22 +8,13 @@ const KEY = 'sezi.settings.v2';
 const LEGACY_KEY = 'sezi.settings.v1';
 const VISITED_KEY = 'sezi.visited.v1';
 
-const SettingsSchema = z.object({
-  themeMode: z.enum(['system', 'light', 'dark']).default('light'),
-  /** Konuşma hızı (cihaz sesi ve Chirp oynatma hızı): 0.75 yavaş – 1.2 hızlı. */
-  speechRate: z.number().min(0.5).max(1.5).default(0.95),
+const SettingsSchema = SyncedSettings.extend({
   /** Keşfet ekranında seçili envanter ili. */
   city: z.string().default('bursa'),
   /** Geliştirici seçenekleri: sanal yürüyüş, jüri senaryoları ve cihaz testleri. */
   devSimulation: z.boolean().default(false),
-  /** Anlatım noktası sesi: otomatik ya da dokununca. */
-  storyPlayback: z.enum(['auto', 'tap']).default('auto'),
 });
 export type Settings = z.infer<typeof SettingsSchema>;
-
-/** Hesapla cihazlar arasında taşınan ayarlar. İl ve geliştirici seçenekleri cihaza özgü kalır. */
-export const SyncedSettings = SettingsSchema.pick({ themeMode: true, speechRate: true, storyPlayback: true });
-
 function loadJson<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>, fallback: T): T {
   try {
     const raw = Storage.getItemSync(key);

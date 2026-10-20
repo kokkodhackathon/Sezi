@@ -1,7 +1,7 @@
+import { toneForType } from '@sezi/shared';
 import { View } from 'react-native';
 import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 
-import { toneForType } from '@/design/sweet/tones';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 
 /**
