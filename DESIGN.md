@@ -1,98 +1,40 @@
 ---
 name: Sezi
-description: "Çini" — önce fotoğraf, az yazı; sıcak beyaz zemin, İznik turkuazı, mercan kırmızısı yalnızca vurguda.
+description: "Çini 2" — önce fotoğraf, az yazı; sıcak kırık beyaz zemin, mürekkep siyahı metin, kimlik rengi pastel firuze; düz yüzeyler, ölçülü hareket.
 colors:
-  light-background: "#FAF7F2"
+  light-background: "#F6F4F0"
   light-surface: "#FFFFFF"
-  light-soft: "#F1ECE5"
-  light-text: "#1E1A17"
-  light-text-muted: "#5F5650"
-  light-primary: "#0B6E73"
-  light-on-primary: "#FFFFFF"
-  light-accent: "#B8321F"
-  light-on-accent: "#FFFFFF"
-  light-danger: "#8E1F1A"
-  light-border: "#ECE6DE"
-  dark-background: "#161311"
-  dark-surface: "#211C19"
-  dark-soft: "#2A2420"
-  dark-text: "#F2EDE7"
-  dark-text-muted: "#B5ABA2"
-  dark-primary: "#6FC7C4"
-  dark-on-primary: "#161311"
-  dark-accent: "#F08A70"
-  dark-on-accent: "#161311"
-  dark-danger: "#F28B82"
-  dark-border: "#332C27"
+  light-soft: "#ECE8E1"
+  light-text: "#16151A"
+  light-text-muted: "#5E5A64"
+  light-primary-fill: "#A8E0D6"
+  light-primary-ink: "#0F4A44"
+  light-primary-text: "#0F4A44"
+  light-accent-fill: "#FDE3DA"
+  light-accent-ink: "#9A361D"
+  light-danger: "#B3261E"
+  light-border: "#E2DED6"
+  dark-background: "#111014"
+  dark-surface: "#1C1B20"
+  dark-soft: "#26252B"
+  dark-text: "#F3F1F5"
+  dark-text-muted: "#ABA7B3"
+  dark-primary-fill: "#7FCFC3"
+  dark-primary-ink: "#06302B"
+  dark-primary-text: "#8FD8CC"
+  dark-danger: "#FFB4AB"
   high-contrast-background: "#FFFFFF"
-  high-contrast-surface: "#FFFFFF"
   high-contrast-text: "#000000"
-  high-contrast-text-muted: "#1E1A17"
-  high-contrast-primary: "#064C50"
-  high-contrast-on-primary: "#FFFFFF"
-  high-contrast-accent: "#8E1F1A"
-  high-contrast-on-accent: "#FFFFFF"
-  high-contrast-danger: "#8E1F1A"
+  high-contrast-primary-fill: "#064C50"
+  high-contrast-primary-ink: "#FFFFFF"
   high-contrast-border: "#000000"
 typography:
-  hero:
-    fontFamily: Fraunces_700Bold
-    fontSize: "44px"
-    fontWeight: 700
-    lineHeight: "50px"
-    letterSpacing: "-0.5px"
-  display:
-    fontFamily: AtkinsonHyperlegibleNext_700Bold
-    fontSize: "32px"
-    fontWeight: 700
-    lineHeight: "40px"
-    letterSpacing: "-0.3px"
-  title:
-    fontFamily: AtkinsonHyperlegibleNext_600SemiBold
-    fontSize: "26px"
-    fontWeight: 600
-    lineHeight: "34px"
-  editorial:
-    fontFamily: Fraunces_600SemiBold
-    fontSize: "32px"
-    fontWeight: 600
-    lineHeight: "40px"
-    letterSpacing: "-0.3px"
-  heading:
-    fontFamily: AtkinsonHyperlegibleNext_700Bold
-    fontSize: "20px"
-    fontWeight: 700
-    lineHeight: "26px"
-  item-title:
-    fontFamily: AtkinsonHyperlegibleNext_600SemiBold
-    fontSize: "18px"
-    fontWeight: 600
-    lineHeight: "24px"
-  body:
-    fontFamily: AtkinsonHyperlegibleNext_400Regular
-    fontSize: "17px"
-    fontWeight: 400
-    lineHeight: "26px"
-  lead:
-    fontFamily: AtkinsonHyperlegibleNext_400Regular
-    fontSize: "19px"
-    fontWeight: 400
-    lineHeight: "28px"
-  meta:
-    fontFamily: AtkinsonHyperlegibleNext_400Regular
-    fontSize: "15px"
-    fontWeight: 400
-    lineHeight: "21px"
-  button:
-    fontFamily: AtkinsonHyperlegibleNext_700Bold
-    fontSize: "17px"
-    fontWeight: 700
-    lineHeight: "22px"
+  fonts: "Nunito 700/800 (başlık, kart, düğme, etiket) · Atkinson Hyperlegible Next 400/600/700 (okuma, yardımcı bilgi, yön talimatı)"
 rounded:
-  sm: "8px"
-  md: "12px"
-  lg: "16px"
-  pill: "999px"
+  sm: "10px"
+  md: "16px"
+  lg: "22px"
+  xl: "28px"
 spacing:
   xs: "4px"
   sm: "8px"
@@ -100,176 +42,108 @@ spacing:
   lg: "16px"
   xl: "24px"
   xxl: "32px"
-components:
-  button-primary:
-    backgroundColor: "{colors.light-primary}"
-    textColor: "{colors.light-on-primary}"
-    typography: "{typography.button}"
-    rounded: "{rounded.md}"
-    padding: "12px 24px"
-  button-secondary:
-    backgroundColor: "{colors.light-text}"
-    textColor: "{colors.light-background}"
-    typography: "{typography.button}"
-    rounded: "{rounded.md}"
-    padding: "12px 24px"
-  button-outline:
-    backgroundColor: "{colors.light-surface}"
-    textColor: "{colors.light-primary}"
-    typography: "{typography.button}"
-    rounded: "{rounded.md}"
-    padding: "12px 24px"
-  button-ghost:
-    backgroundColor: transparent
-    textColor: "{colors.light-primary}"
-    typography: "{typography.button}"
-    rounded: "{rounded.md}"
-    padding: "12px 24px"
-  button-danger:
-    backgroundColor: "{colors.light-surface}"
-    textColor: "{colors.light-danger}"
-    typography: "{typography.button}"
-    rounded: "{rounded.md}"
-    padding: "12px 24px"
-  card:
-    backgroundColor: "{colors.light-surface}"
-    rounded: "{rounded.lg}"
-    padding: "16px"
-  field:
-    backgroundColor: "{colors.light-surface}"
-    textColor: "{colors.light-text}"
-    typography: "{typography.body}"
-    rounded: "{rounded.md}"
-    padding: "12px 16px"
-  chip:
-    backgroundColor: "{colors.light-surface}"
-    textColor: "{colors.light-text}"
-    rounded: "{rounded.pill}"
-    padding: "8px 16px"
-  chip-selected:
-    backgroundColor: "{colors.light-primary}"
-    textColor: "{colors.light-on-primary}"
-    rounded: "{rounded.pill}"
-    padding: "8px 16px"
 ---
 
-## Çini ilkeleri (14 Ekim 2026)
+# Sezi tasarım sistemi: Çini 2 (19 Ekim 2026)
 
-- **Kaynak:** Bursa vakıf eserlerinin kubbe ve çini süslemeleri (envanter fotoğraf arşivi). Turkuaz, mercan kırmızısı, beyaz ve koyu mürekkep.
-- **Önce fotoğraf, sonra yazı.** Liste ve kartlar fotoğrafla açılır; fotoğrafı olmayan eser yumuşak dolgulu alanda tür simgesiyle gösterilir. Uzun açıklama yerine tek satır (tür · ilçe); ayrıntı eser sayfasında ve ekran okuyucu etiketinde.
-- **Kutu yerine boşluk.** Kartlar çerçevesiz, yumuşak gölgeli (`softShadow`); etiketler dolu küçük hap; ayraçlar ince.
-- **Renk görevi:** turkuaz etkileşim (düğme, seçili şerit), mercan yalnızca vurgu (UNESCO, haritada hedef, seçili nokta). Renk tek başına anlam taşımaz.
-- **Yazı:** eser, tur, il adları ve ekran başlıkları Fraunces; arayüz, talimat ve okuma metni Atkinson Hyperlegible Next.
-- **Açık tema birincildir**; koyu tema ayarlardan seçilir, az gören profili yüksek kontrast temasını kullanır.
-- **Simülasyon** (sanal yürüyüş, jüri senaryoları, profillere göre rota, cihaz testleri) yalnızca Ayarlar → Geliştirici seçenekleri → Simülasyon modu açıkken görünür.
+Tüm mobil ekranlar bu sistemi kullanır. Önceki "Çini" sistemi (Fraunces başlıklar, derin turkuaz, `useSeziTheme`, native sekme çubuğu) ve ilk "Pastel Çini" denemesi (krem zemin, nane/şeftali, her yerde kapsül; modern bulunmadı) kaldırıldı.
 
+## İlkeler
 
-# Design System: Sezi
+1. **Sade:** bir ekranda bir ana iş; filtre ve görünüm seçimi aramada, ana sayfada değil.
+2. **Az yazı, önce görsel:** fotoğraf, tür glifi ve renkli kutucuk anlatır; ayrıntı eser sayfasında ve ekran okuyucu etiketinde. Fotoğrafı olmayan eser tür tonunda dolgu ve glifle gösterilir.
+3. **Sakin zemin, tek kimlik rengi:** sıcak kırık beyaz zemin, mürekkep siyahı metin; ana renk **pastel firuze** (Bursa Yeşil Türbe çinileri, pilot alanın rengi). Firuze dolgu koyu firuze yazıyla okunur, beyazla değil. Yumuşak tonlar tür kutucuklarında ve fotoğrafsız kartlarda.
+4. **Düz yüzey:** kartlar beyaz yüzey, gölgesiz; ayrım dolgu tonuyla ve ince çizgiyle yapılır. Gölge yalnız yüzen öğelerde (sekme çubuğu, pilot kartı, harita üstü kontroller, alt kart) ve çok hafif.
+5. **Ölçülü hareket:** her hareketin bir nedeni var; kısa, ease-out, çıkış girişten hızlı. Reduce motion'a uyulur.
+6. **Renk tek başına anlam taşımaz:** seçili durum dolgu yanında kalın yazı, ✓, dolu simge ya da çerçeveyle de gösterilir; tür farkını glif silueti verir.
 
-## Overview
+## Renk
 
-**Creative North Star: "Sıcak çağdaş kültür rehberi"**
+Kaynak `packages/shared/src/sweet-theme.ts` (`sweetThemes`: `light`, `dark`, `highContrast`); uygulamada `useSweetTheme()` (`apps/mobile/src/hooks/use-sweet-theme.ts`). Öncelik: az gören profili → yüksek kontrast; sonra Ayarlar'daki tema; "Cihaz" ise sistem tercihi. Tüm metin/zemin çiftleri `sweet-theme.test.ts`'te WCAG AA (≥ 4.5) ile doğrulanır.
 
-Sezi'nin kültürel kimliği krem sayfa, kahve mürekkep, sade eser çizimleri ve sınırlı serif kullanımıyla görünür. Arayüzün ritmini süsleme yerine okunabilir başlıklar, kaynak satırları ve açık eylemler kurar. Erişilebilirlik, palet ve bileşen kararlarının parçasıdır.
+| token | açık | koyu | görev |
+|---|---|---|---|
+| background / surface / soft | `#F6F4F0` / `#FFFFFF` / `#ECE8E1` | `#111014` / `#1C1B20` / `#26252B` | sayfa / kart / dolgulu alan (arama, seçenek, not, ikon düğmesi) |
+| text / textMuted | `#16151A` / `#5E5A64` | `#F3F1F5` / `#ABA7B3` | ana ve ikincil metin |
+| primary (fill / ink) | `#A8E0D6` / `#0F4A44` | `#7FCFC3` / `#06302B` | ana düğme, seçili hap, pilot kartı; `ink` yalnız `fill` üstünde |
+| primaryText | `#0F4A44` | `#8FD8CC` | ana rengin zemin üstündeki hâli: bağlantı, ghost düğme, ikon, çizgi; seçili tür kutucuğunun dolgusu |
+| accent (fill / ink), accentText | `#FDE3DA` / `#9A361D`, `#9A361D` | `#3D241C` / `#FFC6B3`, `#FFC6B3` | vurgu: UNESCO rozeti, uyarı, hedef |
+| danger | `#B3261E` | `#FFB4AB` | tehlike ve olumsuz durum (yanında metin) |
+| nav | çubuk `#FFFFFF`, yazı `#5E5A64`, seçili gösterge `#A8E0D6` / simge `#0F4A44` | `#1C1B20`, `#ABA7B3`, `#7FCFC3` / `#06302B` | sekme çubuğu |
+| tones | cobalt `#E4E8FC`/`#2A3C9C`, teal `#DBF0EB`/`#1C5D55`, coral `#FDE3DA`/`#9A361D`, saffron `#FAEDCB`/`#6E520A`, sage `#E4EDDC`/`#3B5728`, plum `#F2E1EE`/`#7A3266` | koyu karşılıkları | tür rengi (`design/sweet/tones.ts`): cami kobalt, medrese/kütüphane safran, türbe erik, çeşme/sebil firuze, hamam/imaret mercan, diğerleri adaçayı |
 
-Bu belge uygulanmış React Native / Android kaynaklarını kaydeder. Frontmatter'daki `px` birimi taşınabilir şemanın gösterimidir; uygulamada boşluk ve köşe değerleri dp, yazı değerleri React Native'in ölçeklenebilir yazı ölçüleridir. Bileşen renkleri açık tema örneğidir; uygulama karşılıklarını `useSeziTheme()` üzerinden seçer. Web hover, CSS düzeni veya masaüstü breakpoint'i tanımlanmaz.
+**Yüksek kontrast** (az gören profili, `outlined: true`): dolgu ve gölge yok; beyaz zemin, siyah metin; yüzeyler 2 dp siyah çerçeveyle ayrılır (`outline(t)`); ana eylem koyu firuze üstünde beyaz; sekme çubuğunda seçili simge siyah gösterge içinde beyaz.
 
-**Key Characteristics:**
-- Krem sayfa üzerinde sade beyaz yüzeyler.
-- Ana eylem ve seçili durum için turkuaz.
-- Okuma ve yönlendirmede Atkinson; eser ve tur başlığında Fraunces.
-- Kaynak ve konum kesinliğini görünür tutan içerik düzeni.
-- Karşılamada tek küçük kültürel işaret.
+Harita (Mapbox Standard) kara zemini `t.background`; yol, park ve su için `components/map` içinde açıklamalı üç doğal harita sabiti var. Harita noktaları tür tonunun mürekkep rengini kullanır.
 
-## Colors
+## Tipografi
 
-Renklerin kaynağı `packages/shared/src/theme.ts`; ham moodboard paleti arayüze doğrudan uygulanmaz.
+`apps/mobile/src/design/type.ts`. İki yazı tipi:
+- **Nunito** (700/800, yuvarlak): ekran, eser ve tur başlıkları, kart adı, düğme ve etiketler.
+- **Atkinson Hyperlegible Next** (Braille Institute, az gören okurlar için): okuma metni, yardımcı bilgi ve **yön talimatı** (`display`). Yön talimatına yuvarlak başlık yazısı taşınmaz.
 
-### Primary
-- **Derin turkuaz:** açık temada ana düğme, seçili kontrol, eylem simgesi ve yön işareti.
-- **Açık turkuaz:** koyu temada aynı roller; metin eşleşmesi `onPrimary` ile değişir.
-- **Yüksek kontrast turkuaz:** az gören profilinin ana eylem rengi.
+Roller: `hero` 34 (ana sayfada şehir adı), `screenTitle` 30, `editorial` 28 (eser/tur adı), `display` 32/40 Atkinson (yön talimatı), `title` 22, `heading` 19, `itemTitle` 17, `cardTitle` 16, `body` 17/26, `lead` 19/28, `meta` 15, `eyebrow` 15, `button` 17, `bubble` 14, `tab` 12. Okuma metni 17/26'nın altına inmez. Büyük harf `upper(text, lang)` ile (Türkçe i/İ).
 
-### Secondary
-- **Pas:** marka ayrıntısı ve anlam taşıyan vurgu; kartların genel dolgu rengi değildir.
-- **Koyu kırmızı:** tehlike ve olumsuz durum; açıklama metniyle birlikte gösterilir.
+## Biçim ve yerleşim
 
-### Neutral
-- **Krem / beyaz:** sayfa ile kart, alan ve seçili kontrol ayrımı.
-- **Kahve mürekkep / soluk kahve:** ana metin ile ikincil bilgi ayrımı.
-- **Kum çizgisi:** liste ayırıcıları ve yüzey sınırları.
-- **Gece / yükseltilmiş gece:** koyu temanın sayfa ve yüzey ayrımı.
-- **Siyah / beyaz:** yüksek kontrast temasının metin ve sınırları.
+- Köşeler `radius`: `sm` 10 (çip, rozet, sekme göstergesi), `md` 16 (düğme, alan, seçenek satırı), `lg` 22 (kart, fotoğraf, harita), `xl` 28 (büyük kart, alt panel). Kapsül yalnız sayaç ve yuvarlak ikon düğmesinde. iOS'ta `borderCurve: 'continuous'`.
+- Boşluk `space` (4 / 8 / 12 / 16 / 24 / 32); ana ekranların yatay payı `space.xl`.
+- En küçük dokunma alanı 48 dp; düğme 54 dp (kompakt 48), liste satırı en az 64 dp. Sabit yükseklik yerine minimum yükseklik. `Segmented`, yazı ölçeği 1,5'i geçince dikeyleşir. `SafeAreaView` ve panel inset'leri sistem kenarlarını korur.
+- Keşfet bir görsel vitrindir: şehir adı (dokununca şehir paneli), arama alanı, pilot kartı, tür kutucukları, öne çıkan fotoğraflar, iki sütunlu ızgara. Liste/harita geçişi ve ilçe filtresi arama ekranındadır.
 
-**The Anlamlı Renk Rule.** Seçili durum, uyarı ve konum kesinliği renk yanında metin, sınır veya erişilebilirlik durumuyla da ifade edilir.
+## Sekme çubuğu
 
-## Typography
+`apps/mobile/src/components/app-tabs.tsx` (`expo-router/ui`). Ekran kenarlarından 16 dp ayrık, içeriğin üstünde yüzen beyaz yüzey (22 köşe, ince çizgi, hafif gölge); çevresi saydamdır, kaydırılan içerik arkasından geçer. Sekme ekranları kaydırma kapsayıcısının alt payına `useTabBarSpace()` verir (Sor ekranında yazı alanı çubuğun üstünde durur). Dört sekmenin yazısı her zaman görünür (12 boyut istisnadır); seçili sekmede simge firuze göstergede (60×32, 10 köşe) dolu çizilir ve yazı kalınlaşır. Klavye açıkken gizlenir. Bırakılan denemeler: koyu yüzen kapsül (uygulamanın diliyle uyuşmadı), ekrana yapışık çubuk (kullanıcı yüzen biçimi istedi).
 
-**Display Font:** ekran başlığı ve rehberlikte Atkinson Hyperlegible Next; marka adında Fraunces.
-**Body Font:** Atkinson Hyperlegible Next.
+## Hareket
 
-Frontmatter, `apps/mobile/src/design/type.ts` içindeki yeniden kullanılan rolleri kaydeder. Ekran başlığı `display`, bölüm başlığı `heading`, eser satırı `itemTitle`, okuma `body`, kaynak ve yardımcı bilgi `meta`, kontroller `button` kullanır. `hero` marka adına; `editorial` eser ve tur adına ayrılır. Yazı tipleri Expo üzerinden yüklenen gerçek font varlıklarıdır; sistem fontuyla hazırlanmış bir başlık standardı yoktur.
+`apps/mobile/src/design/sweet/motion.ts` (Reanimated):
+- Basma (`SoftPressable`): 0.96'ya küçülme 140 ms, geri dönüş 200 ms, `cubic-bezier(0.23, 1, 0.32, 1)`.
+- Kart girişi (`FadeInItem`): 8 dp yukarı + opacity, 260 ms, öğeler arası 50 ms; 6. öğeden sonra gecikme artmaz.
+- Tür kutucuğu seçimi: koyu firuze dolgu ve 1.05'e hafif sekme (yay, 350 ms, sönüm 0.7); seçim haptik verir.
+- Sekme değişimi: seçili gösterge 150 ms'de yatayda açılır (sık tekrarlanan eylem, kısa).
+- Alt panel (`SweetSheet`): 320 ms `cubic-bezier(0.32, 0.72, 0, 1)` ile kayarak açılır, 200 ms'de kapanır; arka plan 150 ms söner.
+- Nokta kartı (`PointPopup`, yürüyüşte kendiliğinden açılır): 24 dp aşağıdan + opacity, 260 ms ease-out; aynı kenara 200 ms'de iner. Reduce motion: yalnız opacity.
+- Navigasyon: talimat kartı yürüyüş başlarken bir kez `FadeInItem` ile girer; adım değişimi canlandırılmaz (görsel karşılığı CueFlash). Varış kartında başlık, fotoğraf, ad ve metin sırayla gelir; düğmeler hemen kullanılabilir.
+- Onboarding: her adımın içeriği `FadeInItem` ile belirir (ileri/geri aynı).
+- Canlandırılmayanlar: sekme ve ekran geçişleri (platform), ilerleme çubuğu, harita kamerası, liste kaydırma.
+- Yükleniyor iskeleti: gri blok 900 ms'de nefes alır.
+- Reduce motion açıkken ölçek ve kayma kalkar; yalnız opacity değişir (basınca 0.8, panel 150 ms söner).
 
-**The İki Ses Rule.** Atkinson işlemi ve yön talimatını; Fraunces eser, tur ve marka kimliğini taşır. Serif yön talimatlarına taşınmaz.
+## Bileşenler
 
-**The Tek Başlık Rule.** `ScreenHeader` bir ekran başlığı ve gerektiğinde alt açıklama gösterir; yinelenen dekoratif üst başlık göstermez.
+- `apps/mobile/src/components/ui.tsx`: `Button` (`primary` firuze, `secondary` gri dolgu, `outline`, `ghost` yalnız yazı, `danger`), `Card` (beyaz, 22 köşe, gölgesiz), `ListRow` / `ToggleRow` (kart içinde ince çizgiyle ayrılır), `Segmented` (gri ray, seçili parça beyaz), `Chip` (gri; seçili firuze + kalın), `Badge`, `EmptyState`, `Field` (gri dolgu, 16 köşe; hata durumunda tehlike rengi ve polite live region), `Note`, `SectionTitle`, `Eyebrow`.
+- `apps/mobile/src/components/screen-header.tsx`: tek başlık (`screenTitle`) ve isteğe bağlı alt açıklama; yinelenen üst etiket ve dekoratif şerit yok.
+- `apps/mobile/src/components/read-more.tsx`: uzun metin (eser tarihçesi, mimari). 600 karakterden uzunsa önce ilk paragraflardan ≤ 360 karakterlik, tam cümlede kesilmiş kısa hâli görünür. "Devamını oku · N dk" tamamını paragraf boşluklarıyla açar; açılan kısım yalnız saydamlıkla gelir. "Kısalt" metni kapatır ve sayfayı bölüm başlığına döndürür. Dinleme düğmesi her zaman metnin tamamını okur.
+- `apps/mobile/src/design/sweet/components.tsx`: `SoftPressable`, `IconBubble` (48 dp gri yuvarlak ikon düğmesi), `TypeTile`, `PhotoTile` (köşeli fotoğraf ya da tür glifi, altında ad, UNESCO yıldızı), `FadeInItem`, `Skeleton`, `SweetSheet`, `sweetShadow` (yalnız yüzen öğeler), `outline` (yüksek kontrast çerçevesi), `a11yLabel`.
+- `apps/mobile/src/design/work-glyph.tsx`: `WorkGlyph` (tür tonunda karo üstünde glif), `WorkGlyphInline`. `design/motif.tsx`: onboarding'deki küçük `CengelMark` (yüksek kontrastta gösterilmez).
 
-## Layout
+## Rehberlik / CueFlash
 
-Ana ekranların yatay payı `space.xl`; içerik tek sütunlu ve dikey kaydırılabilirdir. Liste satırları yatay simge, esnek metin grubu ve sağ eylem işareti kullanır. Satır başlıkları ile kaynaklar ayrı satırlara yerleşir. Boşluk ölçeği küçük grup içi aralıktan ekran kenarına kadar frontmatter'daki altı değerden oluşur; içerik bölüm aralıkları gerektiğinde ekran stilinde ayrıca tanımlanır.
+Yön işareti ve `display` (Atkinson) talimat ana odağı oluşturur; kalan mesafe, simülasyon açıklaması ve erişilebilir ilerleme çubuğu ayrı bilgidir. İşitme profiline bağlı görsel ipucu dekoratif hareket değildir: normalde ekran kenarında iki parlama; reduce motion'da 1.500 ms sabit çerçeve. Her ses ipucunun görsel ve haptik karşılığı vardır. Simülasyon gerçek GPS yönlendirmesi diye sunulmaz ve yalnız Ayarlar → Geliştirici seçenekleri → Simülasyon modu açıkken görünür.
 
-Keşfet listeyle açılır; harita bir görünüm seçeneğidir. Şehir ve filtreler, alt kenardan açılan native `Modal` içinde kaydırılabilir seçeneklere sahiptir. Görsel rehberlikte ana talimat kaydırılabilir sahnede, yürütme kontrolleri alt bölümde kalır. Bunlar ekran örnekleridir; her yeni ekrana aynı kompozisyon dayatılmaz.
+## Yönetim paneli
 
-En küçük etkileşim alanı 48 dp; standart düğme ve alan 56 dp, kompakt düğme 48 dp, ortak liste satırı en az 64 dp'dir. Sabit yükseklik yerine minimum yükseklik kullanılır. `Segmented`, yazı ölçeği 1,5'i geçtiğinde dikeyleşir. `SafeAreaView` ve alt panel inset'leri sistem kenarlarını korur.
+`apps/admin`: shadcn/ui (radix, `components.json`) + Tailwind v4. Token'lar `src/index.css` içinde Çini 2'nin açık temasıyla eşlenir: zemin kırık beyaz, kart beyaz, `primary` pastel firuze dolgu + koyu firuze yazı, `success` / `warning` tür tonlarından (teal / coral), grafik serileri tür tonlarının koyu ve orta değerleri. Başlıklar Nunito (`font-heading`), gövde Atkinson. Panel yalnız açık temadır.
+- Yerleşim: daraltılabilir sol menü (gruplar: Genel, İçerik, Konum ve rota, Topluluk, Ayarlar; bekleyen iş sayısı rozetle), üstte yol çubuğu. Menü, sayfa başlıkları ve pano kısayolları tek listeden (`src/lib/nav.ts`).
+- Her sayfa `PageHeader` ile açılır: başlık + bu sayfada ne yapılacağını söyleyen tek cümle + sağda eylemler.
+- Durum `StatusBadge` (Doğrulandı / Taslak / Arşivde); renk yanında hep metin. Geri alınamaz işlem `AlertDialog` ile onaylanır; sonuç `sonner` bildirimi.
+- Açılış sayfası Pano: kapsam kartları, il grafiği ve tablosu, fotoğraf durumu, pilot alan ve tur kapsamı, sırada bekleyen işler.
+- Ham renk ya da bileşen renklerini ezen sınıf yazılmaz; yeni bileşen `npx shadcn@latest add` ile eklenir.
 
-## Elevation & Depth
+## Yap / Yapma
 
-Örneklenen ortak bileşenlerde gölge veya native elevation yoktur. Derinlik krem/beyaz ya da koyu tema yüzey ayrımı, bir dp sınır ve ayırıcı çizgiyle oluşur. Modal arka planı tema metninin `66` alfa uzantısıyla kararır; bu etkileşim katmanıdır, dekoratif gölge değildir.
+**Yap**
+- Renkleri `useSweetTheme()` üzerinden al; dolgu üstünde eşleşen `ink`, zemin üstünde `primaryText` / `accentText` kullan.
+- Ekranları `ui.tsx` ve `design/sweet/components` parçalarıyla, en az 48 dp dokunma alanıyla kur.
+- Uzun metni ve büyük yazıyı kaydırılabilir, esnek yerleşimde tut.
+- Kaynak, konum kesinliği ve simülasyon durumunu okunur metinle göster.
+- Yüksek kontrastta dolgusuz yüzeylere `outline(t)` ekle.
 
-## Shapes
-
-Kontrol ve alanlar orta köşe, kart ve haritalar büyük köşe, seçeneğin iç yüzeyi küçük köşe kullanır. Chip'ler kapsül biçimindedir. Alt panelin üst köşesi ekran kaynağında ayrıca 24 dp'dir; kart köşesinin yerine genel bir yeni ölçek olarak kullanılmaz.
-
-Karşılama ekranındaki `CengelMark` 40 dp'dir. Yüksek kontrast temasında gösterilmez. Dekoratif kilim bantları ve büyük madalyonlar yeniden kullanılan ekran dili değildir.
-
-## Components
-
-### Buttons
-
-Ana düğme turkuaz; ikincil düğme metin renginde dolgu; outline beyaz yüzey üzerinde turkuaz sınır; ghost saydam; danger yüzey üzerinde tehlike rengi kullanır. Basılı durumda opacity 0,85, devre dışıyken 0,4'tür. Bunlar mevcut durum değerleridir; gelecekte tüm kontrollere evrensel bir kontrast garantisi olarak uygulanmaz. Etiket ortalıdır, dar alanda küçülebilir; erişilebilir rol, etiket ve disabled durumu taşınır.
-
-### Chips
-
-Seçili chip turkuaz dolgu ve `onPrimary` metin; diğerleri yüzey dolgusu ve sınır kullanır. Seçili durum erişilebilirlik ağacında da belirtilir. Metin 15 boyutlu kalın Atkinson'dır; dokunma alanı en az 48 dp'dir.
-
-### Cards / Containers
-
-`Card` yüzey dolgusu, bir dp sınır ve büyük köşe taşır; varsayılan iç pay `space.lg` olur. `padded={false}` liste gruplarına ayrılır. `ListRow` ilk satırdan sonra üst ayırıcı kullanır. Basılı satır sayfa rengine geçer; genel gölge eklenmez.
-
-### Inputs / Fields
-
-`Field` görünür etiket, beyaz yüzey, orta köşe ve okunabilir sınır kullanır. Hata durumunda sınır ve hata metni danger olur; hata metni polite live region taşır. Çok satırlı alan en az 120 dp'dir. Özel focus halkası kaynakta uygulanmış değildir; yeni bir uygulanmış standart gibi kaydedilmez.
-
-### Navigation
-
-Alt gezinme `NativeTabs` ile platformun gerçek sekme bileşenidir. Dört sekmenin yazılı etiketi görünür; Atkinson normal durumda yarı kalın, seçili durumda kalındır. Native sekme etiketi 12 boyutlu istisnadır; dar ekranda büyütülmüş İngilizce etiketlere yer açar. Seçili simge ve yazı turkuaz, göstergesi primary renginin `2E` alfa uzantısıdır. Uygulama SVG eylem simgeleri ile platform sekme ikonlarını aynı renderer'a dönüştürmez.
-
-### Guidance / CueFlash
-
-Yön işareti ve 32/40 Atkinson talimat ana odağı oluşturur. Kalan mesafe, simülasyon açıklaması ve erişilebilir ilerleme çubuğu ayrı bilgidir. İşitme profiline bağlı görsel ipucu dekoratif hareket değildir: normalde ekran kenarında iki parlama; reduce motion'da 1.500 ms sabit çerçeve gösterir. Simülasyon gerçek GPS yönlendirmesi diye sunulmaz.
-
-## Do's and Don'ts
-
-### Do:
-- **Do** renkleri `useSeziTheme()` üzerinden ve eşleşen metin token'ıyla kullan.
-- **Do** ekranları mevcut ortak bileşenlerle ve en az 48 dp dokunma alanıyla kur.
-- **Do** uzun metni ve büyük yazıyı kaydırılabilir, esnek yerleşimde tut.
-- **Do** kaynak, konum kesinliği ve simülasyon durumunu okunur metinle göster.
-- **Do** her ses ipucunun görsel ve haptik karşılığını koru.
-
-### Don't:
-- **Don't** fotoğraf, tarihçe veya doğrulanmamış eser bilgisi uydur.
-- **Don't** ana arayüze dekoratif bantlar veya tekrar eden üst başlıklar ekle.
-- **Don't** Fraunces'i kontrollerde veya yön talimatlarında kullan.
-- **Don't** renkleri tek başına durum göstergesi yap.
-- **Don't** ekranda harita kütüphanesini doğrudan kullan; harita çizimleri `components/map` bileşenleriyle yapılır.
+**Yapma**
+- Fotoğraf, tarihçe veya doğrulanmamış eser bilgisi uydurma.
+- Sabit renk kodu yazma (harita altlığının üç doğal rengi dışında).
+- Kartlara gölge ekleme; dekoratif bant ve madalyon kullanma.
+- `primary.ink`'i zemin üstünde, beyaz yazıyı firuze dolgu üstünde kullanma.
+- Renkleri tek başına durum göstergesi yapma.
+- Ekranda harita kütüphanesini doğrudan kullanma; harita çizimleri `components/map` bileşenleriyle yapılır.

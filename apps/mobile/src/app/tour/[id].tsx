@@ -1,14 +1,16 @@
-import type { ThemeColors } from '@sezi/shared';
+import type { SweetTheme } from '@sezi/shared';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Badge, Button, EmptyState, SectionTitle } from '@/components/ui';
 import { ChevronIcon, TurnIcon } from '@/design/icons';
+import { outline, SoftPressable } from '@/design/sweet/components';
+import { toneForType } from '@/design/sweet/tones';
 import { radius, space, type } from '@/design/type';
-import { colorForType, WorkGlyphInline } from '@/design/work-glyph';
+import { WorkGlyphInline } from '@/design/work-glyph';
 import { Image } from 'expo-image';
-import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
 import { defaultStart, useNavVersion, walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
@@ -18,7 +20,7 @@ import { coverOf, photoUrl, useWorks } from '@/lib/works';
 
 export default function TourDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
   const { profile } = useProfile();
@@ -48,7 +50,7 @@ export default function TourDetail() {
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
       <Stack.Screen options={{ title: '' }} />
       <View style={{ gap: space.xs }}>
-        <Text style={[type.title, { color: t.text, fontSize: 30, lineHeight: 36 }]} accessibilityRole="header">
+        <Text style={[type.editorial, { color: t.text }]} accessibilityRole="header">
           {title}
         </Text>
         <Text style={[type.body, { color: t.textMuted }]}>{tr(`tours.${id}.body` as MessageKey)}</Text>
@@ -76,24 +78,25 @@ export default function TourDetail() {
             <View key={stop.slug} style={s.stopRow}>
               {/* Zaman çizgisi: durak numarası ve aradaki bağlantı çizgisi */}
               <View style={s.rail} importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-                <View style={[s.dot, { backgroundColor: isVisited ? t.primary : t.surface, borderColor: t.primary }]}>
-                  <Text style={[type.button, { fontSize: 14, color: isVisited ? t.onPrimary : t.primary }]}>{i + 1}</Text>
+                <View style={[s.dot, { backgroundColor: isVisited ? t.primary.fill : t.surface, borderColor: isVisited ? (t.outlined ? t.border : t.primary.fill) : t.primaryText }]}>
+                  <Text style={[type.button, { fontSize: 14, color: isVisited ? t.primary.ink : t.primaryText }]}>{i + 1}</Text>
                 </View>
                 {!last ? <View style={[s.line, { backgroundColor: t.border }]} /> : null}
               </View>
-              <Pressable
+              <SoftPressable
                 onPress={() => router.push({ pathname: '/work/[slug]', params: { slug: stop.slug } })}
                 accessibilityRole="button"
                 accessibilityLabel={`${i + 1}. ${name}. ${tr('tours.leg', { m: Math.round(stop.legM) })}${isVisited ? `. ${tr('work.visited')}` : ''}`}
-                style={({ pressed }) => [s.stopCard, pressed && { backgroundColor: t.background }]}>
+                style={[s.stopCard, { backgroundColor: t.surface }, outline(t)]}>
                 {(() => {
                   const w = bySlug.get(stop.slug);
                   const c = w ? coverOf(w) : undefined;
+                  const tone = t.tones[toneForType(stop.type)];
                   return c ? (
-                    <Image source={{ uri: photoUrl(c, 'thumb') }} style={s.thumb} contentFit="cover" accessible={false} />
+                    <Image source={{ uri: photoUrl(c, 'thumb') }} style={[s.thumb, outline(t)]} contentFit="cover" accessible={false} />
                   ) : (
-                    <View style={[s.thumb, { backgroundColor: t.soft, alignItems: 'center', justifyContent: 'center' }]}>
-                      <WorkGlyphInline slug={stop.type} color={colorForType(stop.type)} size={24} />
+                    <View style={[s.thumb, { backgroundColor: tone.fill, alignItems: 'center', justifyContent: 'center' }, outline(t)]}>
+                      <WorkGlyphInline slug={stop.type} color={tone.ink} size={24} />
                     </View>
                   );
                 })()}
@@ -104,7 +107,7 @@ export default function TourDetail() {
                   {stop.legStairs > 0 ? <Badge label={tr('tours.stairs', { n: stop.legStairs })} tone="accent" /> : null}
                 </View>
                 <ChevronIcon color={t.textMuted} />
-              </Pressable>
+              </SoftPressable>
             </View>
           );
         })}
@@ -114,20 +117,20 @@ export default function TourDetail() {
   );
 }
 
-function Stat({ value, label, t }: { value: string; label: string; t: ThemeColors }) {
+function Stat({ value, label, t }: { value: string; label: string; t: SweetTheme }) {
   return (
-    <View style={statStyle.box} accessible accessibilityLabel={`${value} ${label}`}>
-      <Text style={[type.title, { color: t.text, fontSize: 24, lineHeight: 30 }]}>{value}</Text>
-      <Text style={[type.meta, { color: t.textMuted }]} >
-        {label}
-      </Text>
+    <View style={[statStyle.box, { backgroundColor: t.soft }, outline(t)]} accessible accessibilityLabel={`${value} ${label}`}>
+      <Text style={[type.title, { color: t.text }]}>{value}</Text>
+      <Text style={[type.meta, { color: t.textMuted }]}>{label}</Text>
     </View>
   );
 }
 
-const statStyle = StyleSheet.create({ box: { flexGrow: 1, flexBasis: 100, paddingVertical: space.md, gap: 4 } });
+const statStyle = StyleSheet.create({
+  box: { flexGrow: 1, flexBasis: 100, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.md, borderCurve: 'continuous', gap: 4 },
+});
 
-const makeStyles = (t: ThemeColors) =>
+const makeStyles = (t: SweetTheme) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
     body: { padding: space.xl, gap: space.xl, paddingBottom: 56 },
@@ -142,9 +145,10 @@ const makeStyles = (t: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: space.md,
-      paddingVertical: space.sm,
+      padding: space.md,
       marginBottom: space.md,
       borderRadius: radius.lg,
+      borderCurve: 'continuous',
     },
-    thumb: { width: 64, height: 64, borderRadius: radius.lg },
+    thumb: { width: 64, height: 64, borderRadius: radius.lg, borderCurve: 'continuous' },
   });

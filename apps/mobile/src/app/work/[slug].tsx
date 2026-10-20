@@ -1,18 +1,22 @@
-import type { ThemeColors } from '@sezi/shared';
+import type { SweetTheme } from '@sezi/shared';
 import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Linking, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SeziMap, WorkPin } from '@/components/map';
 import { PhotoViewer } from '@/components/photo-viewer';
-import { Badge, Button, EmptyState, ListRow, softShadow } from '@/components/ui';
+import { ReadMore } from '@/components/read-more';
+import { Badge, Button, Card, EmptyState, ListRow } from '@/components/ui';
 import { ChevronIcon, ExternalIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
+import { outline, SoftPressable, sweetShadow } from '@/design/sweet/components';
+import { toneForType } from '@/design/sweet/tones';
 import { radius, space, type } from '@/design/type';
-import { colorForType, WorkGlyphInline } from '@/design/work-glyph';
-import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { WorkGlyphInline } from '@/design/work-glyph';
+import { useReducedMotion } from '@/hooks/use-reduced-motion';
+import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
 import { hasRouteTo, planRoute } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
@@ -27,7 +31,7 @@ const workClip = createClipPlayer();
 
 export default function WorkDetail() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr } = useT();
   const { data: work, isLoading, error } = useWork(slug);
@@ -36,7 +40,7 @@ export default function WorkDetail() {
     return (
       <View style={s.center}>
         <Stack.Screen options={{ title: '' }} />
-        <ActivityIndicator color={t.primary} accessibilityLabel={tr('work.loading')} />
+        <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('work.loading')} />
       </View>
     );
   }
@@ -55,12 +59,14 @@ export default function WorkDetail() {
  * Eser sayfası: önce fotoğraf ve ad, sonra iki eylem (dinle, yol tarifi), sonra kısa bölümler.
  * Uzun açıklama yok: tarihçe resmî metin gelene kadar kitap sayfasına yönlendirir.
  */
-function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<typeof makeStyles> }) {
-  const [speaking, setSpeaking] = useState(false);
+function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<typeof makeStyles> }) {
+  /** Çalan anlatım: genel (ad, yer, tarihçe) ya da mimari bölümü; mimari ayrı dinlenir (Ulu Cami'de ~12 bin karakter). */
+  const [speaking, setSpeaking] = useState<'main' | 'architecture' | null>(null);
   const [viewer, setViewer] = useState<number | null>(null);
   // Kapak geçilince durum çubuğunun altına zemin rengi şerit gelir (içerik saatin altına girmesin).
   const [scrolled, setScrolled] = useState(false);
   const insets = useSafeAreaInsets();
+  const reduced = useReducedMotion();
   const { t: tr, lang } = useT();
   const { profile } = useProfile();
   const { visited, settings } = useSettings();
@@ -72,6 +78,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
   const period = loc(work.period, lang);
   const address = loc(work.address, lang);
   const cover = coverOf(work);
+  const tone = t.tones[toneForType(work.type_slug)];
   const inv = inventorySource(work);
   const ref = inv?.page ? (inv.volume ? tr('inv.refShort', { v: inv.volume, page: inv.page }) : tr('inv.refPage', { page: inv.page })) : null;
   const otherSources = work.sources.filter((x) => x.kind !== 'inventory');
@@ -91,28 +98,42 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
   const narration = [name, kind, place, period, history || (ref ? tr('work.historyRef', { ref }) : tr('work.historyInBook'))].filter(Boolean).join('. ');
   // İngilizcede TR kayda düşülmez: metin cihaz sesiyle okunur.
   const audioPath = lang === 'en' ? work.audio_en : work.audio_tr;
+  const stopSpeech = () => {
+    workClip.stop();
+    silence();
+    setSpeaking(null);
+  };
+  // Kesilen okumanın geç gelen onDone'ı yeni başlayanı kapatmasın.
+  const done = (key: 'main' | 'architecture') => () => setSpeaking((k) => (k === key ? null : k));
   const toggleSpeech = () => {
-    if (speaking) {
-      workClip.stop();
-      silence();
-      setSpeaking(false);
-      return;
-    }
-    setSpeaking(true);
-    const tts = () =>
-      say(narration, { lang, rate: settings.speechRate, interrupt: true, waitMs: NARRATION_WAIT_MS, onDone: () => setSpeaking(false) });
+    if (speaking === 'main') return stopSpeech();
+    setSpeaking('main');
+    const tts = () => say(narration, { lang, rate: settings.speechRate, interrupt: true, waitMs: NARRATION_WAIT_MS, onDone: done('main') });
     if (!audioPath) return tts();
     silence();
     // İnsan kaydı hızlandırılmaz.
-    workClip.play(AUDIO_BASE + audioPath, { onEnd: () => setSpeaking(false), onError: tts });
+    workClip.play(AUDIO_BASE + audioPath, { onEnd: done('main'), onError: tts });
+  };
+  const toggleArchitecture = () => {
+    if (speaking === 'architecture') return stopSpeech();
+    workClip.stop();
+    setSpeaking('architecture');
+    say(`${tr('work.architecture')}. ${architecture}`, { lang, rate: settings.speechRate, interrupt: true, waitMs: NARRATION_WAIT_MS, onDone: done('architecture') });
   };
   const citation = inv ? `${name}. ${inv.title}${ref ? `, ${ref}` : ''}. Vakıf Katılım${inv.year ? `, ${inv.year}` : ''}.${inv.url ? ` ${inv.url}` : ''}` : null;
+  // "Kısalt" sayfayı bölüm başlığına döndürür (geri düğmesinin altında kalmasın).
+  const scrollRef = useRef<ScrollView>(null);
+  const bodyY = useRef(0);
+  const sectionY = useRef<Record<string, number>>({});
+  const backTo = (key: string) =>
+    scrollRef.current?.scrollTo({ y: Math.max(0, bodyY.current + (sectionY.current[key] ?? 0) - insets.top - 72), animated: !reduced });
 
   return (
     <View style={s.screen}>
       <Stack.Screen options={{ headerShown: false }} />
       <StatusBar style={cover && !scrolled ? 'light' : 'auto'} />
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={{ paddingBottom: space.xxl + insets.bottom }}
         scrollEventThrottle={64}
         onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > (cover ? 360 : 40))}>
@@ -128,24 +149,26 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
             </View>
             <View style={s.heroText} pointerEvents="none">
               <Text style={[type.meta, s.onPhotoDim]}>{kind}</Text>
-              <Text style={[type.title, s.onPhoto, { fontSize: 30, lineHeight: 36 }]} accessibilityRole="header">
+              <Text style={[type.editorial, s.onPhoto]} accessibilityRole="header">
                 {name}
               </Text>
               <Text style={[type.meta, s.onPhotoDim]}>{place}</Text>
             </View>
           </Pressable>
         ) : (
-          <View style={[s.plainHero, { paddingTop: insets.top + 64, backgroundColor: t.soft }]}>
-            <WorkGlyphInline slug={work.type_slug} color={colorForType(work.type_slug)} size={44} />
+          <View style={[s.plainHero, { paddingTop: insets.top + 64, backgroundColor: t.soft }, t.outlined && { borderBottomWidth: 2, borderBottomColor: t.border }]}>
+            <View style={[s.glyphTile, { backgroundColor: tone.fill }, outline(t)]}>
+              <WorkGlyphInline slug={work.type_slug} color={tone.ink} size={32} />
+            </View>
             <Text style={[type.meta, { color: t.textMuted }]}>{kind}</Text>
-            <Text style={[type.title, { color: t.text, fontSize: 30, lineHeight: 36 }]} accessibilityRole="header">
+            <Text style={[type.editorial, { color: t.text }]} accessibilityRole="header">
               {name}
             </Text>
             <Text style={[type.meta, { color: t.textMuted }]}>{place}</Text>
           </View>
         )}
 
-        <View style={s.body}>
+        <View style={s.body} onLayout={(e) => (bodyY.current = e.nativeEvent.layout.y)}>
           <View style={s.facts}>
             {ref ? <Badge label={ref} /> : null}
             {work.condition !== 'unknown' ? (
@@ -159,9 +182,9 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
             {canHear ? (
               <Button
                 style={{ flex: 1 }}
-                label={speaking ? tr('work.stop') : tr('work.listen')}
+                label={speaking === 'main' ? tr('work.stop') : tr('work.listen')}
                 onPress={toggleSpeech}
-                icon={(c) => (speaking ? <StopIcon color={c} /> : <PlayIcon color={c} />)}
+                icon={(c) => (speaking === 'main' ? <StopIcon color={c} /> : <PlayIcon color={c} />)}
               />
             ) : null}
             {hasRouteTo(work.slug) ? (
@@ -181,29 +204,48 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
             <Section title={tr('work.photos')} t={t}>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: space.sm, paddingHorizontal: space.xl }} style={{ marginHorizontal: -space.xl }}>
                 {work.photos.map((p, i) => (
-                  <Pressable key={p.id} onPress={() => setViewer(i)} accessibilityRole="imagebutton" accessibilityLabel={loc(p.alt, lang)}>
-                    <Image source={{ uri: photoUrl(p, 'thumb') }} style={s.thumb} contentFit="cover" accessible={false} />
-                  </Pressable>
+                  <SoftPressable key={p.id} onPress={() => setViewer(i)} accessibilityRole="imagebutton" accessibilityLabel={loc(p.alt, lang)}>
+                    <Image source={{ uri: photoUrl(p, 'thumb') }} style={[s.thumb, outline(t)]} contentFit="cover" accessible={false} />
+                  </SoftPressable>
                 ))}
               </ScrollView>
             </Section>
           ) : null}
 
-          <Section title={tr('work.history')} t={t}>
+          <Section title={tr('work.history')} t={t} onLayout={(y) => (sectionY.current.history = y)}>
             {period ? <Text style={[type.itemTitle, { color: t.text }]}>{period}</Text> : null}
             {history ? (
-              <Text style={[type.body, { color: t.text }]}>{history}</Text>
+              <ReadMore text={history} onCollapse={() => backTo('history')} />
             ) : (
               <Text style={[type.body, { color: t.textMuted }]}>{ref ? tr('work.historyRef', { ref }) : tr('work.historyInBook')}</Text>
             )}
-            {architecture ? <Text style={[type.body, { color: t.text }]}>{architecture}</Text> : null}
           </Section>
+
+          {architecture ? (
+            <Section title={tr('work.architecture')} t={t} onLayout={(y) => (sectionY.current.architecture = y)}>
+              {canHear ? (
+                <Button
+                  compact
+                  variant="outline"
+                  label={speaking === 'architecture' ? tr('work.stop') : tr('work.listenArchitecture')}
+                  onPress={toggleArchitecture}
+                  icon={(c) => (speaking === 'architecture' ? <StopIcon color={c} /> : <PlayIcon color={c} />)}
+                />
+              ) : null}
+              <ReadMore text={architecture} onCollapse={() => backTo('architecture')} />
+            </Section>
+          ) : null}
+
+          {/* Kitaptan alınan metnin atfı: metinlerin hemen altında (kaynaklar bölümü sayfanın sonunda). */}
+          {(history || architecture) && inv ? (
+            <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.textSource', { book: [inv.title, ref].filter(Boolean).join(', ') })}</Text>
+          ) : null}
 
           <Section title={tr('design.location')} t={t}>
             {address ? <Text style={[type.body, { color: t.text }]}>{address}</Text> : null}
             {hasLocation(work) ? (
               <SeziMap
-                style={s.map}
+                style={[s.map, outline(t)]}
                 interactive={false}
                 initial={[[work.lng, work.lat]]}
                 initialZoom={work.location_precision === 'exact' ? 16.5 : 15}
@@ -218,22 +260,24 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
 
           {access ? (
             <Section title={tr('work.access')} t={t}>
-              <View style={[s.panel, softShadow(t), { backgroundColor: t.surface, padding: 0 }]}>
+              <Card padded={false}>
                 <ListRow
                   first
                   title={access.stairSegments === 0 ? tr('work.accessStepFree') : tr('work.accessStairs', { n: access.stairSegments })}
                   subtitle={tr('work.accessRoute', { m: Math.round(access.route.lengthM) })}
                 />
                 <ListRow title={tr('work.report')} hint={tr('work.reportHint')} onPress={() => router.push({ pathname: '/report/new', params: { work: work.slug } })} />
-              </View>
+              </Card>
             </Section>
           ) : null}
 
           {work.exhibitions.length ? (
             <Section title={tr('work.exhibitions')} t={t}>
-              {work.exhibitions.map((e) => (
-                <ListRow key={e.slug} first title={loc(e.title, lang)} subtitle={loc(e.venue, lang)} onPress={() => router.push('/exhibitions')} />
-              ))}
+              <Card padded={false}>
+                {work.exhibitions.map((e, i) => (
+                  <ListRow key={e.slug} first={i === 0} title={loc(e.title, lang)} subtitle={loc(e.venue, lang)} onPress={() => router.push('/exhibitions')} />
+                ))}
+              </Card>
             </Section>
           ) : null}
 
@@ -256,7 +300,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
                 subtitle={[src.publisher, src.year].filter(Boolean).join(' · ')}
                 hint={src.url ? tr('work.sourceHint') : undefined}
                 onPress={src.url ? () => Linking.openURL(src.url!) : undefined}
-                trailing={src.url ? <ExternalIcon color={t.primary} /> : null}
+                trailing={src.url ? <ExternalIcon color={t.primaryText} /> : null}
               />
             ))}
             {!inv && otherSources.length === 0 ? <Text style={[type.body, { color: t.textMuted }]}>{tr('work.noSources')}</Text> : null}
@@ -267,11 +311,15 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
 
       {scrolled ? <View style={[s.topBar, { height: insets.top, backgroundColor: t.background }]} /> : null}
       {/* Yüzen geri düğmesi: üst çubuk yerine (fotoğraf tam ekrana kadar uzanır). */}
-      <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={tr('work.back')} style={[s.back, softShadow(t), { top: insets.top + space.sm, backgroundColor: t.surface }]}>
+      <SoftPressable
+        onPress={() => router.back()}
+        accessibilityRole="button"
+        accessibilityLabel={tr('work.back')}
+        style={[s.back, sweetShadow(t), { top: insets.top + space.sm, backgroundColor: t.surface }]}>
         <View style={{ transform: [{ rotate: '180deg' }] }}>
           <ChevronIcon color={t.text} />
         </View>
-      </Pressable>
+      </SoftPressable>
 
       {work.photos.length ? <PhotoViewer key={viewer ?? -1} photos={work.photos} start={viewer} onClose={() => setViewer(null)} /> : null}
     </View>
@@ -281,9 +329,9 @@ function Detail({ work, t, s }: { work: WorkRow; t: ThemeColors; s: ReturnType<t
 // Karartma şeritlerinin opaklığı: yumuşak (kareli) bir artış, bant görünmesin.
 const SHADE = Array.from({ length: 24 }, (_, i) => Number((0.7 * ((i + 1) / 24) ** 1.6).toFixed(3)));
 
-function Section({ title, t, children }: { title: string; t: ThemeColors; children: ReactNode }) {
+function Section({ title, t, children, onLayout }: { title: string; t: SweetTheme; children: ReactNode; onLayout?: (y: number) => void }) {
   return (
-    <View style={{ gap: space.md }}>
+    <View style={{ gap: space.md }} onLayout={onLayout ? (e) => onLayout(e.nativeEvent.layout.y) : undefined}>
       <Text style={[type.heading, { color: t.text }]} accessibilityRole="header">
         {title}
       </Text>
@@ -292,7 +340,7 @@ function Section({ title, t, children }: { title: string; t: ThemeColors; childr
   );
 }
 
-const makeStyles = (t: ThemeColors) =>
+const makeStyles = (t: SweetTheme) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: space.xl, backgroundColor: t.background },
@@ -302,13 +350,13 @@ const makeStyles = (t: ThemeColors) =>
     onPhoto: { color: '#FFFFFF' },
     onPhotoDim: { color: 'rgba(255,255,255,0.86)' },
     plainHero: { paddingHorizontal: space.xl, paddingBottom: space.xl, gap: space.xs },
+    glyphTile: { width: 56, height: 56, borderRadius: radius.md, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', marginBottom: space.xs },
     body: { paddingHorizontal: space.xl, paddingTop: space.lg, gap: space.xl },
     facts: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
     actions: { flexDirection: 'row', gap: space.sm },
-    panel: { gap: space.xs, padding: space.lg, borderRadius: radius.xl, overflow: 'hidden' },
-    thumb: { width: 132, height: 132, borderRadius: radius.lg },
-    map: { height: 180, borderRadius: radius.xl, overflow: 'hidden', backgroundColor: t.soft },
+    thumb: { width: 132, height: 132, borderRadius: radius.lg, borderCurve: 'continuous', backgroundColor: t.soft },
+    map: { height: 180, borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden', backgroundColor: t.soft },
     links: { flexDirection: 'row', flexWrap: 'wrap', marginLeft: -space.lg },
     topBar: { position: 'absolute', top: 0, left: 0, right: 0 },
-    back: { position: 'absolute', left: space.lg, width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+    back: { position: 'absolute', left: space.lg, width: 48, height: 48, borderRadius: 24, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
   });

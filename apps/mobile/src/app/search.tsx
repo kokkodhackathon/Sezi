@@ -1,27 +1,34 @@
-import type { ThemeColors } from '@sezi/shared';
+import type { SweetTheme } from '@sezi/shared';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { Badge, Button, Chip, EmptyState, Eyebrow, softShadow } from '@/components/ui';
+import { SeziMap, WorkClusters } from '@/components/map';
+import { Badge, Button, Chip, EmptyState, Eyebrow, Segmented } from '@/components/ui';
 import { WorkThumb, workEra, workExcerpt, workPlace } from '@/components/work-preview';
 import { ChevronIcon } from '@/design/icons';
+import { outline, SoftPressable } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
-import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { toneForType } from '@/design/sweet/tones';
+import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { normalize } from '@/lib/ask';
 import { useT } from '@/lib/i18n';
 import { hasRouteTo } from '@/lib/nav';
 import { useSettings } from '@/lib/settings';
-import { inventorySource, loc, useWorks, type WorkRow } from '@/lib/works';
+import { hasLocation, inventorySource, loc, useWorks, type WorkRow } from '@/lib/works';
 
 export default function Search() {
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
   const { data: works } = useWorks();
   const [q, setQ] = useState('');
   // Açık kart: sonuca dokununca bilgiler bu ekranda açılır, eser sayfasına geçmeden.
   const [open, setOpen] = useState<string | null>(null);
+  const [view, setView] = useState<'list' | 'map'>('list');
+  // Haritada seçili eser (slug); altında sonuç kartı açılır.
+  const [pin, setPin] = useState<string | null>(null);
+  const { settings } = useSettings();
 
   const results = useMemo(() => {
     const n = normalize(q).trim();
@@ -32,6 +39,14 @@ export default function Search() {
   }, [q, works]);
 
   const suggestions = useMemo(() => [...new Set((works ?? []).map((w) => loc(w.type_name, lang)))].slice(0, 6), [works, lang]);
+  const cityWorks = useMemo(() => (works ?? []).filter((w) => w.city_slug === settings.city), [works, settings.city]);
+  // İlçeye dokununca arama kutusu doldurulur; arama zaten ilçe alanında eşleşiyor.
+  const districts = useMemo(
+    () => [...new Set(cityWorks.flatMap((w) => (w.district ? [w.district] : [])))].sort((a, b) => a.localeCompare(b, lang)),
+    [cityWorks, lang],
+  );
+  const mapWorks = (q.trim() ? results : cityWorks).filter(hasLocation);
+  const pinned = mapWorks.find((w) => w.slug === pin);
 
   return (
     <View style={s.screen}>
@@ -41,52 +56,104 @@ export default function Search() {
           onChangeText={(v) => {
             setQ(v);
             setOpen(null);
+            setPin(null);
           }}
           autoFocus
           placeholder={tr('search.placeholder')}
           placeholderTextColor={t.textMuted}
           accessibilityLabel={tr('search.title')}
           returnKeyType="search"
-          style={[type.lead, s.input]}
+          style={[type.lead, s.input, outline(t)]}
         />
+        <View style={{ marginTop: space.md }}>
+          <Segmented
+            label={tr('design.view')}
+            value={view}
+            onChange={setView}
+            options={[
+              { value: 'list', label: tr('design.list') },
+              { value: 'map', label: tr('design.map') },
+            ]}
+          />
+        </View>
       </View>
-      <FlatList
-        data={results}
-        keyExtractor={(w) => w.id}
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={s.list}
-        ListHeaderComponent={
-          q.trim() ? (
-            <Text style={[type.meta, { color: t.textMuted }]} accessibilityLiveRegion="polite">
-              {tr('search.results', { n: results.length })}
-            </Text>
-          ) : (
-            <View style={{ gap: space.md }}>
-              <Eyebrow text={tr('search.recent')} />
-              <View style={s.chips}>
-                {suggestions.map((x) => (
-                  <Chip key={x} label={x} selected={false} onPress={() => setQ(x)} />
-                ))}
+      {view === 'map' ? (
+        <FlatList
+          data={pinned ? [pinned] : []}
+          keyExtractor={(w) => w.id}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={s.list}
+          ListHeaderComponent={
+            mapWorks.length ? (
+              <View style={{ gap: space.sm }}>
+                <SeziMap
+                  key={q}
+                  style={s.map}
+                  initial={mapWorks.map((w) => [w.lng, w.lat])}
+                  initialZoom={15}
+                  accessibilityLabel={tr('design.mapHelp', { n: mapWorks.length })}>
+                  <WorkClusters works={mapWorks.map((w) => ({ slug: w.slug, location: [w.lng, w.lat], color: t.tones[toneForType(w.type_slug)].ink }))} selected={pin} onPress={setPin} />
+                </SeziMap>
+                <Text style={[type.meta, { color: t.textMuted }]} accessibilityLiveRegion="polite">
+                  {tr('design.mapHelp', { n: mapWorks.length })}
+                </Text>
               </View>
-            </View>
-          )
-        }
-        ListEmptyComponent={q.trim() ? <EmptyState title={tr('search.empty')} /> : null}
-        extraData={open}
-        renderItem={({ item }) => <ResultCard work={item} open={open === item.id} onToggle={() => setOpen(open === item.id ? null : item.id)} t={t} />}
-      />
+            ) : (
+              <EmptyState title={tr('search.empty')} />
+            )
+          }
+          renderItem={({ item }) => <ResultCard work={item} open onToggle={() => setPin(null)} t={t} />}
+        />
+      ) : (
+        <FlatList
+          data={results}
+          keyExtractor={(w) => w.id}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={s.list}
+          ListHeaderComponent={
+            q.trim() ? (
+              <Text style={[type.meta, { color: t.textMuted }]} accessibilityLiveRegion="polite">
+                {tr('search.results', { n: results.length })}
+              </Text>
+            ) : (
+              <View style={{ gap: space.md }}>
+                <Eyebrow text={tr('search.recent')} />
+                <View style={s.chips}>
+                  {suggestions.map((x) => (
+                    <Chip key={x} label={x} selected={false} onPress={() => setQ(x)} />
+                  ))}
+                </View>
+                {districts.length ? (
+                  <>
+                    <Eyebrow text={tr('inv.district')} />
+                    <View style={s.chips}>
+                      {districts.map((x) => (
+                        <Chip key={x} label={x} selected={false} onPress={() => setQ(x)} />
+                      ))}
+                    </View>
+                  </>
+                ) : null}
+              </View>
+            )
+          }
+          ListEmptyComponent={q.trim() ? <EmptyState title={tr('search.empty')} /> : null}
+          extraData={open}
+          renderItem={({ item }) => <ResultCard work={item} open={open === item.id} onToggle={() => setOpen(open === item.id ? null : item.id)} t={t} />}
+        />
+      )}
     </View>
   );
 }
 
-const makeStyles = (t: ThemeColors) =>
+const makeStyles = (t: SweetTheme) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
     searchBar: { paddingHorizontal: space.lg, paddingTop: space.md, paddingBottom: space.md },
-    input: { minHeight: 56, paddingHorizontal: space.lg, borderRadius: radius.md, borderWidth: 1, borderColor: t.textMuted, backgroundColor: t.surface, color: t.text },
+    input: { minHeight: 54, paddingHorizontal: space.lg, borderRadius: radius.md, borderCurve: 'continuous', backgroundColor: t.soft, color: t.text },
+    map: { height: 420, borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden', backgroundColor: t.soft, ...outline(t) },
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
     list: { paddingHorizontal: space.lg, paddingBottom: space.xxl, gap: space.md },
-    card: { borderRadius: radius.lg, padding: space.md, gap: space.md },
+    card: { borderRadius: radius.lg, borderCurve: 'continuous', padding: space.md, gap: space.md },
     head: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md, minHeight: 72 },
     badges: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs, marginTop: space.xs },
     actions: { flexDirection: 'row', gap: space.sm },
@@ -97,7 +164,7 @@ const makeStyles = (t: ThemeColors) =>
  * Açılınca: büyük fotoğraf, uzun özet, adres, kitap kaynağı ve eylemler (eser sayfası, yol tarifi).
  * Açılma animasyonsuz (reduce motion sorunu doğmaz); ekran okuyucuya açık/kapalı durumu bildirilir.
  */
-function ResultCard({ work, open, onToggle, t }: { work: WorkRow; open: boolean; onToggle: () => void; t: ThemeColors }) {
+function ResultCard({ work, open, onToggle, t }: { work: WorkRow; open: boolean; onToggle: () => void; t: SweetTheme }) {
   const s = makeStyles(t);
   const { t: tr, lang } = useT();
   const { visited } = useSettings();
@@ -112,8 +179,8 @@ function ResultCard({ work, open, onToggle, t }: { work: WorkRow; open: boolean;
   const openPage = () => router.push({ pathname: '/work/[slug]', params: { slug: work.slug } });
 
   return (
-    <View style={[s.card, softShadow(t), { backgroundColor: t.surface }]}>
-      <Pressable
+    <View style={[s.card, { backgroundColor: t.surface }, outline(t)]}>
+      <SoftPressable
         onPress={onToggle}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
@@ -141,7 +208,7 @@ function ResultCard({ work, open, onToggle, t }: { work: WorkRow; open: boolean;
         <View style={{ transform: [{ rotate: open ? '-90deg' : '90deg' }] }}>
           <ChevronIcon color={t.textMuted} />
         </View>
-      </Pressable>
+      </SoftPressable>
 
       {open ? (
         <>

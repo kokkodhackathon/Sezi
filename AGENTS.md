@@ -68,7 +68,7 @@ Ekibin ve önceki oturumların çalışma biçimi. Bunlara uyulmazsa süreç boz
 **Kodlarken dikkat edilenler**
 - Metin önce `messages-app.ts`'e TR + EN; ekranda sabit metin yok.
 - Simülasyon ve geliştirici araçları `settings.devSimulation` arkasında; normal kullanıcı görmez.
-- Az yazı, önce fotoğraf (DESIGN.md "Çini"). Yeni renk değil token; gölge için `softShadow()`.
+- Az yazı, önce fotoğraf (DESIGN.md "Çini 2"). Yeni renk değil token; kartlar gölgesiz, yalnız yüzen öğelerde `sweetShadow()`, yüksek kontrastta `outline()`.
 - Rota grafiği değişince: `python -I data/build_nav_graph.py` → `assets/pilot/*.json` yeniden üretilir → `pnpm test` (pilot-graph testleri).
 - Sabit yönlendirme cümlesi (`shared/guidance.ts` dönüş/uyarı kalıpları, `navigation/texts.ts`) değişince: `cd apps/mobile && npx tsx scripts/gen-voice-bundle.mts` → `assets/voice/tr` ve `voice/bundled.ts` yeniden üretilir (Chirp sesleri uygulamaya gömülü).
 - Başlangıç noktası, yer işareti, anlatım ve eser varış bilgisi kod değil veridir: admin panelinde **Noktalar** (`nav_points`). Kodda sabit nokta ya da rota yazılmaz.
@@ -84,12 +84,12 @@ Ekibin ve önceki oturumların çalışma biçimi. Bunlara uyulmazsa süreç boz
   - Typed routes, Metro çalışırken `.expo/types/router.d.ts` dosyasına üretilir. Yeni rota için tip hatası alırsanız Metro'yu bir kez başlatın.
 - **Metinler:** `src/lib/messages-app.ts` dosyasına **TR ve EN birlikte** eklenir; EN tipi tüm anahtarları zorunlu kılar. Çekirdek anahtarlar `src/lib/i18n.ts` içinde. Kullanım: `const { t: tr, lang } = useT()`.
 - **Tema:**
-  - Renkler yalnızca `useSeziTheme()` token'larından alınır (kaynak: `packages/shared/src/theme.ts`, kontrastı testlerle korunur).
-  - Eser türü renkleri `design/work-glyph.tsx` içinde. Sabit renk kodu yazmayın.
+  - Renkler yalnızca `useSweetTheme()` token'larından alınır (kaynak: `packages/shared/src/sweet-theme.ts`, kontrastı `sweet-theme.test.ts` korur). Dolgu üstünde `primary.ink`, zemin üstünde `primaryText`.
+  - Eser türü renkleri tür tonundan (`design/sweet/tones.ts`, `toneForType`). Sabit renk kodu yazmayın.
 - **Tipografi:** `design/type.ts` (`type.*`, `space`, `radius`). Büyük harf için `upper(text, lang)` kullanın (Türkçe i/İ).
 - **UI parçaları:**
-  - `components/ui.tsx`: Button, Card, ListRow, Badge, Note, Chip, Segmented, ToggleRow, EmptyState, Field, SectionTitle, Eyebrow.
-  - Yeni ekran bunlarla kurulur. Motifler `design/motif.tsx`, ikonlar `design/icons.tsx` içinde.
+  - `components/ui.tsx`: Button, Card, ListRow, Badge, Note, Chip, Segmented, ToggleRow, EmptyState, Field, SectionTitle, Eyebrow. `design/sweet/components.tsx`: SoftPressable, IconBubble, TypeTile, PhotoTile, FadeInItem, Skeleton, SweetSheet.
+  - Yeni ekran bunlarla kurulur. Hareket token'ları `design/sweet/motion.ts`, ikonlar `design/icons.tsx` içinde.
 - **Harita:**
   - Ekranlar Mapbox'ı doğrudan kullanmaz: harita, rota, nokta ve konum çizimleri `components/map` (`SeziMap`, `RouteLine`, `PointsLayer`…) üzerinden yapılır; kütüphaneye ait kod yalnızca orada.
   - Token: `EXPO_PUBLIC_MAPBOX_TOKEN` (mobil), `VITE_MAPBOX_TOKEN` (admin). Stil Mapbox Standard (düz, dükkân etiketleri kapalı); eklenen katmanlar `slot` ile (rota `middle`, noktalar `top`).

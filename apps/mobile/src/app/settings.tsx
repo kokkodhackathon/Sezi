@@ -1,4 +1,4 @@
-import type { ThemeColors } from '@sezi/shared';
+import type { SweetTheme } from '@sezi/shared';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -6,14 +6,14 @@ import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, ListRow, Note, SectionTitle, Segmented, ToggleRow } from '@/components/ui';
 import { InfoIcon, PlayIcon } from '@/design/icons';
 import { space, type } from '@/design/type';
-import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
 import { NARRATION_WAIT_MS, say } from '@/lib/voice/speech';
 
 export default function SettingsScreen() {
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
   const { settings, update, visited, clearVisited } = useSettings();
@@ -108,7 +108,7 @@ export default function SettingsScreen() {
   );
 }
 
-const makeStyles = (t: ThemeColors) =>
+const makeStyles = (t: SweetTheme) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
     body: { padding: space.xl, gap: space.xl, paddingBottom: 56 },

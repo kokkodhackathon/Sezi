@@ -1,4 +1,4 @@
-import type { ThemeColors } from '@sezi/shared';
+import type { SweetTheme } from '@sezi/shared';
 import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
@@ -6,13 +6,13 @@ import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Card, ListRow, SectionTitle } from '@/components/ui';
 import { space, type } from '@/design/type';
-import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { ExternalIcon } from '@/design/icons';
 import { useT } from '@/lib/i18n';
 import { loc, useCities, useInventoryBooks } from '@/lib/works';
 
 export default function About() {
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
   const { data: books } = useInventoryBooks();
@@ -48,7 +48,7 @@ export default function About() {
                 title={b.title}
                 subtitle={[cityName(b.city_id), b.year ? String(b.year) : null].filter(Boolean).join(' · ')}
                 hint={tr('inv.openBookHint')}
-                trailing={<ExternalIcon color={t.primary} />}
+                trailing={<ExternalIcon color={t.primaryText} />}
                 onPress={b.url ? () => Linking.openURL(b.url!) : undefined}
               />
             ))}
@@ -72,7 +72,7 @@ export default function About() {
   );
 }
 
-const makeStyles = (t: ThemeColors) =>
+const makeStyles = (t: SweetTheme) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
     body: { padding: space.xl, gap: space.xl, paddingBottom: 56 },

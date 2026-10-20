@@ -1,21 +1,23 @@
-import type { ThemeColors } from '@sezi/shared';
+import type { SweetTheme } from '@sezi/shared';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { PointsLayer, SeziMap } from '@/components/map';
 import { Button, Card, Eyebrow, ListRow, SectionTitle } from '@/components/ui';
 import { TurnIcon } from '@/design/icons';
+import { outline } from '@/design/sweet/components';
+import { toneForType } from '@/design/sweet/tones';
 import { radius, space, type } from '@/design/type';
-import { colorForType, WorkGlyph } from '@/design/work-glyph';
-import { PointsLayer, SeziMap } from '@/components/map';
-import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { WorkGlyphInline } from '@/design/work-glyph';
+import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings';
 import { hasLocation, loc, useWorks } from '@/lib/works';
 
 export default function ComplexScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
   const { visited } = useSettings();
@@ -25,7 +27,7 @@ export default function ComplexScreen() {
   if (isLoading) {
     return (
       <View style={s.center}>
-        <ActivityIndicator color={t.primary} />
+        <ActivityIndicator color={t.primaryText} />
       </View>
     );
   }
@@ -44,7 +46,7 @@ export default function ComplexScreen() {
       <View style={s.hero}>
         <View style={{ flex: 1, gap: space.xs }}>
           <Eyebrow text={tr('complex.eyebrow')} />
-          <Text style={[type.title, { color: t.text }]} accessibilityRole="header">
+          <Text style={[type.editorial, { color: t.text }]} accessibilityRole="header">
             {name}
           </Text>
           <Text style={[type.meta, { color: t.textMuted }]}>
@@ -56,8 +58,8 @@ export default function ComplexScreen() {
 
       <Text style={[type.lead, { color: t.text }]}>{tr('complex.lead')}</Text>
 
-      <SeziMap style={s.map} initial={mapped.map((w) => [w.lng, w.lat])} accessibilityLabel={tr('explore.mapLabel', { n: parts.length })}>
-        <PointsLayer points={mapped.map((w) => ({ id: w.slug, location: [w.lng, w.lat], kind: 'work', color: colorForType(w.type_slug) }))} />
+      <SeziMap style={[s.map, outline(t)]} initial={mapped.map((w) => [w.lng, w.lat])} accessibilityLabel={tr('explore.mapLabel', { n: parts.length })}>
+        <PointsLayer points={mapped.map((w) => ({ id: w.slug, location: [w.lng, w.lat], kind: 'work', color: t.tones[toneForType(w.type_slug)].ink }))} />
       </SeziMap>
 
       <Button
@@ -67,37 +69,48 @@ export default function ComplexScreen() {
       />
 
       <SectionTitle title={tr('complex.parts')} />
-      {[...groups.entries()].map(([typeSlug, list]) => (
-        <View key={typeSlug} style={{ gap: space.sm }}>
-          <View style={s.groupHead}>
-            <View style={[s.groupDot, { backgroundColor: colorForType(typeSlug) }]} />
-            <Text style={[type.itemTitle, { color: t.text }]}>{tr('complex.byType', { n: list.length, type: loc(list[0]!.type_name, lang) })}</Text>
+      {[...groups.entries()].map(([typeSlug, list]) => {
+        const tone = t.tones[toneForType(typeSlug)];
+        return (
+          <View key={typeSlug} style={{ gap: space.sm }}>
+            <View style={s.groupHead}>
+              <View style={[s.groupDot, { backgroundColor: tone.ink }]} />
+              <Text style={[type.itemTitle, { color: t.text }]}>{tr('complex.byType', { n: list.length, type: loc(list[0]!.type_name, lang) })}</Text>
+            </View>
+            <Card padded={false}>
+              {list.map((w, i) => (
+                <ListRow
+                  key={w.id}
+                  first={i === 0}
+                  title={loc(w.name, lang)}
+                  subtitle={visited.includes(w.slug) ? tr('work.visited') : undefined}
+                  leading={
+                    <View
+                      importantForAccessibility="no-hide-descendants"
+                      accessibilityElementsHidden
+                      style={[s.glyphBox, { backgroundColor: tone.fill }, outline(t)]}>
+                      <WorkGlyphInline slug={w.type_slug} color={tone.ink} size={22} />
+                    </View>
+                  }
+                  onPress={() => router.push({ pathname: '/work/[slug]', params: { slug: w.slug } })}
+                />
+              ))}
+            </Card>
           </View>
-          <Card padded={false}>
-            {list.map((w, i) => (
-              <ListRow
-                key={w.id}
-                first={i === 0}
-                title={loc(w.name, lang)}
-                subtitle={visited.includes(w.slug) ? tr('work.visited') : undefined}
-                leading={<WorkGlyph slug={w.type_slug} size={40} />}
-                onPress={() => router.push({ pathname: '/work/[slug]', params: { slug: w.slug } })}
-              />
-            ))}
-          </Card>
-        </View>
-      ))}
+        );
+      })}
     </ScrollView>
   );
 }
 
-const makeStyles = (t: ThemeColors) =>
+const makeStyles = (t: SweetTheme) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
     body: { padding: space.xl, gap: space.xl, paddingBottom: 56 },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.background },
     hero: { flexDirection: 'row', gap: space.lg, alignItems: 'center' },
-    map: { height: 240, borderRadius: radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: t.border, backgroundColor: t.surface },
+    map: { height: 240, borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden', backgroundColor: t.soft },
     groupHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-    groupDot: { width: 12, height: 12, borderRadius: 3, transform: [{ rotate: '45deg' }] },
+    groupDot: { width: 10, height: 10, borderRadius: 5 },
+    glyphBox: { width: 40, height: 40, borderRadius: radius.sm, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
   });

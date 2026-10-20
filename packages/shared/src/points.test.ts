@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { duePoints, pointVoice, startPointsOf, type LngLat, type LocationFix, type NavPoint } from "./index";
+import { duePoints, excerpt, passingWorkPoints, pointVoice, startPointsOf, workPoint, type LngLat, type LocationFix, type NavPoint } from "./index";
 
 const pt = (x: number, y: number): LngLat => [29 + x / 85_277, 40 + y / 110_540];
 
@@ -78,5 +78,38 @@ describe("startPointsOf", () => {
       point("a", pt(0, 0), { roles: ["start", "landmark"], sortOrder: 1 }),
     ];
     expect(startPointsOf(list).map((p) => p.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("excerpt", () => {
+  it("kısa ilk paragrafa ikinciyi ekler, uzunsa son tam cümlede keser", () => {
+    const s1 = "Cami, Sultan II. Murad’ın harem ağalarından Reyhan Paşa tarafından 15. yüzyılda inşa ettirilmiştir.";
+    const s2 = "Acemlerin ayinlerini icra ettikleri hane aynı mahallededir.";
+    const long = `${s1} ${s2} ${"Yapı defalarca onarılmıştır. ".repeat(20)}`;
+    // "II." ve "15." cümle sonu sayılmaz; kesim tam cümlede biter.
+    expect(excerpt(long, 180)).toBe(`${s1} ${s2}`);
+    expect(excerpt(`Kısa giriş.\n\n${s1}`)).toBe(`Kısa giriş. ${s1}`);
+  });
+
+  it("cümle sonu bulunamazsa sözcük sınırında üç noktayla keser", () => {
+    const out = excerpt("kelime ".repeat(100), 50);
+    expect(out.length).toBeLessThanOrEqual(51);
+    expect(out.endsWith("kelime…")).toBe(true);
+  });
+});
+
+describe("passingWorkPoints", () => {
+  const w = (slug: string) => workPoint({ slug, citySlug: "bursa", name: { tr: slug }, location: pt(0, 0), text: { tr: `${slug} metni.` } });
+
+  it("admin'de anlatımı olan, hedef ya da turdaki eseri atlar", () => {
+    const nav = [point("p", pt(0, 0), { workSlug: "a" }), point("l", pt(0, 0), { roles: ["landmark"], body: undefined, workSlug: "b" })];
+    const out = passingWorkPoints([w("a"), w("b"), w("c"), w("d")], nav, new Set(["d"]));
+    // b'nin noktası yalnız yer işareti (metin açmaz): eser kartı yine açılır.
+    expect(out.map((p) => p.workSlug)).toEqual(["b", "c"]);
+  });
+
+  it("yanından geçerken yarıçapta tetiklenir", () => {
+    expect(duePoints([w("c")], fix(pt(15, 0)), new Set()).map((p) => p.id)).toEqual(["work:c"]);
+    expect(duePoints([w("c")], fix(pt(30, 0)), new Set())).toEqual([]);
   });
 });

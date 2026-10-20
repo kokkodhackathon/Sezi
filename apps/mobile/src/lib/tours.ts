@@ -1,24 +1,11 @@
-import { distanceM, type LngLat, type UserProfile } from '@sezi/shared';
+import { distanceM, inTour, TOURS, type LngLat, type UserProfile } from '@sezi/shared';
 
 import { defaultStart, legBetween, nearestNode, pilotWorks } from './nav';
 
 /**
  * Turlar doğrulanmış eserlerden ve gerçek yol grafiğinden hesaplanır (yazılmış içerik yok).
- * Sıra: başlangıçtan en yakın komşu sezgisi.
+ * Tanımlar `@sezi/shared` (TOURS); sıra: başlangıçtan en yakın komşu sezgisi.
  */
-export interface TourDef {
-  id: string;
-  /** i18n anahtar öneki: tours.<id>.title / .body */
-  types: string[] | null;
-}
-
-export const TOURS: TourDef[] = [
-  { id: 'tum', types: null },
-  { id: 'hanlar', types: ['han', 'bedesten', 'carsi'] },
-  { id: 'camiler', types: ['cami', 'mescit', 'turbe'] },
-  { id: 'su', types: ['cesme', 'sebil', 'hamam'] },
-];
-
 export interface TourStop {
   slug: string;
   name: { tr: string; en?: string };
@@ -38,7 +25,7 @@ export interface PlannedTour {
 export function planTour(id: string, profile: UserProfile, from: LngLat = defaultStart()): PlannedTour | null {
   const def = TOURS.find((t) => t.id === id);
   if (!def) return null;
-  const pool = pilotWorks.filter((n) => !def.types || def.types.includes(n.workType ?? ''));
+  const pool = pilotWorks.filter((n) => inTour(def, n.workType));
   if (pool.length === 0) return null;
 
   const stops: TourStop[] = [];

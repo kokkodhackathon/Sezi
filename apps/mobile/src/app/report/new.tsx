@@ -1,13 +1,15 @@
-import type { ThemeColors } from '@sezi/shared';
+import type { SweetTheme } from '@sezi/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { Button, Card, EmptyState, Field, Note } from '@/components/ui';
-import { InfoIcon } from '@/design/icons';
-import { radius, space, type } from '@/design/type';
-import { WorkGlyph } from '@/design/work-glyph';
-import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { CheckIcon, InfoIcon } from '@/design/icons';
+import { outline, SoftPressable } from '@/design/sweet/components';
+import { toneForType } from '@/design/sweet/tones';
+import { font, radius, space, type } from '@/design/type';
+import { WorkGlyphInline } from '@/design/work-glyph';
+import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
 import { landmarkNodeForWork, nearestSegmentId } from '@/lib/nav';
 import { addReport } from '@/lib/reports';
@@ -17,7 +19,7 @@ const TYPES = ['stairs', 'ramp_blocked', 'narrow_path', 'surface_damage', 'const
 
 export default function NewReport() {
   const { work: slug } = useLocalSearchParams<{ work: string }>();
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
   const { data: work } = useWork(slug);
@@ -62,7 +64,14 @@ export default function NewReport() {
         <View style={{ gap: space.sm }}>
           <Text style={[type.itemTitle, { color: t.text, fontSize: 16 }]}>{tr('report.where')}</Text>
           <Card style={s.where}>
-            {work ? <WorkGlyph slug={work.type_slug} size={40} /> : null}
+            {work ? (
+              <View
+                importantForAccessibility="no-hide-descendants"
+                accessibilityElementsHidden
+                style={[s.glyph, { backgroundColor: t.tones[toneForType(work.type_slug)].fill }, outline(t)]}>
+                <WorkGlyphInline slug={work.type_slug} color={t.tones[toneForType(work.type_slug)].ink} size={22} />
+              </View>
+            ) : null}
             <Text style={[type.body, { color: t.text, flex: 1 }]}>{tr('report.near', { name })}</Text>
           </Card>
         </View>
@@ -72,8 +81,9 @@ export default function NewReport() {
           <View style={s.grid}>
             {TYPES.map((k) => {
               const on = kind === k;
+              const fg = on ? t.primary.ink : t.text;
               return (
-                <Pressable
+                <SoftPressable
                   key={k}
                   onPress={() => {
                     setKind(k);
@@ -82,10 +92,23 @@ export default function NewReport() {
                   accessibilityRole="radio"
                   accessibilityLabel={tr(`report.type.${k}` as MessageKey)}
                   accessibilityState={{ checked: on }}
-                  style={[s.option, { borderColor: on ? t.primary : t.border, borderWidth: on ? 2 : 1, backgroundColor: on ? t.background : t.surface }]}>
-                  <View style={[s.radio, { borderColor: on ? t.primary : t.textMuted, backgroundColor: on ? t.primary : 'transparent' }]} />
-                  <Text style={[type.itemTitle, { color: t.text, fontSize: 16, flex: 1 }]}>{tr(`report.type.${k}` as MessageKey)}</Text>
-                </Pressable>
+                  style={[
+                    s.option,
+                    { backgroundColor: on ? t.primary.fill : t.surface },
+                    outline(t),
+                    on && t.outlined && { borderWidth: 3 },
+                  ]}>
+                  <View
+                    style={[
+                      s.radio,
+                      { borderColor: on ? t.primary.ink : t.textMuted, backgroundColor: on ? t.primary.ink : 'transparent' },
+                    ]}>
+                    {on ? <CheckIcon color={t.primary.fill} size={14} /> : null}
+                  </View>
+                  <Text style={[type.itemTitle, { color: fg, fontSize: 16, flex: 1 }, on && { fontFamily: font.roundHeavy }]}>
+                    {tr(`report.type.${k}` as MessageKey)}
+                  </Text>
+                </SoftPressable>
               );
             })}
           </View>
@@ -110,13 +133,14 @@ export default function NewReport() {
   );
 }
 
-const makeStyles = (t: ThemeColors) =>
+const makeStyles = (t: SweetTheme) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
     body: { padding: space.xl, gap: space.xl, paddingBottom: 56 },
     done: { flex: 1, padding: space.lg, justifyContent: 'center', backgroundColor: t.background },
     where: { flexDirection: 'row', alignItems: 'center', gap: space.md },
+    glyph: { width: 40, height: 40, borderRadius: radius.sm, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
     grid: { gap: space.sm },
-    option: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56, paddingHorizontal: space.lg, borderRadius: radius.md },
-    radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2 },
+    option: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56, paddingHorizontal: space.lg, borderRadius: radius.md, borderCurve: 'continuous' },
+    radio: { width: 24, height: 24, borderRadius: 12, borderCurve: 'continuous', borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   });

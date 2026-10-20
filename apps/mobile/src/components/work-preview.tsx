@@ -1,10 +1,12 @@
 import { Image } from 'expo-image';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { ChevronIcon } from '@/design/icons';
+import { outline, SoftPressable } from '@/design/sweet/components';
+import { toneForType } from '@/design/sweet/tones';
 import { radius, space, type } from '@/design/type';
-import { WorkGlyph } from '@/design/work-glyph';
-import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { WorkGlyphInline } from '@/design/work-glyph';
+import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT, type Lang } from '@/lib/i18n';
 import { coverOf, loc, photoUrl, type WorkRow } from '@/lib/works';
 
@@ -35,26 +37,28 @@ export function workExcerpt(w: WorkRow, lang: Lang, max = 180): string {
 
 /** Kapak fotoğrafı (küçük boy) ya da fotoğraf yoksa tür glifi. Dekoratif: ad yanındaki metinden gelir. */
 export function WorkThumb({ work, size, wide }: { work: WorkRow; size: number; wide?: boolean }) {
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const cover = coverOf(work);
+  const tone = t.tones[toneForType(work.type_slug)];
   const box = wide ? { width: '100%' as const, aspectRatio: 16 / 9 } : { width: size, height: size };
   if (cover) {
     return (
       <Image
         source={{ uri: photoUrl(cover, wide ? 'full' : 'thumb') }}
         placeholder={wide ? { uri: photoUrl(cover, 'thumb') } : undefined}
-        style={[box, { borderRadius: radius.md, backgroundColor: t.soft }]}
+        style={[box, styles.thumb, { backgroundColor: t.soft }, outline(t)]}
         contentFit="cover"
         accessible={false}
         accessibilityIgnoresInvertColors
       />
     );
   }
-  // Fotoğraf yoksa tür karosu kutunun tamamını doldurur (iç içe çerçeve yok); geniş görünümde ortada glif.
-  if (!wide) return <WorkGlyph slug={work.type_slug} size={size} />;
   return (
-    <View style={[box, styles.glyphBox, { backgroundColor: t.soft }]}>
-      <WorkGlyph slug={work.type_slug} size={56} />
+    <View
+      importantForAccessibility="no-hide-descendants"
+      accessibilityElementsHidden
+      style={[box, styles.glyphBox, { backgroundColor: tone.fill }, outline(t)]}>
+      <WorkGlyphInline slug={work.type_slug} color={tone.ink} size={wide ? 48 : Math.round(size * 0.56)} />
     </View>
   );
 }
@@ -64,19 +68,19 @@ export function WorkThumb({ work, size, wide }: { work: WorkRow; size: number; w
  * Kartın başlığı eserin adıyla aynıysa ad tekrarlanmaz; şerit tür ve yerle başlar.
  */
 export function WorkPeek({ work, cardTitle, onOpen }: { work: WorkRow; cardTitle: string; onOpen: () => void }) {
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const { t: tr, lang } = useT();
   const name = loc(work.name, lang);
   const place = workPlace(work, lang);
   const era = workEra(work, lang);
-  const showName = normalizeName(name) !== normalizeName(cardTitle);
+  const showName = name.toLocaleLowerCase('tr').replace(/\s+/g, ' ').trim() !== cardTitle.toLocaleLowerCase('tr').replace(/\s+/g, ' ').trim();
   return (
-    <Pressable
+    <SoftPressable
       onPress={onOpen}
       accessibilityRole="button"
       accessibilityLabel={`${name}. ${place}${era ? `. ${era}` : ''}`}
       accessibilityHint={tr('nav.workPage')}
-      style={({ pressed }) => [styles.peek, { backgroundColor: pressed ? t.border : t.soft }]}>
+      style={[styles.peek, { backgroundColor: t.soft }, outline(t)]}>
       <WorkThumb work={work} size={64} />
       <View style={{ flex: 1, gap: 2 }}>
         {showName ? (
@@ -92,16 +96,24 @@ export function WorkPeek({ work, cardTitle, onOpen }: { work: WorkRow; cardTitle
             {era}
           </Text>
         ) : null}
-        <Text style={[type.meta, { color: t.primary }]}>{tr('nav.workDetails')}</Text>
+        <Text style={[type.meta, { color: t.primaryText }]}>{tr('nav.workDetails')}</Text>
       </View>
       <ChevronIcon color={t.textMuted} />
-    </Pressable>
+    </SoftPressable>
   );
 }
 
-const normalizeName = (s: string) => s.toLocaleLowerCase('tr').replace(/\s+/g, ' ').trim();
-
 const styles = StyleSheet.create({
-  glyphBox: { borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-  peek: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.sm, paddingRight: space.md, borderRadius: radius.lg, minHeight: 80 },
+  thumb: { borderRadius: radius.md, borderCurve: 'continuous' },
+  glyphBox: { borderRadius: radius.md, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
+  peek: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: space.md,
+    padding: space.sm,
+    paddingRight: space.md,
+    borderRadius: radius.lg,
+    borderCurve: 'continuous',
+    minHeight: 80,
+  },
 });

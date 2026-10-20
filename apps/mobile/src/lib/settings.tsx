@@ -20,6 +20,9 @@ const SettingsSchema = z.object({
 });
 export type Settings = z.infer<typeof SettingsSchema>;
 
+/** Hesapla cihazlar arasında taşınan ayarlar. İl ve geliştirici seçenekleri cihaza özgü kalır. */
+export const SyncedSettings = SettingsSchema.pick({ themeMode: true, speechRate: true, storyPlayback: true });
+
 function loadJson<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>, fallback: T): T {
   try {
     const raw = Storage.getItemSync(key);

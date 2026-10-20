@@ -61,7 +61,6 @@ const tr = {
   'profile.senses': 'Yönlendirme',
   'profile.lang': 'Dil',
 
-  'explore.title': 'Keşfet',
   'explore.eyebrow': 'Fatih · İstanbul',
   'explore.count': '{n} doğrulanmış eser',
   'explore.subtitle': 'Hatay, Konya ve Bursa vakıf eserleri',
@@ -77,6 +76,12 @@ const tr = {
   'work.partOf': '{complex} yapılarından',
   'work.mapLabel': '{name} konumunu gösteren harita',
   'work.history': 'Tarihçe',
+  'work.architecture': 'Mimari',
+  'work.listenArchitecture': 'Mimariyi dinle',
+  'work.readMore': 'Devamını oku · {n} dk',
+  'work.readMoreHint': 'Metnin tamamını açar',
+  'work.readLess': 'Kısalt',
+  'work.textSource': 'Metin: {book}, Vakıf Katılım',
   'work.noHistory': 'Bu eser için doğrulanmış tarihçe metni henüz eklenmedi.',
   'work.sources': 'Kaynaklar',
   'work.noSources': 'Kaynak yok.',
@@ -170,7 +175,6 @@ const en: Record<CoreKey, string> = {
   'profile.senses': 'Guidance',
   'profile.lang': 'Language',
 
-  'explore.title': 'Explore',
   'explore.eyebrow': 'Fatih · Istanbul',
   'explore.count': '{n} verified sites',
   'explore.subtitle': 'Foundation works of Hatay, Konya and Bursa',
@@ -186,6 +190,12 @@ const en: Record<CoreKey, string> = {
   'work.partOf': 'Part of {complex}',
   'work.mapLabel': 'Map showing the location of {name}',
   'work.history': 'History',
+  'work.architecture': 'Architecture',
+  'work.listenArchitecture': 'Listen to architecture',
+  'work.readMore': 'Read more · {n} min',
+  'work.readMoreHint': 'Opens the full text',
+  'work.readLess': 'Show less',
+  'work.textSource': 'Text: {book}, Vakıf Katılım',
   'work.noHistory': 'A verified history text has not been added for this site yet.',
   'work.sources': 'Sources',
   'work.noSources': 'No sources.',
@@ -226,9 +236,13 @@ export function translate(lang: Lang, key: MessageKey, vars?: Record<string, str
   return s;
 }
 
+/** Ekrandaki çeviri fonksiyonu (`useT().t`). */
+export type Translate = (key: MessageKey, vars?: Record<string, string | number>) => string;
+
 /** Profil dilini kullanır; profil yoksa (onboarding öncesi) Türkçe. */
 export function useT() {
   const { profile } = useProfile();
   const lang: Lang = profile?.lang ?? 'tr';
-  return { lang, t: (key: MessageKey, vars?: Record<string, string | number>) => translate(lang, key, vars) };
+  const t: Translate = (key, vars) => translate(lang, key, vars);
+  return { lang, t };
 }

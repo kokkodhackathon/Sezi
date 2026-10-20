@@ -6,8 +6,10 @@ import {
   followRoute,
   initialTrack,
   offRouteThreshold,
+  passingWorkPoints,
   pointVoice,
   projectOnLine,
+  WORK_POINT_PREFIX,
   soundKindFor,
   soundscapeMix,
   stepWalker,
@@ -29,7 +31,7 @@ import { useSyncExternalStore } from 'react';
 import { AccessibilityInfo } from 'react-native';
 
 import { blockableAhead, detourFrom, inPilotArea, landmarkNodes, planRoute, planStroll, startLocation, walkingSpeed, type PlannedRoute } from '../nav';
-import { navPoints, pointAudioUri } from '../points';
+import { navPoints, pointAudioUri, workPoints } from '../points';
 import { hapticAlert, hapticForTurn, playLandmarkCue } from '../sim/cues';
 import { stopSoundscape, updateSoundscape } from '../sim/soundscape-engine';
 import { prefetchChirp } from '../voice/chirp';
@@ -172,6 +174,8 @@ let soundSources: SoundSource[] = [];
 const listeners = new Set<() => void>();
 /** Nokta (anlatım / eser varışı) ses kaydı oynatıcısı. */
 const pointClip = createClipPlayer();
+/** Bu ekranda (tur boyunca, duraklar arası dahil) yanından geçilip kartı açılmış eserler: bir kez açılır. */
+let shownWorks = new Set<string>();
 
 function emit(patch: Partial<NavState>) {
   state = { ...state, ...patch };
@@ -179,7 +183,9 @@ function emit(patch: Partial<NavState>) {
 }
 
 const totalOf = (plan: PlannedRoute) => plan.geometry.nodeAtM.at(-1)!;
-const findPoint = (id: string): NavPoint | undefined => navPoints().find((p) => p.id === id);
+const findPoint = (id: string): NavPoint | undefined => navPoints().find((p) => p.id === id) ?? workPoints().find((p) => p.id === id);
+/** Admin'de varış bilgisi olmayan hedefte eserin kendi anlatımı kullanılır. */
+const workArrival = (slug: string | null) => (slug ? workPoints().find((p) => p.workSlug === slug) : undefined);
 const canHear = () => !!cfg && cfg.profile.hearing !== 'deaf' && cfg.profile.senses.audio && !state.noisy;
 const wantsSim = (c: NavConfig, start: StartChoice) => c.sim && start.kind !== 'here';
 
@@ -416,6 +422,12 @@ function onFix(fix: LocationFix, truthAt: LngLat, walkerAtEnd: boolean) {
 
   // 1. Noktalar: yarıçapa girilen her nokta bu yürüyüşte bir kez açılır.
   const due = duePoints(navPoints(), fix, new Set(state.fired)).filter((p) => p.id !== state.plan?.arrival?.id);
+  // Yanından geçilen eserler: hedef ve turdaki eserler varışta açılır, yolda değil.
+  const passing = passingWorkPoints(workPoints(), navPoints(), new Set([...(state.dest ? [state.dest] : []), ...state.tour]));
+  for (const p of duePoints(passing, fix, new Set([...state.fired, ...shownWorks]))) {
+    due.push(p);
+    shownWorks.add(p.id);
+  }
   if (due.length) emit({ fired: [...state.fired, ...due.map((p) => p.id)] });
   for (const p of due) {
     if (state.popup) emit({ queue: [...state.queue, p.id] });
@@ -499,9 +511,13 @@ function arrive() {
   const plan = state.plan;
   const slug = state.dest;
   emit({ phase: 'arrived', running: false, arrived: slug });
-  if (slug) cfg.onArrive(slug);
+  if (slug) {
+    cfg.onArrive(slug);
+    // Varılan eser sonraki duraklara giderken yeniden açılmaz.
+    shownWorks.add(WORK_POINT_PREFIX + slug);
+  }
   // Varış bilgisi: kart ekranda; ses ayara göre.
-  const arrival = plan?.arrival;
+  const arrival = plan?.arrival ?? workArrival(slug);
   if (arrival) {
     emit({ fired: [...state.fired, arrival.id], cueCount: state.cueCount + 1 });
     if (cfg.playback === 'auto') playPoint(arrival.id);
@@ -551,6 +567,7 @@ export const navigation = {
   /** Ekran açılınca: hedef ve tur. Başlangıç seçimi korunur. */
   open(dest: string | null, tour: string[] = []) {
     navigation.stop();
+    shownWorks = new Set();
     emit({ dest, tour });
     replanPreview();
     if (state.start.kind === 'here') void startWatch();

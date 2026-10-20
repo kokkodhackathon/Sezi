@@ -1,13 +1,15 @@
-import { themes, type ThemeColors, type UserProfile } from '@sezi/shared';
+import { sweetThemes, type SweetTheme, type UserProfile } from '@sezi/shared';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, findNodeHandle, Pressable, ScrollView, StyleSheet, Text, useColorScheme, View } from 'react-native';
+import { AccessibilityInfo, findNodeHandle, ScrollView, StyleSheet, Text, useColorScheme, View, type TextStyle, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { CheckIcon } from '@/design/icons';
 import { CengelMark } from '@/design/motif';
+import { FadeInItem, outline, SoftPressable } from '@/design/sweet/components';
+import { font, radius, space, type } from '@/design/type';
 import { useSettings } from '@/lib/settings';
-import { radius, space, type } from '@/design/type';
 import { translate, type Lang, type MessageKey } from '@/lib/i18n';
 import { defaultSenses, useProfile } from '@/lib/profile';
 
@@ -28,7 +30,7 @@ export default function Onboarding() {
   const [senses, setSenses] = useState<UserProfile['senses']>(profile?.senses ?? defaultSenses('full'));
 
   // Önizleme: az gören seçilince yüksek kontrast hemen uygulanır.
-  const t: ThemeColors = vision === 'low' ? themes.highContrast : themes[settings.themeMode === 'system' ? (scheme === 'dark' ? 'dark' : 'light') : settings.themeMode];
+  const t: SweetTheme = vision === 'low' ? sweetThemes.highContrast : sweetThemes[settings.themeMode === 'system' ? (scheme === 'dark' ? 'dark' : 'light') : settings.themeMode];
   const s = useMemo(() => makeStyles(t), [t]);
   const tr = (key: MessageKey, vars?: Record<string, string | number>) => translate(lang, key, vars);
 
@@ -69,11 +71,22 @@ export default function Onboarding() {
 
   return (
     <SafeAreaView style={s.screen}>
-      <StatusBar style={t === themes.dark ? 'light' : 'dark'} />
+      <StatusBar style={t === sweetThemes.dark ? 'light' : 'dark'} />
 
       <View style={s.progress} accessibilityLabel={tr('onb.step', { n: index + 1, total: steps.length })}>
         {steps.map((x, i) => (
-          <View key={x} style={[s.progressSeg, { backgroundColor: i <= index ? t.primary : t.border }]} />
+          <View
+            key={x}
+            style={[
+              s.progressSeg,
+              { backgroundColor: i <= index ? t.primary.fill : t.soft },
+              t.outlined && {
+                borderWidth: 1,
+                borderColor: t.border,
+                backgroundColor: i <= index ? t.primary.fill : t.background,
+              },
+            ]}
+          />
         ))}
       </View>
 
@@ -82,13 +95,15 @@ export default function Onboarding() {
           {tr('onb.step', { n: index + 1, total: steps.length })}
         </Text>
 
+        {/* Adım değişince içerik yerinde belirir (8 dp + opacity); ileri/geri yönden bağımsız. */}
+        <FadeInItem key={step} index={0} style={s.stepBody}>
         {step === 'welcome' && (
           <View style={s.welcome}>
-            <View style={s.medallion}>{t.motifOpacity > 0 ? <CengelMark color={t.accent} size={40} /> : null}</View>
+            <View style={s.medallion}>{!t.outlined ? <CengelMark color={t.primaryText} size={40} /> : null}</View>
             <Text style={[type.hero, { color: t.text }]} accessibilityElementsHidden importantForAccessibility="no">
               Sezi
             </Text>
-            <Text ref={titleRef} style={[type.heading, { color: t.primary }]} accessibilityRole="header">
+            <Text ref={titleRef} style={[type.heading, { color: t.primaryText }]} accessibilityRole="header">
               {tr('design.welcome')}
             </Text>
 
@@ -190,33 +205,49 @@ export default function Onboarding() {
               ].filter(Boolean) as MessageKey[]
             ).map((key) => (
               <View key={key} style={s.summaryRow}>
-                <View style={[s.summaryDot, { backgroundColor: t.accent }]} />
+                <View style={[s.summaryDot, { backgroundColor: t.accentText }]} />
                 <Text style={s.lead}>{tr(key)}</Text>
               </View>
             ))}
             <Text style={s.hint}>{tr('onb.summary.change')}</Text>
           </>
         )}
+        </FadeInItem>
       </ScrollView>
 
       <View style={s.footer}>
         {index > 0 || editing ? (
-          <Pressable onPress={back} accessibilityRole="button" accessibilityLabel={tr('onb.back')} style={({ pressed }) => [s.secondaryBtn, pressed && s.pressed]}>
+          <SoftPressable onPress={back} accessibilityRole="button" accessibilityLabel={tr('onb.back')} style={[s.secondaryBtn, outline(t)]}>
             <Text style={s.secondaryBtnText}>{tr('onb.back')}</Text>
-          </Pressable>
+          </SoftPressable>
         ) : null}
-        <Pressable
+        <SoftPressable
           onPress={next}
           disabled={!canContinue}
           accessibilityRole="button"
           accessibilityLabel={step === 'summary' ? tr('onb.start') : tr('onb.next')}
           accessibilityState={{ disabled: !canContinue }}
-          style={({ pressed }) => [s.primaryBtn, !canContinue && s.disabled, pressed && s.pressed]}>
+          style={[s.primaryBtn, outline(t), !canContinue && s.disabled]}>
           <Text style={s.primaryBtnText}>{step === 'summary' ? tr('onb.start') : tr('onb.next')}</Text>
-        </Pressable>
+        </SoftPressable>
       </View>
     </SafeAreaView>
   );
+}
+
+interface QuestionStyles {
+  title: TextStyle;
+  hint: TextStyle;
+  options: ViewStyle;
+}
+
+interface OptionStyles {
+  option: ViewStyle;
+  optionText: ViewStyle;
+  optionLabel: TextStyle;
+  optionDesc: TextStyle;
+  radio: ViewStyle;
+  check: ViewStyle;
 }
 
 function Question({
@@ -230,7 +261,7 @@ function Question({
   title: string;
   hint?: string;
   titleRef: React.RefObject<Text | null>;
-  s: ReturnType<typeof makeStyles>;
+  s: QuestionStyles;
   multi?: boolean;
   children: React.ReactNode;
 }) {
@@ -261,62 +292,64 @@ function Option({
   selected: boolean;
   onPress: () => void;
   multi?: boolean;
-  t: ThemeColors;
-  s: ReturnType<typeof makeStyles>;
+  t: SweetTheme;
+  s: OptionStyles;
 }) {
+  const fg = selected ? t.primary.ink : t.text;
+  const descFg = selected ? t.primary.ink : t.textMuted;
   return (
-    <Pressable
+    <SoftPressable
       onPress={onPress}
       accessibilityRole={multi ? 'checkbox' : 'radio'}
       accessibilityState={{ checked: selected }}
       accessibilityLabel={description ? `${label}. ${description}` : label}
-      style={({ pressed }) => [
+      style={[
         s.option,
-        { borderColor: selected ? t.primary : t.border, borderWidth: selected ? 2 : 1 },
-        pressed && s.pressed,
+        { backgroundColor: selected ? t.primary.fill : t.surface },
+        outline(t),
+        selected && t.outlined && { borderWidth: 3 },
       ]}>
       <View
         style={[
           multi ? s.check : s.radio,
-          { borderColor: selected ? t.primary : t.textMuted, backgroundColor: selected ? t.primary : 'transparent' },
+          { borderColor: selected ? t.primary.ink : t.textMuted, backgroundColor: selected ? t.primary.ink : 'transparent' },
         ]}>
-        {selected ? <Text style={[s.checkMark, { color: t.onPrimary }]}>{multi ? '✓' : ''}</Text> : null}
+        {selected ? <CheckIcon color={t.primary.fill} size={16} /> : null}
       </View>
       <View style={s.optionText}>
-        <Text style={s.optionLabel}>{label}</Text>
-        {description ? <Text style={s.optionDesc}>{description}</Text> : null}
+        <Text style={[s.optionLabel, { color: fg }, selected && { fontFamily: font.roundHeavy }]}>{label}</Text>
+        {description ? <Text style={[s.optionDesc, { color: descFg }]}>{description}</Text> : null}
       </View>
-    </Pressable>
+    </SoftPressable>
   );
 }
 
-const makeStyles = (t: ThemeColors) =>
+const makeStyles = (t: SweetTheme) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
     progress: { flexDirection: 'row', gap: 6, paddingHorizontal: space.xl, paddingTop: space.xl },
-    progressSeg: { flex: 1, height: 4, borderRadius: 2 },
+    progressSeg: { flex: 1, height: 6, borderRadius: 3, borderCurve: 'continuous' },
     body: { padding: space.xl, gap: space.lg, paddingBottom: space.xxl },
+    stepBody: { gap: space.lg },
     welcome: { gap: space.md },
     medallion: { alignItems: 'flex-start', marginBottom: space.lg, marginTop: space.sm },
-    stepLabel: { ...type.meta, color: t.primary },
-    title: { ...type.display, color: t.text },
+    stepLabel: { ...type.meta, color: t.primaryText },
+    title: { ...type.screenTitle, color: t.text },
     lead: { ...type.lead, color: t.text, flexShrink: 1 },
     hint: { ...type.body, color: t.textMuted },
     options: { gap: space.md, marginTop: space.xs },
-    option: { flexDirection: 'row', gap: 14, alignItems: 'center', padding: space.lg, borderRadius: radius.lg, backgroundColor: t.surface },
+    option: { flexDirection: 'row', gap: 14, alignItems: 'center', minHeight: 64, padding: space.lg, borderRadius: radius.lg, borderCurve: 'continuous' },
     optionText: { flex: 1, gap: 4 },
     optionLabel: { ...type.itemTitle, color: t.text },
     optionDesc: { ...type.meta, color: t.textMuted },
-    radio: { width: 26, height: 26, borderRadius: 13, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-    check: { width: 26, height: 26, borderRadius: 7, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-    checkMark: { fontSize: 15, fontWeight: '800', lineHeight: 18 },
+    radio: { width: 26, height: 26, borderRadius: 13, borderCurve: 'continuous', borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+    check: { width: 26, height: 26, borderRadius: 8, borderCurve: 'continuous', borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
     summaryRow: { flexDirection: 'row', gap: space.md, alignItems: 'flex-start' },
     summaryDot: { width: 10, height: 10, borderRadius: 2, marginTop: 9, transform: [{ rotate: '45deg' }] },
-    footer: { flexDirection: 'row', gap: space.md, paddingHorizontal: space.xl, paddingVertical: space.md, borderTopWidth: 1, borderTopColor: t.border, backgroundColor: t.background },
-    primaryBtn: { flex: 2, minHeight: 56, paddingVertical: 12, paddingHorizontal: 8, borderRadius: radius.md, backgroundColor: t.primary, alignItems: 'center', justifyContent: 'center' },
-    primaryBtnText: { ...type.button, fontSize: 18, color: t.onPrimary },
-    secondaryBtn: { flex: 1, minHeight: 56, paddingVertical: 12, paddingHorizontal: 8, borderRadius: radius.md, borderWidth: 1.5, borderColor: t.border, alignItems: 'center', justifyContent: 'center', backgroundColor: t.surface },
-    secondaryBtnText: { ...type.button, fontSize: 18, color: t.text },
+    footer: { flexDirection: 'row', gap: space.md, paddingHorizontal: space.xl, paddingVertical: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.border, backgroundColor: t.background },
+    primaryBtn: { flex: 2, minHeight: 54, paddingVertical: space.md, paddingHorizontal: space.xl, borderRadius: radius.md, borderCurve: 'continuous', backgroundColor: t.primary.fill, alignItems: 'center', justifyContent: 'center' },
+    primaryBtnText: { ...type.button, color: t.primary.ink },
+    secondaryBtn: { flex: 1, minHeight: 54, paddingVertical: space.md, paddingHorizontal: space.lg, borderRadius: radius.md, borderCurve: 'continuous', backgroundColor: t.soft, alignItems: 'center', justifyContent: 'center' },
+    secondaryBtnText: { ...type.button, color: t.text },
     disabled: { opacity: 0.4 },
-    pressed: { opacity: 1 },
   });

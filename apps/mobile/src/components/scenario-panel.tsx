@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
+import { outline, SoftPressable } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
-import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
 import type { NavState } from '@/lib/navigation/session';
 
@@ -21,7 +22,7 @@ export function ScenarioPanel({
   onWrongTurn: () => boolean;
   onCrowd: () => void;
 }) {
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const { t: tr } = useT();
   const [failed, setFailed] = useState(false);
   const run = (fn: () => boolean) => setFailed(!fn());
@@ -34,11 +35,11 @@ export function ScenarioPanel({
   ];
 
   return (
-    <View style={[styles.panel, { backgroundColor: t.soft }]}>
+    <View style={[styles.panel, { backgroundColor: t.soft }, outline(t)]}>
       <Text style={[type.heading, { color: t.text }]} accessibilityRole="header">{tr('sim.scenarios')}</Text>
       <Text style={[type.meta, { color: t.textMuted }]}>{tr('sim.scenariosBody')}</Text>
       {items.map((it) => (
-        <Pressable
+        <SoftPressable
           key={it.key}
           onPress={it.onPress}
           disabled={disabled}
@@ -46,15 +47,16 @@ export function ScenarioPanel({
           accessibilityLabel={it.label}
           accessibilityHint={it.hint}
           accessibilityState={it.toggle ? { checked: it.active, disabled } : { disabled, busy: it.active }}
-          style={({ pressed }) => [
+          style={[
             styles.item,
-            { backgroundColor: it.active ? t.primary : t.surface },
+            { backgroundColor: it.active ? t.primary.fill : t.surface },
+            outline(t),
+            it.active && { borderWidth: t.outlined ? 3 : 2, borderColor: t.primary.ink },
             disabled && { opacity: 0.4 },
-            pressed && { opacity: 0.85 },
           ]}>
-          <Text style={[type.button, { color: it.active ? t.onPrimary : t.text }]}>{it.label}</Text>
-          <Text style={[type.meta, { color: it.active ? t.onPrimary : t.textMuted }]}>{it.hint}</Text>
-        </Pressable>
+          <Text style={[type.button, { color: it.active ? t.primary.ink : t.text }]}>{it.label}</Text>
+          <Text style={[type.meta, { color: it.active ? t.primary.ink : t.textMuted }]}>{it.hint}</Text>
+        </SoftPressable>
       ))}
       {failed ? <Text style={[type.meta, { color: t.danger }]} accessibilityLiveRegion="polite">{tr('sim.notApplicable')}</Text> : null}
       {state.reroutes > 0 || state.blocked.length > 0 ? (
@@ -67,6 +69,6 @@ export function ScenarioPanel({
 }
 
 const styles = StyleSheet.create({
-  panel: { gap: space.md, padding: space.lg, borderRadius: radius.xl },
-  item: { gap: 2, minHeight: 56, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.lg, justifyContent: 'center' },
+  panel: { gap: space.md, padding: space.lg, borderRadius: radius.xl, borderCurve: 'continuous' },
+  item: { gap: 2, minHeight: 56, paddingHorizontal: space.lg, paddingVertical: space.md, borderRadius: radius.lg, borderCurve: 'continuous', justifyContent: 'center' },
 });

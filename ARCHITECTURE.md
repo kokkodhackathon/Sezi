@@ -19,7 +19,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 | Paket | Görev | Durum |
 |---|---|---|
 | `apps/mobile` | Kullanıcı uygulaması | Tüm final ekranları var, bir kısmı mock (aşağıda) |
-| `apps/admin` | İçerik girişi, onay, moderasyon | Eserler, yeni eser, fotoğraf kutusu, bildirimler, iller (apps/admin/README.md) |
+| `apps/admin` | İçerik girişi, onay, moderasyon | shadcn/ui + Tailwind v4 (Çini 2 token'ları). Pano (veri kapsamı, bekleyen işler), eserler, yeni eser, eser metinleri, fotoğraf kutusu, konum eşleştirme, noktalar, rota testi, bildirimler, iller (apps/admin/README.md) |
 | `packages/shared` | zod şemaları, geo, rota ve yönlendirme motoru, tema token'ları | Testli (19 test) |
 | `supabase` | Migration'lar, seed'ler | 3 migration uygulandı; güvenlik uyarısı yok |
 | `data` | Ham veri → model dönüşümü | Envanter pipeline'ı ve nav grafiği üretici |
@@ -62,18 +62,26 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 - `text_drafts`: envanter kitabından çıkarılan TR/EN adres ve tarihçe taslağı (kitap, basılı sayfa aralığı, PDF sayfası, uyarılar). Üretici `data/inventory_texts.py`. Admin "Esere yayınla" deyince eserin `address` / `history` / `architecture` alanlarına yazılır.
 - Kararlar tek işlemde: istemci yalnız karar satırının `status`'unu günceller; eser değişikliğini aynı transaction'da tetikleyici yapar (`apply_candidate_decision`, `apply_text_publish`; security invoker, RLS geçerli). Eser yazılamazsa karar da yazılmaz. Bir eserin en çok bir kabul edilmiş adayı olur (kısmi tekil dizin); yeni kabul öncekini reddeder. Karar zamanı ve karar veren (`decided_at`, `decided_by`) de tetikleyiciyle yazılır (`stamp_decision`).
 
+**Hesap (isteğe bağlı)**
+- Uygulama hesapsız tam çalışır; hesap açılışta sorulmaz (Profil → Hesap). İleride hesaplılara açılacak özelliklerin sahibi bu yapıdır.
+- Kimlik: Supabase Auth, e-posta + şifre (en az 8 karakter, harf ve rakam). Doğrulama, şifre sıfırlama ve girişliyken şifre değişimi e-postaya gelen 6 haneli kodla; derin bağlantı yok. Şifre değişimini sunucu zorlar (`secure_password_change`: `reauthenticate` kodu `nonce` olarak). E-posta değiştirme yok: çift onay kod akışında çalışmıyor (supabase/supabase#32909) ve kapatılması güvenli değil.
+- `accounts` (RLS: yalnız sahibi okur/ekler/günceller; anon erişemez): `display_name`, `prefs` (erişilebilirlik profili + taşınan ayarlar, ≤ 8 KB), `prefs_updated_at`. Satırı istemci ilk girişte ekler; auth.users üzerinde tetikleyici yok.
+- Tercih eşitleme (`lib/account.tsx`): cihaz kaynaktır. Yeni girişte hesaptaki tercih cihaza gelir; sonra en yeni değişiklik kazanır (`prefs_updated_at`). İnternetsiz değişiklik bekler, öne gelince gider. E-posta şablonu dili `user_metadata.lang`'dan.
+- Hesap silme: edge function `delete-account` (oturum anahtarını Auth sunucusunda doğrular, `reports/<uid>/` fotoğraflarını ve kullanıcıyı siler). `accounts` cascade ile gider; `a11y_reports.user_id` ve `reviewed_by` boşalır (bildirim ve onay kalır).
+- E-posta: Resend SMTP (`config.toml [auth.email.smtp]`, gönderici `no-reply@sezi.info`, anahtar `supabase/.env › RESEND_API_KEY`); şablonlar `supabase/templates/` (TR/EN, Çini 2 renkleri). Ücretsiz planda şablon değişikliği özel SMTP ister. Gönderim: `set -a; . supabase/.env; set +a; npx supabase@latest config push --project-ref jejsvycpzulpleftkssj` (yalnız auth'a "y"). Auth her şablonu ilk kullanımda önbelleğe alır (`TemplateMaxAge`, varsayılan 10 dk): değişiklikten sonraki ilk dakikalarda eski şablon gidebilir; gerçek içerik Resend `GET /emails/{id}` ile denetlenir.
+
 **Seslendirme (Chirp 3 HD)**
 - Edge function `tts` (`supabase/functions/tts`, JWT doğrulaması kapalı): Türkçe metni Google Chirp 3 HD ile MP3'e çevirir, `tts` bucket'ına `chirp3/<ses>/<sha256>.mp3` olarak yazar. Aynı metin ikinci kez Google'a gitmez.
 - `tts_usage` + `tts_reserve`: yeni üretilen karakterlerin günlük toplamı; sınır `TTS_DAILY_CHAR_LIMIT` (30.000). Aşılınca 429, uygulama cihaz sesine düşer. Google anahtarı `GOOGLE_TTS_API_KEY` secret'ı.
 
 **Okuma arayüzü**
 - `works_view` (security_invoker): eser, il, tür, külliye, `lng/lat`, kaynaklar, sergiler, fotoğraflar ve ses kaydı yolları (`audio_tr`, `audio_en`) tek satırda.
-- Mobil uygulama yalnızca bu view'u ve `cities`, `sources`, `exhibitions` tablolarını okur.
+- Mobil uygulama yalnızca bu view'u ve `cities`, `sources`, `exhibitions` tablolarını okur; içerik sorguları `status = 'verified'` süzer (admin hesabıyla giriş yapılsa da taslak görünmez).
 
 **RLS**
 - Anonim kullanıcı yalnızca `verified` içeriği okur.
 - Admin (`app_metadata.role = 'admin'`) her şeyi yazar.
-- Giriş yapmış kullanıcı yalnızca kendi bildirimini ekler.
+- Giriş yapmış kullanıcı yalnızca kendi bildirimini ve kendi `accounts` satırını görür.
 
 **Veri durumu (13 Ekim)**
 
@@ -102,13 +110,14 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 4. **Rota** (`shared/planner.ts › createPlanner`; mobilde `nav.ts` gömülü grafikle kurar, adminde `lib/pilot.ts`)
    - `planRoute(eser, profil, başlangıç)`: `shared/via.ts › routeVia` rotayı yakındaki anlatım/varış noktalarına uğratır (açgözlü ekleme, en çok %25 ve +300 m). Haritada seçilen başlangıç ya da yeniden rotada `withLeadIn` kullanıcının tam konumundan bağlar.
    - `planStroll` (hedefsiz gezinti): en yakın açılmamış noktaya, oradan bir sonrakine; en çok 5 nokta, bacak ≤ 500 m, toplam ≤ 1,2 km.
-   - Turlar (`lib/tours.ts`): eser türüne göre havuz, en yakın komşu sırası; "Başla" durakları sırayla aynı navigasyon ekranında yürütür.
+   - Turlar: tanımlar `shared/tours.ts › TOURS` (eser türüne göre havuz; mobil `lib/tours.ts` en yakın komşu sırasıyla planlar, admin panosu aynı tanımla tur kapsamını sayar); "Başla" durakları sırayla aynı navigasyon ekranında yürütür.
 5. **Yönlendirme** (`shared/guidance.ts › buildGuidance`)
    - Dönüş açısı ve en yakın yer işaretinden Lynch tarzı talimat; merdiven, zemin, cadde uyarısı; uzun düzlükte teyit.
    - İpucu türü profile göre seçilir (`cuePreference`): duymayan kullanıcıya sesli ipucu verilmez.
 6. **Navigasyon oturumu** (`mobile/lib/navigation/session.ts`)
    - Aşamalar: plan → yürüyüş → varış. Konum kaynağı GPS (`expo-location`, ön planda; ekran `expo-keep-awake` ile açık) ya da geliştirici simülasyon modunda sanal yürüyüşçü (`shared/walker.ts`, başlangıç "Konumum" değilse). İkisi de aynı takip adımından geçer (`shared/follow.ts › followRoute`: `trackFix`, `dueStep`, rotadaki uğrama noktaları).
    - Yarıçapa girilen anlatım/varış noktası yürüyüş başına bir kez açılır (`shared/points.ts › duePoints`, doğruluk > 50 m ise tetiklemez); sanal yürüyüş nokta okunurken bekler.
+   - Eser anlatımları: yayınlanmış metni (`summary` ya da `history`) ve kesin konumu olan pilot alan eserleri sanal anlatım noktası olur (`shared/points.ts › workPoint`, kimlik `work:<slug>`, yarıçap 20 m, metin `excerpt` ile ilk paragraflardan ≤ 420 karakter, son tam cümlede kesilir). Planlayıcıya girmez, yani rota bunlara sapmaz; yalnız yanından geçilince açılır (`passingWorkPoints`: admin'de esere bağlı anlatım/varış noktası varsa o kullanılır, hedef ve turdaki eserler yolda açılmaz). Varılan eser sonraki duraklarda yeniden açılmaz. Admin'de varış noktası olmayan hedefte varış kartı ve sesi bu noktadan gelir. Liste `lib/points.ts` içinde eşitlenir, kv'de saklanır (`sezi.workpoints.v1`), TR metni Chirp ile önceden indirilir.
    - Ses sırası (`pointVoice`): kendi dilinde kayıt → kendi dilinde metin (TTS) → TR kayıt → TR metin. Kayıt çalarken talimatlar bekler, bitince okunur.
    - Metin okuması (`lib/voice/speech.ts`, kuyruk + `interrupt`): Türkçe metin Chirp 3 HD (`tr-TR-Chirp3-HD-Laomedeia`) ile çalar; cihazda hazır değilse talimatta 1,5 sn, anlatımda 8 sn beklenir, gelmezse `expo-speech`. İngilizce her zaman `expo-speech`.
    - Hazır sesler üç yerden gelir (`lib/voice/chirp.ts › readyChirp`): (1) uygulamaya gömülü sabit cümleler: adsız dönüşler uyarılarıyla, "Vardınız.", kalabalık ve rota bulunamadı uyarıları (`shared/guidance.ts › staticGuidanceTexts`, `navigation/texts.ts › NAV_STATIC_TR`; `assets/voice/tr`, `voice/bundled.ts`). Kalıp değişince `cd apps/mobile && npx tsx scripts/gen-voice-bundle.mts`. (2) Daha önce indirilenler (`Paths.document/tts`). (3) Yoksa edge function. Rota hesaplanınca talimatlar, nokta eşitlemesinde kaydı olmayan anlatımlar önceden indirilir; böylece sahada internetsiz çalar.
@@ -134,7 +143,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 | `exhibitions` | Envanter fotoğraf sergileri | `exhibitions` |
 | `search` | Ad, tür, ilçe ve il araması | `works_view` |
 | `report/new`, `reports` | Erişilebilirlik bildirimi: cihazda kuyruk → sunucu (hesapsız, RLS); onaylanınca "onaylandı" | `a11y_reports`, `segment_overrides` |
-| `sign-in` | Magic link (Supabase OTP); oturum kalıcı değil | Supabase Auth |
+| `account/*` | İsteğe bağlı hesap: `index` (girişsiz tanıtım / girişli ad, e-posta, eşitleme, çıkış), `sign-up`, `sign-in`, `verify` (6 haneli kod: kayıt, sıfırlama), `forgot`, `password` (sıfırlama sonrası ya da kodla değişim), `name`, `delete` | Supabase Auth, `accounts`, `delete-account` |
 | `complex/[slug]` | Külliye ekranı; Bursa verisinde külliye bağlantısı henüz yok | `works_view` |
 | `settings`, `about`, `lab` | Ayarlar, proje ve envanter bilgisi, cihaz testleri (ses, pusula, haptik) | – |
 

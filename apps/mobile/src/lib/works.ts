@@ -36,7 +36,7 @@ export async function prefetchWorks(slugs: string[]): Promise<void> {
   const want = [...new Set(slugs)];
   if (want.length === 0) return;
   try {
-    const { data, error } = await supabase.from('works_view').select('*').in('slug', want);
+    const { data, error } = await supabase.from('works_view').select('*').eq('status', 'verified').in('slug', want);
     if (error || !data) return;
     const rows = data as WorkRow[];
     for (const row of rows) storeWork(row);
@@ -141,7 +141,8 @@ export function useWorks(citySlug?: string) {
   return useQuery({
     queryKey: ['works', citySlug ?? 'all'],
     queryFn: async () => {
-      let q = supabase.from('works_view').select('*').order('slug');
+      // Admin hesabıyla giriş yapılsa da uygulama yalnız yayındaki eseri gösterir (RLS admine taslağı da açar).
+      let q = supabase.from('works_view').select('*').eq('status', 'verified').order('slug');
       if (citySlug) q = q.eq('city_slug', citySlug);
       const { data, error } = await q;
       if (error) throw error;
@@ -160,7 +161,7 @@ export function useWork(slug: string) {
     queryFn: async () => {
       let res;
       try {
-        res = await supabase.from('works_view').select('*').eq('slug', slug).maybeSingle();
+        res = await supabase.from('works_view').select('*').eq('status', 'verified').eq('slug', slug).maybeSingle();
       } catch (e) {
         res = { data: null, error: e };
       }
@@ -231,6 +232,7 @@ export function useExhibitions() {
       const { data, error } = await supabase
         .from('exhibitions')
         .select('id, slug, title, venue, starts_on, ends_on, photo_count, description, source_url, city:cities(slug, name)')
+        .eq('status', 'verified')
         .order('starts_on', { ascending: false });
       if (error) throw error;
       return data as unknown as ExhibitionRow[];

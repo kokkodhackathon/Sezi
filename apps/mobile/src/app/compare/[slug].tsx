@@ -1,14 +1,15 @@
-import type { LngLat, ThemeColors, UserProfile } from '@sezi/shared';
+import type { LngLat, SweetTheme, UserProfile } from '@sezi/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { EndPin, ExtraLines, PointsLayer, SeziMap, type SeziMapHandle } from '@/components/map';
 import { Badge, Chip, Note } from '@/components/ui';
-import { CloseIcon, MapIcon } from '@/design/icons';
+import { CheckIcon, CloseIcon, MapIcon } from '@/design/icons';
+import { SoftPressable, sweetShadow } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
-import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
 import { formatDistance, inPilotArea, pilotWorks, planRoute, routeStats, startLocation, useNavVersion, useStartPoints, walkingSpeed, type PlannedRoute } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
@@ -26,7 +27,7 @@ const DESTINATIONS = [...pilotWorks].sort((a, b) => (a.name?.tr ?? '').localeCom
  */
 export default function Compare() {
   const params = useLocalSearchParams<{ slug: string }>();
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
   const insets = useSafeAreaInsets();
@@ -73,8 +74,8 @@ export default function Compare() {
 
   const line: Record<ProfileKey, { color: string; width: number; dash?: number[] }> = {
     walker: { color: t.text, width: 4 },
-    wheelchair: { color: t.primary, width: 9 },
-    blind: { color: t.accent, width: 5, dash: [1.4, 1] },
+    wheelchair: { color: t.primaryText, width: 9 },
+    blind: { color: t.accentText, width: 5, dash: [1.4, 1] },
   };
 
   return (
@@ -106,20 +107,20 @@ export default function Compare() {
       </SeziMap>
 
       <View style={[s.mapBar, { top: insets.top + space.sm }]} pointerEvents="box-none">
-        <Pressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={tr('nav.close')} style={[s.round, { backgroundColor: t.surface }]}>
+        <SoftPressable onPress={() => router.back()} accessibilityRole="button" accessibilityLabel={tr('nav.close')} style={[s.round, { backgroundColor: t.surface }, sweetShadow(t)]}>
           <CloseIcon color={t.text} />
-        </Pressable>
+        </SoftPressable>
       </View>
       {picking ? (
-        <View style={[s.pickBanner, { top: insets.top + 72 }]} accessibilityLiveRegion="polite">
-          <Text style={[type.button, { color: t.onPrimary }]}>{tr('nav.pickHint')}</Text>
+        <View style={[s.pickBanner, { top: insets.top + 72 }, sweetShadow(t)]} accessibilityLiveRegion="polite">
+          <Text style={[type.button, { color: t.primary.ink }]}>{tr('nav.pickHint')}</Text>
         </View>
       ) : null}
 
       <View style={s.panel}>
         <ScrollView contentContainerStyle={[s.body, { paddingBottom: insets.bottom + space.xl }]}>
           <View style={{ gap: space.xs }}>
-            <Text style={[type.eyebrow, { color: t.primary }]}>{tr('compare.title')}</Text>
+            <Text style={[type.eyebrow, { color: t.primaryText }]}>{tr('compare.title')}</Text>
             <Text style={[type.title, { color: t.text }]} accessibilityRole="header">
               {endName}
             </Text>
@@ -189,7 +190,7 @@ function ProfileCard({
   isYou: boolean;
   selected: boolean;
   onPress: () => void;
-  t: ThemeColors;
+  t: SweetTheme;
 }) {
   const { t: tr, lang } = useT();
   const title = tr(`compare.${k}` as MessageKey);
@@ -205,12 +206,12 @@ function ProfileCard({
     : [];
   const summary = stats ? (diff > 5 ? tr('compare.diff', { m: diff }) : tr('compare.shortest')) : tr('compare.noRoute');
   return (
-    <Pressable
+    <SoftPressable
       onPress={onPress}
       accessibilityRole="radio"
       accessibilityState={{ checked: selected }}
       accessibilityLabel={[title, isYou ? tr('compare.you') : null, summary, ...facts.map((f) => `${f.label}: ${f.value}`), tr(`compare.why.${k}` as MessageKey)].filter(Boolean).join('. ')}
-      style={({ pressed }) => [cardStyles.card, { backgroundColor: t.surface, borderColor: selected ? t.primary : t.border }, pressed && { opacity: 0.9 }]}>
+      style={[cardStyles.card, { backgroundColor: t.surface, borderColor: selected ? t.primaryText : t.outlined ? t.border : 'transparent' }]}>
       <View style={cardStyles.head}>
         {/* Haritadaki çizginin küçük örneği. */}
         <View style={cardStyles.swatch}>
@@ -224,8 +225,11 @@ function ProfileCard({
             <View style={{ width: 32, height: line.width, borderRadius: line.width, backgroundColor: line.color }} />
           )}
         </View>
-        <Text style={[type.itemTitle, { color: t.text, flex: 1 }]}>{title}</Text>
+        <Text style={[selected ? type.heading : type.itemTitle, { color: t.text, flex: 1 }]}>{title}</Text>
         {isYou ? <Badge label={tr('compare.you')} tone="primary" /> : null}
+        <View style={[cardStyles.check, selected ? { backgroundColor: t.primary.fill, borderColor: t.primaryText } : { backgroundColor: t.soft, borderColor: t.border }]}>
+          {selected ? <CheckIcon color={t.primary.ink} size={16} /> : null}
+        </View>
       </View>
       <Text style={[type.button, { color: stats ? t.text : t.danger }]}>{summary}</Text>
       {stats ? (
@@ -239,25 +243,26 @@ function ProfileCard({
         </View>
       ) : null}
       {selected ? <Text style={[type.meta, { color: t.textMuted }]}>{tr(`compare.why.${k}` as MessageKey)}</Text> : null}
-    </Pressable>
+    </SoftPressable>
   );
 }
 
 const cardStyles = StyleSheet.create({
-  card: { gap: space.sm, padding: space.lg, borderRadius: radius.lg, borderWidth: 2 },
+  card: { gap: space.sm, padding: space.lg, borderRadius: radius.lg, borderCurve: 'continuous', borderWidth: 2 },
   head: { flexDirection: 'row', alignItems: 'center', gap: space.md },
   swatch: { width: 40, alignItems: 'center', justifyContent: 'center' },
+  check: { width: 28, height: 28, borderRadius: radius.pill, borderCurve: 'continuous', borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: space.sm },
   fact: { width: '50%', gap: 2 },
 });
 
-const makeStyles = (t: ThemeColors) =>
+const makeStyles = (t: SweetTheme) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
     mapBar: { position: 'absolute', left: space.lg, right: space.lg, flexDirection: 'row' },
-    round: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', elevation: 3, shadowColor: t.shadow, shadowOpacity: 0.15, shadowRadius: 8, shadowOffset: { width: 0, height: 2 } },
-    pickBanner: { position: 'absolute', alignSelf: 'center', backgroundColor: t.primary, paddingHorizontal: space.lg, paddingVertical: space.sm, borderRadius: radius.pill },
-    panel: { flex: 1, marginTop: -radius.xl, backgroundColor: t.background, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+    round: { width: 48, height: 48, borderRadius: radius.pill, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
+    pickBanner: { position: 'absolute', alignSelf: 'center', backgroundColor: t.primary.fill, paddingHorizontal: space.lg, paddingVertical: space.sm, borderRadius: radius.pill, borderCurve: 'continuous' },
+    panel: { flex: 1, marginTop: -radius.xl, backgroundColor: t.background, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, borderCurve: 'continuous' },
     body: { paddingHorizontal: space.xl, paddingTop: space.xl, gap: space.lg },
     label: { ...type.eyebrow, color: t.textMuted },
     chips: { gap: space.sm, paddingHorizontal: space.xl },

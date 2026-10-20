@@ -1,25 +1,13 @@
-import { palette } from '@sezi/shared';
 import { View } from 'react-native';
 import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 
+import { toneForType } from '@/design/sweet/tones';
+import { useSweetTheme } from '@/hooks/use-sweet-theme';
+
 /**
  * Eser türü glifleri. Renk tek başına anlam taşımaz: her türün kendi silueti var.
- * Karo renkleri beyaz glifle en az 4.5:1 kontrast verir.
+ * Renkler tür tonundan gelir (`toneForType`): dolgu üstünde mürekkep glif (AA ≥ 4.5).
  */
-export const typeColor: Record<string, string> = {
-  cami: palette.turquoiseDeep,
-  medrese: palette.brown,
-  turbe: palette.crimson,
-  cesme: '#1D4A44',
-  sebil: '#1D4A44',
-  hamam: palette.rust,
-  imaret: palette.rust,
-  kutuphane: palette.brown,
-};
-
-export function colorForType(slug: string): string {
-  return typeColor[slug] ?? palette.brownInk;
-}
 
 function Shape({ slug, fill }: { slug: string; fill: string }) {
   switch (slug) {
@@ -102,22 +90,28 @@ function Shape({ slug, fill }: { slug: string; fill: string }) {
   }
 }
 
-/** Renkli karo üstünde beyaz glif. Dekoratiftir; erişilebilir ad yanındaki metinden gelir. */
+/** Tür tonunda karo üstünde glif. Dekoratiftir; erişilebilir ad yanındaki metinden gelir. */
 export function WorkGlyph({ slug, size = 48 }: { slug: string; size?: number }) {
+  const t = useSweetTheme();
+  const tone = t.tones[toneForType(slug)];
   return (
     <View
       importantForAccessibility="no-hide-descendants"
       accessibilityElementsHidden
-      style={{
-        width: size,
-        height: size,
-        borderRadius: size * 0.28,
-        backgroundColor: colorForType(slug),
-        alignItems: 'center',
-        justifyContent: 'center',
-      }}>
-      <Svg width={size * 0.62} height={size * 0.62} viewBox="0 0 24 24">
-        <Shape slug={slug} fill="#FFFFFF" />
+      style={[
+        {
+          width: size,
+          height: size,
+          borderRadius: size * 0.3,
+          borderCurve: 'continuous',
+          backgroundColor: tone.fill,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        t.outlined && { borderWidth: 2, borderColor: t.border },
+      ]}>
+      <Svg width={size * 0.6} height={size * 0.6} viewBox="0 0 24 24">
+        <Shape slug={slug} fill={tone.ink} />
       </Svg>
     </View>
   );

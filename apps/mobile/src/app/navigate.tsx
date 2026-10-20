@@ -1,9 +1,9 @@
-import { sliceLine, type LngLat, type NavPoint, type ThemeColors } from '@sezi/shared';
+import { sliceLine, type LngLat, type NavPoint, type SweetTheme } from '@sezi/shared';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CueFlash } from '@/components/cue-flash';
@@ -14,12 +14,13 @@ import { ScenarioPanel } from '@/components/scenario-panel';
 import { SoundCaptions } from '@/components/sound-captions';
 import { Badge, Button, Chip, Note, Segmented } from '@/components/ui';
 import { ChevronIcon, CloseIcon, MapIcon, PinIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
+import { FadeInItem, outline, SoftPressable, sweetShadow } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
-import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
 import { formatDistance, pilotWorks, segmentLines, useNavVersion, useStartPoints, walkingSpeed, type PlannedRoute } from '@/lib/nav';
 import { navigation, useNavigation, type NavConfig, type NavState } from '@/lib/navigation/session';
-import { useNavPoints } from '@/lib/points';
+import { useNavPoints, useWorkPoints } from '@/lib/points';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
 import { coverOf, loc, photoUrl, useWork } from '@/lib/works';
@@ -36,7 +37,7 @@ const minutesFor = (m: number, mps: number) => Math.max(1, Math.round(m / mps / 
  */
 export default function Navigate() {
   const params = useLocalSearchParams<{ dest?: string; tour?: string }>();
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
   const insets = useSafeAreaInsets();
@@ -45,6 +46,7 @@ export default function Navigate() {
   const { settings, markVisited } = useSettings();
   const state = useNavigation();
   const points = useNavPoints();
+  const workPts = useWorkPoints();
   const starts = useStartPoints();
   const version = useNavVersion();
   const mapRef = useRef<SeziMapHandle>(null);
@@ -102,7 +104,7 @@ export default function Navigate() {
 
   const canHear = profile.hearing !== 'deaf' && profile.senses.audio;
   const sim = cfg.sim && state.start.kind !== 'here';
-  const popupPoint = state.popup ? points.find((p) => p.id === state.popup) : undefined;
+  const popupPoint = state.popup ? (points.find((p) => p.id === state.popup) ?? workPts.find((p) => p.id === state.popup)) : undefined;
   const walked = plan && state.phase === 'active' && state.distance > 1 ? sliceLine(plan.geometry.line, 0, state.distance) : undefined;
   const userAt = state.phase === 'active' ? state.position : state.start.kind === 'here' ? state.here : null;
   const startAt = state.start.kind === 'pick' ? state.start.location : plan?.geometry.line[0];
@@ -142,17 +144,17 @@ export default function Navigate() {
         </RoundButton>
         {state.phase === 'active' ? (
           <RoundButton label={tr('nav.recenter')} onPress={() => setFollow((v) => !v)} t={t} active={follow}>
-            <PinIcon color={follow ? t.onPrimary : t.text} size={20} />
+            <PinIcon color={follow ? t.primary.ink : t.text} size={20} />
           </RoundButton>
         ) : null}
       </View>
       {picking ? (
-        <View style={[s.pickBanner, { top: insets.top + 72 }]} accessibilityLiveRegion="polite">
-          <Text style={[type.button, { color: t.onPrimary }]}>{tr('nav.pickHint')}</Text>
+        <View style={[s.pickBanner, sweetShadow(t), { top: insets.top + 72 }]} accessibilityLiveRegion="polite">
+          <Text style={[type.button, { color: t.primary.ink }]}>{tr('nav.pickHint')}</Text>
         </View>
       ) : null}
 
-      <View style={s.panel}>
+      <View style={[s.panel, outline(t)]}>
         <View style={[s.handle, { backgroundColor: t.border }]} />
         <ScrollView contentContainerStyle={[s.panelBody, { paddingBottom: insets.bottom + space.xl }, popupPoint && { paddingBottom: 380 }]}>
           {state.phase === 'plan' ? (
@@ -178,7 +180,7 @@ export default function Navigate() {
           onClose={navigation.closePopup}
         />
       ) : null}
-      <CueFlash count={state.cueCount} color={t.accent} enabled={profile.hearing !== 'full' || !profile.senses.audio || state.noisy} />
+      <CueFlash count={state.cueCount} color={t.accentText} enabled={profile.hearing !== 'full' || !profile.senses.audio || state.noisy} />
     </View>
   );
 }
@@ -202,7 +204,7 @@ function PlanPanel({
   picking: boolean;
   setPicking: (v: boolean) => void;
   sim: boolean;
-  t: ThemeColors;
+  t: SweetTheme;
 }) {
   const s = makeStyles(t);
   const { t: tr, lang } = useT();
@@ -274,7 +276,7 @@ function PlanPanel({
   );
 }
 
-function RouteSummary({ plan, mps, t }: { plan: PlannedRoute; mps: number; t: ThemeColors }) {
+function RouteSummary({ plan, mps, t }: { plan: PlannedRoute; mps: number; t: SweetTheme }) {
   const { t: tr, lang } = useT();
   const len = plan.route.lengthM;
   const parts = [
@@ -285,7 +287,7 @@ function RouteSummary({ plan, mps, t }: { plan: PlannedRoute; mps: number; t: Th
     <View style={{ gap: 2 }}>
       <Text style={[type.lead, { color: t.text }]}>{parts.join(' · ')}</Text>
       {plan.via.pointIds.length ? (
-        <Text style={[type.meta, { color: t.primary, fontFamily: type.button.fontFamily }]}>
+        <Text style={[type.meta, { color: t.primaryText, fontFamily: type.button.fontFamily }]}>
           {plan.kind === 'stroll'
             ? tr('nav.strollPoints', { n: plan.via.pointIds.length })
             : plan.via.extraM > 0
@@ -298,13 +300,13 @@ function RouteSummary({ plan, mps, t }: { plan: PlannedRoute; mps: number; t: Th
 }
 
 /** Rotanın uğradığı noktalar, haritadaki numaralarıyla. */
-function ViaList({ plan, points, order, fired, t }: { plan: PlannedRoute; points: NavPoint[]; order: Map<string, number>; fired: string[]; t: ThemeColors }) {
+function ViaList({ plan, points, order, fired, t }: { plan: PlannedRoute; points: NavPoint[]; order: Map<string, number>; fired: string[]; t: SweetTheme }) {
   const s = makeStyles(t);
   const { t: tr, lang } = useT();
   return (
     <View style={{ gap: space.sm }}>
       <Text style={s.label}>{tr('nav.onTheWay')}</Text>
-      <View style={[s.viaBox, { backgroundColor: t.soft }]}>
+      <View style={[s.viaBox, { backgroundColor: t.soft }, outline(t)]}>
         {plan.via.pointIds.map((id) => {
           const p = points.find((x) => x.id === id);
           if (!p) return null;
@@ -312,8 +314,8 @@ function ViaList({ plan, points, order, fired, t }: { plan: PlannedRoute; points
           const name = p.title[lang] ?? p.title.tr;
           return (
             <View key={id} style={s.viaRow} accessible accessibilityLabel={`${order.get(id)}. ${name}${done ? `. ${tr('nav.seen')}` : ''}`}>
-              <View style={[s.num, { backgroundColor: done ? t.textMuted : t.accent }]}>
-                <Text style={[type.meta, { color: t.onAccent, fontFamily: type.button.fontFamily }]}>{order.get(id)}</Text>
+              <View style={[s.num, { backgroundColor: done ? t.surface : t.accent.fill }, outline(t)]}>
+                <Text style={[type.meta, { color: done ? t.textMuted : t.accent.ink, fontFamily: type.button.fontFamily }]}>{order.get(id)}</Text>
               </View>
               <Text style={[type.body, { color: done ? t.textMuted : t.text, flex: 1 }]} numberOfLines={2}>
                 {name}
@@ -346,7 +348,7 @@ function ActivePanel({
   canHear: boolean;
   hearing: string;
   mps: number;
-  t: ThemeColors;
+  t: SweetTheme;
 }) {
   const s = makeStyles(t);
   const { t: tr, lang } = useT();
@@ -366,23 +368,26 @@ function ActivePanel({
       {sim ? <Badge label={tr('nav.simBadge')} tone="primary" /> : null}
       <NavAlertBanner alert={state.alert} onDismiss={navigation.dismissAlert} />
 
-      {/* Şimdiki talimat: yön oku ve metin; ekran okuyucu her yeni talimatı duyurur. */}
-      <View style={[s.instruction, { backgroundColor: t.primary }]} accessible accessibilityLiveRegion="polite">
-        <TurnIcon turn={current?.turn ?? 'straight'} arrived={false} color={t.onPrimary} size={44} />
-        <View style={{ flex: 1, gap: 2 }}>
-          {plan ? (
-            <>
-              <Text style={[type.heading, { color: t.onPrimary, fontSize: 22, lineHeight: 28 }]}>{current?.text ?? tr('nav.ready')}</Text>
-              {toNext !== null ? <Text style={[type.meta, { color: t.onPrimary }]}>{tr('nav.nextIn', { d: formatDistance(toNext, lang) })}</Text> : null}
-            </>
-          ) : (
-            <>
-              <Text style={[type.heading, { color: t.onPrimary, fontSize: 22, lineHeight: 28 }]}>{state.fix ? tr('nav.freeWalk') : tr('nav.waiting')}</Text>
-              <Text style={[type.meta, { color: t.onPrimary }]}>{tr('nav.freeWalkHint')}</Text>
-            </>
-          )}
+      {/* Şimdiki talimat: yön oku ve metin; ekran okuyucu her yeni talimatı duyurur.
+          Yalnız yürüyüş başlarken bir kez girer; adım değişimini CueFlash gösterir. */}
+      <FadeInItem index={0}>
+        <View style={[s.instruction, { backgroundColor: t.primary.fill }, outline(t)]} accessible accessibilityLiveRegion="polite">
+          <TurnIcon turn={current?.turn ?? 'straight'} arrived={false} color={t.primary.ink} size={44} />
+          <View style={{ flex: 1, gap: 2 }}>
+            {plan ? (
+              <>
+                <Text style={[type.display, { color: t.primary.ink, fontSize: 22, lineHeight: 28 }]}>{current?.text ?? tr('nav.ready')}</Text>
+                {toNext !== null ? <Text style={[type.meta, { color: t.primary.ink }]}>{tr('nav.nextIn', { d: formatDistance(toNext, lang) })}</Text> : null}
+              </>
+            ) : (
+              <>
+                <Text style={[type.display, { color: t.primary.ink, fontSize: 22, lineHeight: 28 }]}>{state.fix ? tr('nav.freeWalk') : tr('nav.waiting')}</Text>
+                <Text style={[type.meta, { color: t.primary.ink }]}>{tr('nav.freeWalkHint')}</Text>
+              </>
+            )}
+          </View>
         </View>
-      </View>
+      </FadeInItem>
       {nextStep && state.stepIndex >= 0 ? (
         <Text style={[type.body, { color: t.textMuted }]} numberOfLines={2}>
           {tr('nav.then')}: {nextStep.text}
@@ -391,17 +396,17 @@ function ActivePanel({
 
       {plan ? (
         <View style={{ gap: space.xs }}>
-          <View style={[s.track, { backgroundColor: t.border }]} accessibilityRole="progressbar" accessibilityLabel={tr('nav.progress', { done: Math.round(state.distance), total: Math.round(total) })} accessibilityValue={{ min: 0, max: 100, now: progress }}>
-            <View style={{ width: `${progress}%`, height: '100%', backgroundColor: t.primary }} />
+          <View style={[s.track, { backgroundColor: t.soft }, outline(t)]} accessibilityRole="progressbar" accessibilityLabel={tr('nav.progress', { done: Math.round(state.distance), total: Math.round(total) })} accessibilityValue={{ min: 0, max: 100, now: progress }}>
+            <View style={{ width: `${progress}%`, height: '100%', backgroundColor: t.primary.fill, borderRadius: radius.pill }} />
           </View>
           <Text style={[type.meta, { color: t.textMuted }]}>{tr('nav.remaining', { d: formatDistance(left, lang), min: minutesFor(left, mps) })}</Text>
         </View>
       ) : null}
 
       {nextViaPoint ? (
-        <View style={[s.nextVia, { backgroundColor: t.soft }]} accessible accessibilityLabel={tr('nav.nextVia', { n: order.get(nextViaPoint.id) ?? '', name: nextViaPoint.title[lang] ?? nextViaPoint.title.tr })}>
-          <View style={[s.num, { backgroundColor: t.accent }]}>
-            <Text style={[type.meta, { color: t.onAccent, fontFamily: type.button.fontFamily }]}>{order.get(nextViaPoint.id)}</Text>
+        <View style={[s.nextVia, { backgroundColor: t.soft }, outline(t)]} accessible accessibilityLabel={tr('nav.nextVia', { n: order.get(nextViaPoint.id) ?? '', name: nextViaPoint.title[lang] ?? nextViaPoint.title.tr })}>
+          <View style={[s.num, { backgroundColor: t.accent.fill }, outline(t)]}>
+            <Text style={[type.meta, { color: t.accent.ink, fontFamily: type.button.fontFamily }]}>{order.get(nextViaPoint.id)}</Text>
           </View>
           <Text style={[type.body, { color: t.text, flex: 1 }]} numberOfLines={1}>
             {nextViaPoint.title[lang] ?? nextViaPoint.title.tr}
@@ -439,19 +444,21 @@ function ActivePanel({
 
 // ---------- Varış ----------
 
-function ArrivalPanel({ state, points, canHear, t }: { state: NavState; points: NavPoint[]; canHear: boolean; t: ThemeColors }) {
+function ArrivalPanel({ state, points, canHear, t }: { state: NavState; points: NavPoint[]; canHear: boolean; t: SweetTheme }) {
   const s = makeStyles(t);
   const { t: tr, lang } = useT();
   const slug = state.arrived;
   const { data: work } = useWork(slug ?? '');
-  const arrival = state.plan?.arrival;
+  const workPts = useWorkPoints();
+  // Admin'de varış bilgisi yoksa eserin yayındaki metninden kısa anlatım (oturumdaki varışla aynı nokta).
+  const arrival = state.plan?.arrival ?? workPts.find((p) => p.workSlug === slug);
   const cover = work ? coverOf(work) : undefined;
   const nextSlug = state.tour[0];
   const next = nextSlug ? DESTINATIONS.find((n) => n.workSlug === nextSlug) : undefined;
 
   if (!slug) {
-    // Hedefsiz gezinti bitti: görülen noktalar.
-    const seen = state.fired.map((id) => points.find((p) => p.id === id)).filter((p): p is NavPoint => !!p);
+    // Hedefsiz gezinti bitti: görülen noktalar ve yanından geçilen eserler.
+    const seen = state.fired.map((id) => points.find((p) => p.id === id) ?? workPts.find((p) => p.id === id)).filter((p): p is NavPoint => !!p);
     return (
       <>
         <Text style={[type.title, { color: t.text }]} accessibilityRole="header">
@@ -472,18 +479,29 @@ function ArrivalPanel({ state, points, canHear, t }: { state: NavState; points: 
   const body = arrival?.body ? (arrival.body[lang] ?? arrival.body.tr) : '';
   return (
     <>
-      <View style={s.arrivedHead} accessible accessibilityLiveRegion="assertive">
-        <TurnIcon turn="straight" arrived color={t.accent} size={28} />
-        <Text style={[type.eyebrow, { color: t.accent }]}>{tr('nav.arrived')}</Text>
-      </View>
-      {cover ? <Image source={{ uri: photoUrl(cover) }} style={s.cover} contentFit="cover" accessibilityIgnoresInvertColors accessible={false} /> : null}
-      <View style={{ gap: space.xs }}>
+      {/* Varış nadir ve önemli an: başlık, fotoğraf ve metin sırayla gelir (düğmeler hemen kullanılabilir). */}
+      <FadeInItem index={0}>
+        <View style={s.arrivedHead} accessible accessibilityLiveRegion="assertive">
+          <TurnIcon turn="straight" arrived color={t.accentText} size={28} />
+          <Text style={[type.eyebrow, { color: t.accentText }]}>{tr('nav.arrived')}</Text>
+        </View>
+      </FadeInItem>
+      {cover ? (
+        <FadeInItem index={1}>
+          <Image source={{ uri: photoUrl(cover) }} style={s.cover} contentFit="cover" accessibilityIgnoresInvertColors accessible={false} />
+        </FadeInItem>
+      ) : null}
+      <FadeInItem index={2} style={{ gap: space.xs }}>
         <Text style={[type.title, { color: t.text }]} accessibilityRole="header">
           {name}
         </Text>
         {work ? <Text style={[type.meta, { color: t.textMuted }]}>{[loc(work.type_name, lang), work.district].filter(Boolean).join(' · ')}</Text> : null}
-      </View>
-      {body ? <Text style={[type.body, { color: t.text }]}>{body}</Text> : null}
+      </FadeInItem>
+      {body ? (
+        <FadeInItem index={3}>
+          <Text style={[type.body, { color: t.text }]}>{body}</Text>
+        </FadeInItem>
+      ) : null}
       {arrival && canHear ? (
         <Button
           label={state.playing === arrival.id ? tr('nav.stopAudio') : tr('nav.listen')}
@@ -503,20 +521,20 @@ function ArrivalPanel({ state, points, canHear, t }: { state: NavState; points: 
 
 // ---------- Yardımcılar ----------
 
-function RoundButton({ label, onPress, children, t, active }: { label: string; onPress: () => void; children: React.ReactNode; t: ThemeColors; active?: boolean }) {
+function RoundButton({ label, onPress, children, t, active }: { label: string; onPress: () => void; children: React.ReactNode; t: SweetTheme; active?: boolean }) {
   return (
-    <Pressable
+    <SoftPressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={active === undefined ? undefined : { selected: active }}
-      style={({ pressed }) => [
-        { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: active ? t.primary : t.surface },
-        { shadowColor: t.shadow, shadowOpacity: 0.15, shadowRadius: 8, shadowOffset: { width: 0, height: 2 }, elevation: 3 },
-        pressed && { opacity: 0.85 },
+      style={[
+        { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center', backgroundColor: active ? t.primary.fill : t.surface },
+        sweetShadow(t),
+        active && t.outlined && { borderWidth: 3 },
       ]}>
       {children}
-    </Pressable>
+    </SoftPressable>
   );
 }
 
@@ -544,24 +562,24 @@ function buildMapPoints(points: NavPoint[], starts: ReturnType<typeof useStartPo
   return out;
 }
 
-const makeStyles = (t: ThemeColors) =>
+const makeStyles = (t: SweetTheme) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
     mapBar: { position: 'absolute', left: space.lg, right: space.lg, flexDirection: 'row', justifyContent: 'space-between' },
-    pickBanner: { position: 'absolute', alignSelf: 'center', backgroundColor: t.primary, paddingHorizontal: space.lg, paddingVertical: space.sm, borderRadius: radius.pill },
-    panel: { flex: 1, marginTop: -radius.xl, backgroundColor: t.background, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
+    pickBanner: { position: 'absolute', alignSelf: 'center', backgroundColor: t.primary.fill, paddingHorizontal: space.lg, paddingVertical: space.sm, borderRadius: radius.pill, borderCurve: 'continuous' },
+    panel: { flex: 1, marginTop: -radius.xl, backgroundColor: t.background, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, borderCurve: 'continuous' },
     handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginTop: space.sm },
     panelBody: { paddingHorizontal: space.xl, paddingTop: space.lg, gap: space.lg },
     label: { ...type.eyebrow, color: t.textMuted },
     chips: { gap: space.sm, paddingHorizontal: space.xl },
     chipScroll: { marginHorizontal: -space.xl },
-    viaBox: { borderRadius: radius.lg, padding: space.md, gap: space.sm },
+    viaBox: { borderRadius: radius.lg, borderCurve: 'continuous', padding: space.md, gap: space.sm },
     viaRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 32 },
     num: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-    instruction: { flexDirection: 'row', alignItems: 'center', gap: space.lg, padding: space.lg, borderRadius: radius.xl },
-    track: { height: 6, borderRadius: 3, overflow: 'hidden' },
-    nextVia: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg, minHeight: 48 },
+    instruction: { flexDirection: 'row', alignItems: 'center', gap: space.lg, padding: space.lg, borderRadius: radius.xl, borderCurve: 'continuous' },
+    track: { height: 8, borderRadius: radius.pill, borderCurve: 'continuous', overflow: 'hidden' },
+    nextVia: { flexDirection: 'row', alignItems: 'center', gap: space.md, padding: space.md, borderRadius: radius.lg, borderCurve: 'continuous', minHeight: 48 },
     controls: { flexDirection: 'row', gap: space.sm },
     arrivedHead: { flexDirection: 'row', alignItems: 'center', gap: space.sm },
-    cover: { width: '100%', aspectRatio: 16 / 9, borderRadius: radius.lg, backgroundColor: t.soft },
+    cover: { width: '100%', aspectRatio: 16 / 9, borderRadius: radius.lg, borderCurve: 'continuous', backgroundColor: t.soft },
   });

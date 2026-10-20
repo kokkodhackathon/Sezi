@@ -2,10 +2,10 @@
  * Lab: native modül risk testi (harita, mekânsal ses, pusula, haptik, TTS).
  * Demo ekranı değildir; özellikler gerçek ekranlara taşındıkça sadeleşecek.
  */
-import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { Button } from '@/components/ui';
 import { useT } from '@/lib/i18n';
-import { type } from '@/design/type';
+import { radius, space, type } from '@/design/type';
 import { EndPin, SeziMap } from '@/components/map';
 import { bearingDeg, stereoPan, type LngLat } from '@sezi/shared';
 import * as Haptics from 'expo-haptics';
@@ -18,7 +18,7 @@ import { AudioContext, type OscillatorNode, type StereoPannerNode } from 'react-
 const ULU_CAMI: LngLat = [29.0618995, 40.1838059];
 
 export default function Lab() {
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const { t: tr } = useT();
   const [heading, setHeading] = useState<number | null>(null);
   const [position, setPosition] = useState<LngLat | null>(null);
@@ -122,8 +122,8 @@ export default function Lab() {
 }
 
 const styles = StyleSheet.create({
-  body: { padding: 24, gap: 8, paddingBottom: 48 },
-  map: { height: 260, borderRadius: 12, overflow: 'hidden' },
-  h: { ...type.heading, marginTop: 24 },
-  row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  body: { padding: space.xl, gap: space.sm, paddingBottom: 48 },
+  map: { height: 260, borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden' },
+  h: { ...type.heading, marginTop: space.xl },
+  row: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
 });

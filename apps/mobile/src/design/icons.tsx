@@ -34,6 +34,23 @@ export function ChevronIcon({ color, size = 20 }: IconProps) {
   );
 }
 
+export function CheckIcon({ color, size = 20 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Path d="M5 12.5 L10 17 L19 7" stroke={color} strokeWidth={2.4} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+/** Yuvarlatılmış beş köşeli yıldız (UNESCO rozeti). */
+export function StarIcon({ color, size = 16 }: IconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Path d="M12 3.5 L14.6 8.9 L20.5 9.7 L16.2 13.8 L17.3 19.7 L12 16.9 L6.7 19.7 L7.8 13.8 L3.5 9.7 L9.4 8.9 Z" fill={color} stroke={color} strokeWidth={1.2} strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
 export function ExternalIcon({ color, size = 18 }: IconProps) {
   return (
     <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
@@ -112,6 +129,51 @@ export function SoundIcon({ color, size = 22 }: IconProps) {
     <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
       <Path d="M4 9.5 H8 L13 5 V19 L8 14.5 H4 Z" fill={color} />
       <Path d="M16.5 8.5 A5 5 0 0 1 16.5 15.5 M19 6 A8.5 8.5 0 0 1 19 18" stroke={color} strokeWidth={1.8} fill="none" strokeLinecap="round" />
+    </Svg>
+  );
+}
+
+/** Sekme çubuğu simgeleri: seçiliyken dolu, değilken çizgi. */
+type TabIconProps = IconProps & { filled?: boolean };
+
+export function CompassIcon({ color, size = 24, filled }: TabIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Circle cx="12" cy="12" r="9" stroke={color} strokeWidth={2} fill="none" />
+      <Path d="M15.5 8.5 L13.4 13.4 L8.5 15.5 L10.6 10.6 Z" fill={filled ? color : 'none'} stroke={color} strokeWidth={1.8} strokeLinejoin="round" />
+    </Svg>
+  );
+}
+
+export function RouteIcon({ color, size = 24, filled }: TabIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Path d="M6 17.5 V9 A3.5 3.5 0 0 1 13 9 V15 A3.5 3.5 0 0 0 20 15 V6.5" stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" />
+      <Circle cx="6" cy="19" r="2.3" fill={filled ? color : 'none'} stroke={color} strokeWidth={1.8} />
+      <Circle cx="20" cy="5" r="2.3" fill={filled ? color : 'none'} stroke={color} strokeWidth={1.8} />
+    </Svg>
+  );
+}
+
+export function ChatIcon({ color, size = 24, filled }: TabIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Path
+        d="M5 4.5 H19 A2 2 0 0 1 21 6.5 V15 A2 2 0 0 1 19 17 H11 L6.5 20.5 V17 H5 A2 2 0 0 1 3 15 V6.5 A2 2 0 0 1 5 4.5 Z"
+        fill={filled ? color : 'none'}
+        stroke={color}
+        strokeWidth={2}
+        strokeLinejoin="round"
+      />
+    </Svg>
+  );
+}
+
+export function PersonIcon({ color, size = 24, filled }: TabIconProps) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      <Circle cx="12" cy="8" r="3.8" fill={filled ? color : 'none'} stroke={color} strokeWidth={2} />
+      <Path d="M4.5 20.5 A7.5 7.5 0 0 1 19.5 20.5 Z" fill={filled ? color : 'none'} stroke={color} strokeWidth={2} strokeLinejoin="round" />
     </Svg>
   );
 }

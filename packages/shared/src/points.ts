@@ -76,3 +76,72 @@ export const startPointsOf = (points: readonly NavPoint[]) =>
 /** Esere bağlı yayındaki varış bilgisi. */
 export const arrivalFor = (points: readonly NavPoint[], workSlug: string) =>
   points.find((p) => p.roles.includes("arrival") && p.workSlug === workSlug);
+
+// ---------- Eser metninden anlatım ----------
+
+/** Esere bağlı sanal anlatım noktasının kimlik öneki (`work:<slug>`). */
+export const WORK_POINT_PREFIX = "work:";
+/** Eserin yanından geçerken kartın açıldığı uzaklık (m). */
+export const WORK_POINT_RADIUS_M = 20;
+/** Kısa anlatımın üst sınırı (karakter): yürürken bir bakışta okunur, yaklaşık yarım dakikada dinlenir. */
+export const EXCERPT_MAX = 420;
+
+export const isWorkPoint = (p: NavPoint) => p.id.startsWith(WORK_POINT_PREFIX);
+
+/** Cümle sonu: nokta/ünlem/soru, ardından boşluk ve büyük harf. "II. Murad", "15. yüzyıl" gibi sıra sayıları sayılmaz. */
+const SENTENCE_END = /(?<![\dIVXLC])[.!?]["”’)]?(?=\s+["“‘(]?[A-ZÇĞİÖŞÜÂÎÛ])/gu;
+
+/**
+ * Eser metninden kısa anlatım: baştan paragraflar (en az ~160 karakter olana dek), uzunsa son tam cümlede kesilir.
+ * Metin değiştirilmez, yalnız kısaltılır; tam metin eser sayfasındadır.
+ */
+export function excerpt(text: string, max = EXCERPT_MAX): string {
+  const paras = text.trim().split(/\n\s*\n/).map((p) => p.replace(/\s+/g, " ").trim()).filter(Boolean);
+  let out = "";
+  for (const p of paras) {
+    out = out ? `${out} ${p}` : p;
+    if (out.length >= 160) break;
+  }
+  if (out.length <= max) return out;
+  const head = out.slice(0, max);
+  let end = -1;
+  for (const m of head.matchAll(SENTENCE_END)) end = m.index + m[0].length;
+  if (end >= max * 0.3) return head.slice(0, end);
+  return `${head.slice(0, head.lastIndexOf(" ")).replace(/[,;:]$/, "")}…`;
+}
+
+/** Rota tarafının ihtiyaç duyduğu eser bilgisi: yayındaki metni ve kesin konumu olan eser. */
+export interface WorkText {
+  slug: string;
+  citySlug: string;
+  name: LocalizedText;
+  location: LngLat;
+  /** Yayınlanmış özet ya da tarihçe. */
+  text: LocalizedText;
+}
+
+/** Eserin sanal anlatım noktası: yanından geçilince ve (admin'de varış bilgisi yoksa) varışta açılır. */
+export function workPoint(w: WorkText): NavPoint {
+  const en = w.text.en ? excerpt(w.text.en) : undefined;
+  return {
+    id: WORK_POINT_PREFIX + w.slug,
+    citySlug: w.citySlug,
+    roles: ["story"],
+    title: w.name,
+    body: { tr: excerpt(w.text.tr), ...(en ? { en } : {}) },
+    location: w.location,
+    radiusM: WORK_POINT_RADIUS_M,
+    workSlug: w.slug,
+    sortOrder: 0,
+    audio: {},
+  };
+}
+
+/**
+ * Yanından geçerken açılabilecek eser noktaları. Admin'de esere bağlı anlatım ya da varış noktası varsa
+ * o kullanılır (aynı eser iki kez açılmaz); hedef ve turdaki eserler varışta açılır, yolda değil.
+ */
+export function passingWorkPoints(workPoints: readonly NavPoint[], navPoints: readonly NavPoint[], exclude: ReadonlySet<string>): NavPoint[] {
+  const covered = new Set(navPoints.flatMap((p) => (p.workSlug && opensOnApproach(p) ? [p.workSlug] : [])));
+  return workPoints.filter((p) => p.workSlug && !covered.has(p.workSlug) && !exclude.has(p.workSlug));
+}

@@ -1,9 +1,9 @@
 import Mapbox, { Camera, CircleLayer, LineLayer, MapView, ShapeSource, StyleImport, SymbolLayer } from '@rnmapbox/maps';
-import { palette, type LngLat } from '@sezi/shared';
+import type { LngLat } from '@sezi/shared';
 import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ComponentRef, type ReactNode } from 'react';
-import { InteractionManager, StyleSheet, View, type ViewStyle } from 'react-native';
+import { InteractionManager, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { useIsDark, useSeziTheme } from '@/hooks/use-sezi-theme';
+import { useIsDark, useSweetTheme } from '@/hooks/use-sweet-theme';
 import { boundsOf } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 
@@ -16,12 +16,18 @@ void Mapbox.setAccessToken(process.env.EXPO_PUBLIC_MAPBOX_TOKEN ?? null);
 /** Harita yazı tipi (Mapbox glif servisi). */
 const FONT = ['DIN Pro Medium', 'Arial Unicode MS Regular'];
 
+// Mapbox Standard açık tema harita katmanı için doğal arazi sabitleri (yol, park, su); arayüz yüzey token'ı değildir.
+const MAP_ROADS = '#E8DFD3';
+const MAP_GREEN = '#DDE8D3';
+const MAP_WATER = '#BFDCDD';
+
 /**
- * Mapbox Standard: düz (3B kapalı), dükkân etiketleri kapalı; zemin ve yeşil alan Çini paletine yakın.
+ * Mapbox Standard: düz (3B kapalı), dükkân etiketleri kapalı; kara zemini sayfa zeminiyle (`t.background`) uyumlu.
  * Koyu temada gece ışığı, az gören profilinde tek renkli (monochrome) sade harita.
  */
 function useStandardConfig() {
   const dark = useIsDark();
+  const t = useSweetTheme();
   const { profile } = useProfile();
   const low = profile?.vision === 'low';
   return {
@@ -33,7 +39,7 @@ function useStandardConfig() {
     showPlaceLabels: true,
     showRoadLabels: true,
     showPedestrianRoads: true,
-    ...(dark || low ? {} : { colorLand: palette.ivory, colorRoads: '#E8DFD3', colorGreenspaces: '#DDE8D3', colorWater: '#BFDCDD' }),
+    ...(dark || low ? {} : { colorLand: t.background, colorRoads: MAP_ROADS, colorGreenspaces: MAP_GREEN, colorWater: MAP_WATER }),
   } as const;
 }
 
@@ -56,7 +62,7 @@ interface SeziMapProps {
   /** false: harita yalnızca gösterir (kaydırma, yakınlaştırma yok). */
   interactive?: boolean;
   accessibilityLabel: string;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   children?: ReactNode;
 }
 
@@ -83,7 +89,7 @@ export const SeziMap = forwardRef<SeziMapHandle, SeziMapProps>(function SeziMap(
   { initial, initialPadding, initialZoom = 16.5, onPress, interactive = true, accessibilityLabel, style, children },
   ref,
 ) {
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const camera = useRef<ComponentRef<typeof Camera>>(null);
   const ready = useDeferred();
   const config = useStandardConfig();
@@ -135,13 +141,13 @@ export const SeziMap = forwardRef<SeziMapHandle, SeziMapProps>(function SeziMap(
 
 /** Rota çizgisi: yürünen kısım soluk, kalan kısım vurgulu. Etiketlerin altında, yolların üstünde. */
 export function RouteLine({ id = 'route', line, walked }: { id?: string; line: LngLat[]; walked?: LngLat[] }) {
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   if (line.length < 2) return null;
   return (
     <>
       <ShapeSource id={`${id}-src`} shape={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: line } }}>
         <LineLayer id={`${id}-casing`} slot="middle" style={{ lineCap: 'round', lineJoin: 'round', lineColor: t.surface, lineWidth: 11 }} />
-        <LineLayer id={`${id}-line`} slot="middle" style={{ lineCap: 'round', lineJoin: 'round', lineColor: t.primary, lineWidth: 6 }} />
+        <LineLayer id={`${id}-line`} slot="middle" style={{ lineCap: 'round', lineJoin: 'round', lineColor: t.primaryText, lineWidth: 6 }} />
       </ShapeSource>
       {walked && walked.length >= 2 ? (
         <ShapeSource id={`${id}-walked-src`} shape={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: walked } }}>
@@ -183,8 +189,8 @@ export interface MapPoint {
 
 /** Noktalar: sıra numaralı anlatım noktaları, yer işaretleri, başlangıçlar, eserler. Basılınca `onPress(id)`. */
 export function PointsLayer({ id = 'points', points, onPress }: { id?: string; points: MapPoint[]; onPress?: (pointId: string) => void }) {
-  const t = useSeziTheme();
-  const color: Record<MapPointKind, string> = { story: t.accent, arrival: t.accent, landmark: t.text, start: t.primary, work: t.primary };
+  const t = useSweetTheme();
+  const color: Record<MapPointKind, string> = { story: t.accentText, arrival: t.accentText, landmark: t.text, start: t.primaryText, work: t.primaryText };
   const shape: GeoJSON.FeatureCollection = {
     type: 'FeatureCollection',
     features: points.map((p) => ({
@@ -213,7 +219,7 @@ export function PointsLayer({ id = 'points', points, onPress }: { id?: string; p
           : undefined
       }>
       <CircleLayer id={`${id}-circle`} slot="top" style={{ circleRadius: ['get', 'r'], circleColor: ['get', 'color'], circleStrokeWidth: 2.5, circleStrokeColor: t.surface }} />
-      <SymbolLayer id={`${id}-order`} slot="top" style={{ textField: ['get', 'order'], textFont: FONT, textSize: 13, textColor: t.onAccent, textAllowOverlap: true, textIgnorePlacement: true }} />
+      <SymbolLayer id={`${id}-order`} slot="top" style={{ textField: ['get', 'order'], textFont: FONT, textSize: 13, textColor: t.surface, textAllowOverlap: true, textIgnorePlacement: true }} />
       <SymbolLayer
         id={`${id}-label`}
         slot="top"
@@ -226,7 +232,7 @@ export function PointsLayer({ id = 'points', points, onPress }: { id?: string; p
 
 /** Eser haritası: kümelenmiş eserler; seçili eser vurgulu. Basılınca `onPress(slug)`. */
 export function WorkClusters({ works, selected, onPress }: { works: { slug: string; location: LngLat; color: string }[]; selected: string | null; onPress: (slug: string) => void }) {
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const shape: GeoJSON.FeatureCollection = {
     type: 'FeatureCollection',
     features: works.map((w) => ({ type: 'Feature', properties: { slug: w.slug, color: w.color }, geometry: { type: 'Point', coordinates: w.location } })),
@@ -243,42 +249,42 @@ export function WorkClusters({ works, selected, onPress }: { works: { slug: stri
         const slug = e.features[0]?.properties?.slug;
         if (typeof slug === 'string') onPress(slug);
       }}>
-      <CircleLayer id="works-clusters" slot="top" filter={['has', 'point_count']} style={{ circleRadius: ['step', ['get', 'point_count'], 18, 10, 22, 40, 28], circleColor: t.primary, circleStrokeWidth: 3, circleStrokeColor: t.surface }} />
-      <SymbolLayer id="works-cluster-label" slot="top" filter={['has', 'point_count']} style={{ textField: ['get', 'point_count_abbreviated'], textSize: 14, textFont: FONT, textColor: t.onPrimary, textAllowOverlap: true }} />
+      <CircleLayer id="works-clusters" slot="top" filter={['has', 'point_count']} style={{ circleRadius: ['step', ['get', 'point_count'], 18, 10, 22, 40, 28], circleColor: t.primary.fill, circleStrokeWidth: 3, circleStrokeColor: t.surface }} />
+      <SymbolLayer id="works-cluster-label" slot="top" filter={['has', 'point_count']} style={{ textField: ['get', 'point_count_abbreviated'], textSize: 14, textFont: FONT, textColor: t.primary.ink, textAllowOverlap: true }} />
       <CircleLayer id="works-circle" slot="top" filter={['!', ['has', 'point_count']]} style={{ circleRadius: 9, circleColor: ['get', 'color'], circleStrokeWidth: 3, circleStrokeColor: t.surface }} />
-      <CircleLayer id="works-selected" slot="top" filter={['==', ['get', 'slug'], selected ?? '']} style={{ circleRadius: 15, circleColor: t.accent, circleStrokeWidth: 3, circleStrokeColor: t.surface }} />
+      <CircleLayer id="works-selected" slot="top" filter={['==', ['get', 'slug'], selected ?? '']} style={{ circleRadius: 15, circleColor: t.accentText, circleStrokeWidth: 3, circleStrokeColor: t.surface }} />
     </ShapeSource>
   );
 }
 
 /** Tek eser işareti; konumu kesin değilse çevresinde yaklaşık alan. */
 export function WorkPin({ location, approximate }: { location: LngLat; approximate?: boolean }) {
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   return (
     <ShapeSource id="work-src" shape={{ type: 'Point', coordinates: location }}>
-      {approximate ? <CircleLayer id="work-area" slot="top" style={{ circleRadius: 46, circleColor: t.primary, circleOpacity: 0.14, circleStrokeWidth: 2, circleStrokeColor: t.primary }} /> : <></>}
+      {approximate ? <CircleLayer id="work-area" slot="top" style={{ circleRadius: 46, circleColor: t.primaryText, circleOpacity: 0.14, circleStrokeWidth: 2, circleStrokeColor: t.primaryText }} /> : <></>}
       <CircleLayer id="work-halo" slot="top" style={{ circleRadius: 16, circleColor: t.surface }} />
-      <CircleLayer id="work-circle" slot="top" style={{ circleRadius: 9, circleColor: t.accent, circleStrokeWidth: 3, circleStrokeColor: t.surface }} />
+      <CircleLayer id="work-circle" slot="top" style={{ circleRadius: 9, circleColor: t.accentText, circleStrokeWidth: 3, circleStrokeColor: t.surface }} />
     </ShapeSource>
   );
 }
 
 /** Kullanıcı konumu: halka ve nokta. */
 export function UserDot({ location }: { location: LngLat }) {
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   return (
     <ShapeSource id="me-src" shape={{ type: 'Point', coordinates: location }}>
-      <CircleLayer id="me-halo" slot="top" style={{ circleRadius: 18, circleColor: t.primary, circleOpacity: 0.18 }} />
-      <CircleLayer id="me-dot" slot="top" style={{ circleRadius: 8, circleColor: t.primary, circleStrokeWidth: 3, circleStrokeColor: t.surface }} />
+      <CircleLayer id="me-halo" slot="top" style={{ circleRadius: 18, circleColor: t.primaryText, circleOpacity: 0.18 }} />
+      <CircleLayer id="me-dot" slot="top" style={{ circleRadius: 8, circleColor: t.primaryText, circleStrokeWidth: 3, circleStrokeColor: t.surface }} />
     </ShapeSource>
   );
 }
 
 /** Başlangıç ve varış işaretleri. */
 export function EndPin({ id, location, kind }: { id: string; location: LngLat; kind: 'start' | 'end' }) {
-  const t = useSeziTheme();
-  const fill = kind === 'end' ? t.accent : t.surface;
-  const stroke = kind === 'end' ? t.surface : t.primary;
+  const t = useSweetTheme();
+  const fill = kind === 'end' ? t.accentText : t.surface;
+  const stroke = kind === 'end' ? t.surface : t.primaryText;
   return (
     <ShapeSource id={`${id}-src`} shape={{ type: 'Point', coordinates: location }}>
       <CircleLayer id={`${id}-pin`} slot="top" style={{ circleRadius: kind === 'end' ? 10 : 8, circleColor: fill, circleStrokeWidth: 3.5, circleStrokeColor: stroke }} />

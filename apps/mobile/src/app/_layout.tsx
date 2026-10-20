@@ -6,7 +6,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 
 import { fontAssets, font } from '@/design/type';
-import { useSeziTheme , useIsDark } from '@/hooks/use-sezi-theme';
+import { useIsDark, useSweetTheme } from '@/hooks/use-sweet-theme';
+import { AccountProvider } from '@/lib/account';
 import { useT } from '@/lib/i18n';
 import { ProfileProvider, useProfile } from '@/lib/profile';
 import { SettingsProvider } from '@/lib/settings';
@@ -35,7 +36,9 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ProfileProvider>
         <SettingsProvider>
-          <AppStack />
+          <AccountProvider>
+            <AppStack />
+          </AccountProvider>
         </SettingsProvider>
       </ProfileProvider>
     </QueryClientProvider>
@@ -47,7 +50,7 @@ function AppStack() {
   usePointsSync();
   const reducedMotion = useReducedMotion();
   const dark = useIsDark();
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const { profile } = useProfile();
   const { t: tr } = useT();
   const navTheme = dark ? DarkTheme : DefaultTheme;
@@ -56,7 +59,7 @@ function AppStack() {
     <ThemeProvider
       value={{
         ...navTheme,
-        colors: { ...navTheme.colors, background: t.background, card: t.background, text: t.text, primary: t.primary, border: t.border },
+        colors: { ...navTheme.colors, background: t.background, card: t.background, text: t.text, primary: t.primaryText, border: t.border },
       }}>
       <StatusBar style={dark ? 'light' : 'dark'} />
       <Stack
@@ -64,7 +67,7 @@ function AppStack() {
           animation: reducedMotion ? 'none' : 'fade',
           headerShadowVisible: false,
           headerTintColor: t.text,
-          headerTitleStyle: { fontFamily: font.bodySemi, fontSize: 17 },
+          headerTitleStyle: { fontFamily: font.round, fontSize: 17 },
           contentStyle: { backgroundColor: t.background },
         }}>
         {/* Profil yoksa uygulama onboarding'e yönlenir. */}
@@ -80,7 +83,15 @@ function AppStack() {
           <Stack.Screen name="search" options={{ title: tr('search.title'), animation: reducedMotion ? 'none' : 'fade_from_bottom' }} />
           <Stack.Screen name="report/new" options={{ title: tr('report.title'), presentation: 'modal' }} />
           <Stack.Screen name="reports" options={{ title: tr('reports.title') }} />
-          <Stack.Screen name="sign-in" options={{ title: tr('signin.title'), presentation: 'modal' }} />
+          {/* Hesap isteğe bağlı: açılışta sorulmaz, Profil → Hesap'tan açılır. */}
+          <Stack.Screen name="account/index" options={{ title: tr('account.title') }} />
+          <Stack.Screen name="account/sign-in" options={{ title: tr('account.signIn') }} />
+          <Stack.Screen name="account/sign-up" options={{ title: tr('account.signUp') }} />
+          <Stack.Screen name="account/verify" options={{ title: tr('account.verifyTitle') }} />
+          <Stack.Screen name="account/forgot" options={{ title: tr('account.forgotTitle') }} />
+          <Stack.Screen name="account/password" options={{ title: tr('account.newPasswordTitle') }} />
+          <Stack.Screen name="account/name" options={{ title: tr('account.editName') }} />
+          <Stack.Screen name="account/delete" options={{ title: tr('account.deleteTitle') }} />
           <Stack.Screen name="settings" options={{ title: tr('settings.title') }} />
           <Stack.Screen name="about" options={{ title: tr('about.title') }} />
           <Stack.Screen name="lab" options={{ title: tr('settings.device') }} />

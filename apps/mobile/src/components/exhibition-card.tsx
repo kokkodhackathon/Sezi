@@ -1,9 +1,10 @@
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, View } from 'react-native';
 
-import { Badge, softShadow } from '@/components/ui';
+import { Badge } from '@/components/ui';
 import { ExternalIcon } from '@/design/icons';
+import { outline, SoftPressable } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
-import { useSeziTheme } from '@/hooks/use-sezi-theme';
+import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
 import { loc, type ExhibitionRow } from '@/lib/works';
 
@@ -13,7 +14,7 @@ function formatDate(iso: string, lang: 'tr' | 'en') {
 
 /** Envanter fotoğraflarıyla açılmış bir sergi: ad, mekân, tarih, fotoğraf sayısı ve duyuru bağlantısı. */
 export function ExhibitionCard({ exhibition: e }: { exhibition: ExhibitionRow }) {
-  const t = useSeziTheme();
+  const t = useSweetTheme();
   const { t: tr, lang } = useT();
   const today = new Date().toISOString().slice(0, 10);
   const ongoing = !!e.starts_on && e.starts_on <= today && (!e.ends_on || e.ends_on >= today);
@@ -26,7 +27,7 @@ export function ExhibitionCard({ exhibition: e }: { exhibition: ExhibitionRow })
   const body = (
     <>
       <View style={styles.head}>
-        <Text style={[type.title, { color: t.text, fontSize: 22, lineHeight: 28, flex: 1 }]}>{title}</Text>
+        <Text style={[type.title, { color: t.text, flex: 1 }]}>{title}</Text>
         {ongoing ? <Badge label={tr('exh.ongoing')} tone="primary" /> : null}
       </View>
       <Text style={[type.body, { color: t.text }]}>{loc(e.venue, lang)}</Text>
@@ -34,28 +35,28 @@ export function ExhibitionCard({ exhibition: e }: { exhibition: ExhibitionRow })
       {e.description ? <Text style={[type.meta, { color: t.textMuted }]}>{loc(e.description, lang)}</Text> : null}
       {e.source_url ? (
         <View style={styles.link}>
-          <ExternalIcon color={t.primary} />
-          <Text style={[type.button, { color: t.primary, fontSize: 15 }]}>{tr('exh.source')}</Text>
+          <ExternalIcon color={t.primaryText} />
+          <Text style={[type.button, { color: t.primaryText, fontSize: 15 }]}>{tr('exh.source')}</Text>
         </View>
       ) : null}
     </>
   );
-  const cardStyle = [styles.card, softShadow(t), { backgroundColor: t.surface }];
+  const cardStyle = [styles.card, { backgroundColor: t.surface }, outline(t)];
   if (!e.source_url) return <View style={cardStyle}>{body}</View>;
   return (
-    <Pressable
+    <SoftPressable
       onPress={() => Linking.openURL(e.source_url!)}
       accessibilityRole="link"
       accessibilityLabel={`${title}. ${loc(e.venue, lang)}. ${dates}`}
       accessibilityHint={tr('exh.source')}
-      style={({ pressed }) => [...cardStyle, pressed && { backgroundColor: t.background }]}>
+      style={cardStyle}>
       {body}
-    </Pressable>
+    </SoftPressable>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { gap: space.sm, padding: space.lg, borderRadius: radius.xl },
+  card: { gap: space.sm, padding: space.lg, borderRadius: radius.lg, borderCurve: 'continuous' },
   head: { flexDirection: 'row', alignItems: 'flex-start', gap: space.sm },
   link: { flexDirection: 'row', alignItems: 'center', gap: space.sm, marginTop: space.xs },
 });
