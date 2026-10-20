@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>Sezi</title>
+</head>
+<body style="margin:0;padding:0;background:#F6F4F0">
+{{ if eq .Data.lang "en" }}
+<div lang="en">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F4F0;border-collapse:collapse">
+    <tr><td align="center" style="padding:32px 16px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;border-collapse:collapse">
+        <tr><td style="padding:0 8px 16px 8px">
+          <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+            <td style="width:32px;height:32px;background:#A8E0D6;border-radius:10px" aria-hidden="true"></td>
+            <td style="padding-left:10px;font-family:'Nunito','Avenir Next','Segoe UI',Arial,sans-serif;font-size:22px;font-weight:800;color:#0F4A44">Sezi</td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="background:#FFFFFF;border-radius:22px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="padding:32px 32px 8px 32px">
+              <h1 style="margin:0;font-family:'Nunito','Avenir Next','Segoe UI',Arial,sans-serif;font-size:24px;line-height:30px;font-weight:800;color:#16151A">Confirm your password change</h1>
+            </td></tr>
+            <tr><td style="padding:8px 32px 16px 32px;font-family:'Atkinson Hyperlegible Next','Atkinson Hyperlegible','Segoe UI',Arial,sans-serif;font-size:17px;line-height:26px;color:#16151A">Enter this code in the app to change your Sezi password.</td></tr>
+          <tr><td style="padding:8px 32px 8px 32px">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate">
+              <tr><td align="center" style="background:#A8E0D6;border-radius:16px;padding:20px 12px">
+                <div style="font-family:'Nunito','Avenir Next','Segoe UI',Arial,sans-serif;font-size:13px;font-weight:700;color:#0F4A44;letter-spacing:0.5px;margin:0 0 6px 0">CONFIRMATION CODE</div>
+                <div style="font-family:'SF Mono',Menlo,Consolas,monospace;font-size:36px;line-height:44px;font-weight:700;letter-spacing:10px;padding-left:10px;color:#0F4A44">{{ .Token }}</div>
+              </td></tr>
+            </table>
+          </td></tr>
+            <tr><td style="padding:16px 32px 32px 32px;font-family:'Atkinson Hyperlegible Next','Atkinson Hyperlegible','Segoe UI',Arial,sans-serif;font-size:15px;line-height:22px;color:#5E5A64">If this was not you, your password stays the same. To protect your account, set a new one with “Forgot password” in the app.</td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:16px 8px 0 8px;font-family:'Atkinson Hyperlegible Next','Atkinson Hyperlegible','Segoe UI',Arial,sans-serif;font-size:13px;line-height:19px;color:#5E5A64">This email was sent automatically for your Sezi account; please do not reply.</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</div>
+{{ else }}
+<div lang="tr">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F6F4F0;border-collapse:collapse">
+    <tr><td align="center" style="padding:32px 16px">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;border-collapse:collapse">
+        <tr><td style="padding:0 8px 16px 8px">
+          <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+            <td style="width:32px;height:32px;background:#A8E0D6;border-radius:10px" aria-hidden="true"></td>
+            <td style="padding-left:10px;font-family:'Nunito','Avenir Next','Segoe UI',Arial,sans-serif;font-size:22px;font-weight:800;color:#0F4A44">Sezi</td>
+          </tr></table>
+        </td></tr>
+        <tr><td style="background:#FFFFFF;border-radius:22px">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+            <tr><td style="padding:32px 32px 8px 32px">
+              <h1 style="margin:0;font-family:'Nunito','Avenir Next','Segoe UI',Arial,sans-serif;font-size:24px;line-height:30px;font-weight:800;color:#16151A">Şifre değişikliğini onaylayın</h1>
+            </td></tr>
+            <tr><td style="padding:8px 32px 16px 32px;font-family:'Atkinson Hyperlegible Next','Atkinson Hyperlegible','Segoe UI',Arial,sans-serif;font-size:17px;line-height:26px;color:#16151A">Sezi hesabınızın şifresini değiştirmek için bu kodu uygulamaya girin.</td></tr>
+          <tr><td style="padding:8px 32px 8px 32px">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:separate">
+              <tr><td align="center" style="background:#A8E0D6;border-radius:16px;padding:20px 12px">
+                <div style="font-family:'Nunito','Avenir Next','Segoe UI',Arial,sans-serif;font-size:13px;font-weight:700;color:#0F4A44;letter-spacing:0.5px;margin:0 0 6px 0">ONAY KODU</div>
+                <div style="font-family:'SF Mono',Menlo,Consolas,monospace;font-size:36px;line-height:44px;font-weight:700;letter-spacing:10px;padding-left:10px;color:#0F4A44">{{ .Token }}</div>
+              </td></tr>
+            </table>
+          </td></tr>
+            <tr><td style="padding:16px 32px 32px 32px;font-family:'Atkinson Hyperlegible Next','Atkinson Hyperlegible','Segoe UI',Arial,sans-serif;font-size:15px;line-height:22px;color:#5E5A64">Bu isteği siz yapmadıysanız şifreniz değişmez. Hesabınızı korumak için uygulamada “Şifremi unuttum” ile yeni bir şifre belirleyin.</td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:16px 8px 0 8px;font-family:'Atkinson Hyperlegible Next','Atkinson Hyperlegible','Segoe UI',Arial,sans-serif;font-size:13px;line-height:19px;color:#5E5A64">Bu e-posta Sezi hesabınız için otomatik gönderildi; yanıtlamayın.</td></tr>
+      </table>
+    </td></tr>
+  </table>
+</div>
+{{ end }}
+</body>
+</html>
