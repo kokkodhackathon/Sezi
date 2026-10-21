@@ -39,6 +39,7 @@ import { Dialog, DialogClose, DialogContent, DialogDescription, DialogFooter, Di
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -58,6 +59,13 @@ interface DraftMediaRow {
   source_page: number | null;
   kind: 'photo' | 'aerial' | 'inscription';
   alt_text: LocalizedText | null;
+  origin: 'inventory' | 'commons';
+  author: string | null;
+  license: string | null;
+  license_url: string | null;
+  source_url: string | null;
+  modifications: LocalizedText | null;
+  wikidata_id: string | null;
   work: {
     id: string;
     slug: string;
@@ -91,8 +99,8 @@ function districtHint(folder: string | null): string {
  */
 export function Inbox() {
   const [tab, setTab] = useState<InboxTab>('unlinked');
+  const [origin, setOrigin] = useState<'all' | 'inventory' | 'commons'>('all');
   const [preview, setPreview] = useState<PreviewState | null>(null);
-
   const { data: unlinkedData, isLoading: unlinkedLoading, error: unlinkedError, refetch: refetchUnlinked } = useInbox();
   const {
     data: draftRows,
@@ -104,7 +112,7 @@ export function Inbox() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('media')
-        .select('id, work_id, storage_path, thumb_path, folder, source_file, source_volume, source_page, kind, alt_text, work:works(id, slug, name, district)')
+        .select('id, work_id, storage_path, thumb_path, folder, source_file, source_volume, source_page, kind, alt_text, origin, author, license, license_url, source_url, modifications, wikidata_id, work:works(id, slug, name, district)')
         .eq('status', 'draft')
         .order('source_volume')
         .order('source_page')
@@ -119,12 +127,12 @@ export function Inbox() {
     metaById.set(row.id, row);
   }
 
-  const unlinkedPhotos = unlinkedData ?? [];
-  const draftLinkedPhotos = (draftRows ?? []).filter((r) => r.work_id !== null);
+  const unlinkedPhotos = (unlinkedData ?? []).filter((p) => origin === 'all' || p.origin === origin);
+  const draftLinkedPhotos = (draftRows ?? []).filter((r) => r.work_id !== null && (origin === 'all' || r.origin === origin));
 
   const groups = new Map<string, InboxPhoto[]>();
   for (const p of unlinkedPhotos) {
-    const key = p.folder ?? 'Klasörsüz';
+    const key = p.folder ?? (p.origin === 'commons' ? 'Wikimedia Commons' : 'Klasörsüz');
     groups.set(key, [...(groups.get(key) ?? []), p]);
   }
 
@@ -165,24 +173,44 @@ export function Inbox() {
       ) : null}
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as InboxTab)}>
-        <TabsList aria-label="Fotoğraf durumu">
-          <TabsTrigger value="unlinked">
-            <span>Esere bağlanmamış</span>
-            {!unlinkedLoading ? (
-              <Badge variant="secondary" className="num">
-                {unlinkedPhotos.length}
-              </Badge>
-            ) : null}
-          </TabsTrigger>
-          <TabsTrigger value="draft">
-            <span>Onay bekleyen</span>
-            {!draftsLoading ? (
-              <Badge variant="secondary" className="num">
-                {draftLinkedPhotos.length}
-              </Badge>
-            ) : null}
-          </TabsTrigger>
-        </TabsList>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <TabsList aria-label="Fotoğraf durumu">
+            <TabsTrigger value="unlinked">
+              <span>Esere bağlanmamış</span>
+              {!unlinkedLoading ? (
+                <Badge variant="secondary" className="num">
+                  {unlinkedPhotos.length}
+                </Badge>
+              ) : null}
+            </TabsTrigger>
+            <TabsTrigger value="draft">
+              <span>Onay bekleyen</span>
+              {!draftsLoading ? (
+                <Badge variant="secondary" className="num">
+                  {draftLinkedPhotos.length}
+                </Badge>
+              ) : null}
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="flex items-center gap-2">
+            <FieldLabel htmlFor="inbox-origin-filter" className="text-xs text-muted-foreground whitespace-nowrap">
+              Kaynak:
+            </FieldLabel>
+            <Select value={origin} onValueChange={(v) => setOrigin(v as 'all' | 'inventory' | 'commons')}>
+              <SelectTrigger id="inbox-origin-filter" className="h-8 w-36 text-xs">
+                <SelectValue placeholder="Tümü" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectItem value="all">Tümü</SelectItem>
+                  <SelectItem value="inventory">Envanter</SelectItem>
+                  <SelectItem value="commons">Commons</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
         <TabsContent value="unlinked" className="flex flex-col gap-6 pt-2">
           {isLoading ? (
@@ -426,7 +454,7 @@ function UnlinkedPhotoCard({
       );
     },
     onError: (e) => {
-      toast.error(`Fotoğraf bağlanamadı: ${e.message}`);
+      toast.error(e.message);
     },
   });
   const busy = assign.isPending;
@@ -440,7 +468,10 @@ function UnlinkedPhotoCard({
             onPreview({
               url: mediaUrl(photo.storage_path),
               title: fileName,
-              subtitle: [photo.folder ?? 'Klasörsüz', KIND_LABEL[photo.kind], bookRef].join(' · '),
+              subtitle:
+                photo.origin === 'commons'
+                  ? ['Wikimedia Commons', photo.author || 'Yazar belirtilmemiş', photo.license, photo.wikidata_id ? `Wikidata: ${photo.wikidata_id}` : null].filter(Boolean).join(' · ')
+                  : [photo.folder ?? 'Klasörsüz', KIND_LABEL[photo.kind], bookRef].join(' · '),
             })
           }
           className="group relative overflow-hidden rounded-lg border bg-muted text-left"
@@ -459,18 +490,57 @@ function UnlinkedPhotoCard({
         </button>
 
         <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1">
-          <Badge variant="outline">{KIND_LABEL[photo.kind]}</Badge>
-          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <BookOpen className="size-3" aria-hidden />
-            {bookRef}
-          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {photo.origin === 'commons' ? <Badge variant="secondary">Commons</Badge> : null}
+            <Badge variant="outline">{KIND_LABEL[photo.kind]}</Badge>
+          </div>
+          {photo.origin !== 'commons' ? (
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <BookOpen className="size-3" aria-hidden />
+              {bookRef}
+            </span>
+          ) : null}
         </div>
+
+        {photo.origin === 'commons' ? (
+          <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+            <span className="truncate" title={[photo.author || 'Yazar belirtilmemiş', photo.license].filter(Boolean).join(' · ')}>
+              {[photo.author || 'Yazar belirtilmemiş', photo.license].filter(Boolean).join(' · ')}
+            </span>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              {photo.source_url ? (
+                <a
+                  href={photo.source_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-0.5 text-primary hover:underline"
+                  aria-label="Wikimedia Commons dosya sayfası"
+                >
+                  <span>Commons</span>
+                  <ExternalLink className="size-3" aria-hidden />
+                </a>
+              ) : null}
+              {photo.wikidata_id ? (
+                <a
+                  href={`https://www.wikidata.org/wiki/${photo.wikidata_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-0.5 text-muted-foreground hover:underline"
+                  aria-label={`Wikidata maddesi ${photo.wikidata_id}`}
+                >
+                  <span>{photo.wikidata_id}</span>
+                  <ExternalLink className="size-3" aria-hidden />
+                </a>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         <CardTitle className="truncate text-sm font-semibold" title={fileName}>
           {fileName}
         </CardTitle>
-        <CardDescription className="truncate text-xs" title={photo.folder ?? 'Klasörsüz'}>
-          {photo.folder ?? 'Klasörsüz'}
+        <CardDescription className="truncate text-xs" title={photo.folder ?? (photo.origin === 'commons' ? 'Wikimedia Commons' : 'Klasörsüz')}>
+          {photo.folder ?? (photo.origin === 'commons' ? 'Wikimedia Commons' : 'Klasörsüz')}
         </CardDescription>
       </CardHeader>
 
@@ -564,7 +634,7 @@ function DraftLinkedPhotoCard({
       toast.success(`“${targetName}” fotoğrafı onaylandı ve yayımlandı.`);
     },
     onError: (e) => {
-      toast.error(`Onaylanamadı: ${e.message}`);
+      toast.error(e.message);
     },
   });
 
@@ -598,7 +668,10 @@ function DraftLinkedPhotoCard({
             onPreview({
               url: mediaUrl(photo.storage_path),
               title: workName,
-              subtitle: [bookRef, fileName, KIND_LABEL[photo.kind]].join(' · '),
+              subtitle:
+                photo.origin === 'commons'
+                  ? ['Wikimedia Commons', photo.author || 'Yazar belirtilmemiş', photo.license, photo.wikidata_id ? `Wikidata: ${photo.wikidata_id}` : null].filter(Boolean).join(' · ')
+                  : [bookRef, fileName, KIND_LABEL[photo.kind]].join(' · '),
             })
           }
           className="group relative overflow-hidden rounded-lg border bg-muted text-left"
@@ -619,13 +692,50 @@ function DraftLinkedPhotoCard({
         <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1">
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge variant="warning">Taslak</Badge>
+            {photo.origin === 'commons' ? <Badge variant="secondary">Commons</Badge> : null}
             <Badge variant="outline">{KIND_LABEL[photo.kind]}</Badge>
           </div>
-          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <BookOpen className="size-3" aria-hidden />
-            {bookRef}
-          </span>
+          {photo.origin !== 'commons' ? (
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <BookOpen className="size-3" aria-hidden />
+              {bookRef}
+            </span>
+          ) : null}
         </div>
+
+        {photo.origin === 'commons' ? (
+          <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+            <span className="truncate" title={[photo.author || 'Yazar belirtilmemiş', photo.license].filter(Boolean).join(' · ')}>
+              {[photo.author || 'Yazar belirtilmemiş', photo.license].filter(Boolean).join(' · ')}
+            </span>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              {photo.source_url ? (
+                <a
+                  href={photo.source_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-0.5 text-primary hover:underline"
+                  aria-label="Wikimedia Commons dosya sayfası"
+                >
+                  <span>Commons</span>
+                  <ExternalLink className="size-3" aria-hidden />
+                </a>
+              ) : null}
+              {photo.wikidata_id ? (
+                <a
+                  href={`https://www.wikidata.org/wiki/${photo.wikidata_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-0.5 text-muted-foreground hover:underline"
+                  aria-label={`Wikidata maddesi ${photo.wikidata_id}`}
+                >
+                  <span>{photo.wikidata_id}</span>
+                  <ExternalLink className="size-3" aria-hidden />
+                </a>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
 
         <CardTitle className="text-base">
           {photo.work ? (

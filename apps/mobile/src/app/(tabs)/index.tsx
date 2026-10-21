@@ -8,6 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CheckIcon, ChevronIcon, InfoIcon, PlayIcon, SearchIcon } from '@/design/icons';
 import { useTabBarSpace } from '@/components/app-tabs';
 import { Button } from '@/components/ui';
+import { PhotoSourceTag } from '@/components/photo-source';
 import { FadeInItem, outline, PhotoTile, Skeleton, SoftPressable, SweetSheet, sweetShadow, TypeTile } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
@@ -109,6 +110,7 @@ export default function Explore() {
             style={[s.pilot, { backgroundColor: t.primary.fill }, sweetShadow(t)]}>
             <View style={[s.pilotImg, { backgroundColor: t.soft }]}>
               {pilotCover ? <Image source={{ uri: photoUrl(pilotCover, 'thumb') }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} accessible={false} /> : null}
+              <PhotoSourceTag photo={pilotCover} />
             </View>
             <View style={s.pilotRow}>
               <Text style={[type.title, { color: t.primary.ink, flex: 1 }]} numberOfLines={2}>

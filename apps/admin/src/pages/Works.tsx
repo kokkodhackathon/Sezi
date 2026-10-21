@@ -23,7 +23,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { mediaUrl, PAGE_SIZE, PRECISION_LABEL, tr, useLookups, useWorkList, type Precision, type WorkFilters } from '@/lib/data';
 
-const KEYS: (keyof WorkFilters)[] = ['q', 'city', 'type', 'status', 'precision', 'review', 'photo'];
+const KEYS: (keyof WorkFilters)[] = ['q', 'city', 'type', 'status', 'precision', 'review', 'photo', 'origin'];
 const ALL = '__all__';
 
 const PRECISION_VARIANT: Record<Precision, 'secondary' | 'outline' | 'warning'> = {
@@ -57,6 +57,7 @@ export function Works() {
     precision: params.get('precision') ?? '',
     review: params.get('review') ?? '',
     photo: params.get('photo') ?? '',
+    origin: params.get('origin') ?? '',
     page: Math.max(0, Number(params.get('page') ?? 0) || 0),
   };
 
@@ -112,7 +113,7 @@ export function Works() {
           </CardAction>
         </CardHeader>
         <CardContent>
-          <FieldGroup className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">
+          <FieldGroup className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
             <Field className="sm:col-span-2 lg:col-span-2 xl:col-span-1">
               <FieldLabel htmlFor="filter-q">Ara</FieldLabel>
               <InputGroup>
@@ -218,6 +219,22 @@ export function Works() {
                     <SelectItem value={ALL}>Tümü</SelectItem>
                     <SelectItem value="with">Fotoğraflı</SelectItem>
                     <SelectItem value="without">Fotoğrafsız</SelectItem>
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="filter-origin">Fotoğraf kaynağı</FieldLabel>
+              <Select value={f.origin || ALL} onValueChange={(v) => set('origin', v)}>
+                <SelectTrigger id="filter-origin" className="w-full">
+                  <SelectValue placeholder="Tümü" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectItem value={ALL}>Tümü</SelectItem>
+                    <SelectItem value="inventory">Envanter</SelectItem>
+                    <SelectItem value="commons">Commons</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>
@@ -386,6 +403,11 @@ export function Works() {
                             className="font-semibold text-foreground underline-offset-4 hover:text-primary hover:underline">
                             {tr(w.name)}
                           </Link>
+                          {photo?.origin === 'commons' ? (
+                            <Badge variant="secondary" className="h-4 px-1 py-0 text-[10px]">
+                              Commons
+                            </Badge>
+                          ) : null}
                           {w.photos.length > 1 ? (
                             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground num" title={`${w.photos.length} fotoğraf`}>
                               <ImageIcon className="size-3" aria-hidden />

@@ -1,6 +1,6 @@
 "use client";
 
-import { loc, type WorkPhoto } from "@sezi/shared";
+import { isCommons, loc, type WorkPhoto } from "@sezi/shared";
 import { ChevronLeftIcon, ChevronRightIcon, ExpandIcon } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
@@ -15,6 +15,11 @@ import {
 } from "@/components/ui/dialog";
 import { WorkThumb } from "@/components/work-thumb";
 import { Lens } from "@/components/works/lens";
+import {
+  CommonsBadge,
+  PhotoSource,
+  photoCreditLine,
+} from "@/components/works/photo-source";
 import { useT } from "@/lib/i18n-client";
 import { photoUrl } from "@/lib/media";
 
@@ -57,36 +62,46 @@ export function PhotoGallery({
     ? loc(activePhoto.alt, lang) || workName
     : workName;
 
+  const currentCreditLine = photoCreditLine(currentPhoto, lang, t);
+  const activeCreditLine = activePhoto ? photoCreditLine(activePhoto, lang, t) : null;
+
   return (
     <section aria-label={t("works.detail.photosTitle")} className="grid gap-2">
       {/* Büyük tepe fotoğrafı */}
       <figure className="grid gap-1.5">
         <Lens src={photoUrl(currentPhoto, "full")}>
-          <button
-            type="button"
-            onClick={() => setActiveIndex(selectedPhotoIndex)}
-            aria-label={t("works.detail.openPhoto", { alt: currentAlt })}
-            className="group relative aspect-[16/9] max-h-[480px] w-full overflow-hidden rounded-lg border bg-muted text-left outline-none focus-visible:ring-3 focus-visible:ring-ring sm:aspect-[21/9]"
-          >
-            <Image
-              src={photoUrl(currentPhoto, "full")}
-              alt={currentAlt}
-              fill
-              priority
-              sizes="(min-width: 1024px) 1152px, 100vw"
-              className="object-cover"
-            />
-            <span
-              aria-hidden
-              className="absolute bottom-3 right-3 inline-flex size-10 items-center justify-center rounded-lg border bg-card/90 text-foreground"
+          <div className="group relative aspect-[16/9] max-h-[480px] w-full overflow-hidden rounded-lg border bg-muted sm:aspect-[21/9]">
+            <button
+              type="button"
+              onClick={() => setActiveIndex(selectedPhotoIndex)}
+              aria-label={t("works.detail.openPhoto", { alt: currentAlt })}
+              className="absolute inset-0 size-full text-left outline-none focus-visible:ring-3 focus-visible:ring-ring"
             >
-              <ExpandIcon className="size-4" />
-            </span>
-          </button>
+              <Image
+                src={photoUrl(currentPhoto, "full")}
+                alt={currentAlt}
+                fill
+                priority
+                sizes="(min-width: 1024px) 1152px, 100vw"
+                className="object-cover"
+              />
+              <span
+                aria-hidden
+                className="absolute bottom-3 right-3 inline-flex size-10 items-center justify-center rounded-lg border bg-card/90 text-foreground"
+              >
+                <ExpandIcon className="size-4" />
+              </span>
+            </button>
+            {isCommons(currentPhoto) ? (
+              <div className="absolute bottom-3 left-3 z-20">
+                <PhotoSource photo={currentPhoto} />
+              </div>
+            ) : null}
+          </div>
         </Lens>
-        {currentPhoto.credit ? (
+        {currentCreditLine ? (
           <figcaption className="text-right text-xs text-muted-foreground">
-            {t("works.detail.photoCredit", { credit: currentPhoto.credit })}
+            {currentCreditLine}
           </figcaption>
         ) : null}
       </figure>
@@ -116,6 +131,7 @@ export function PhotoGallery({
                   sizes="80px"
                   className="object-cover"
                 />
+                {isCommons(p) ? <CommonsBadge /> : null}
               </button>
             );
           })}
@@ -147,13 +163,16 @@ export function PhotoGallery({
                   sizes="(min-width: 1024px) 896px, 100vw"
                   className="object-contain"
                 />
+                {isCommons(activePhoto) ? (
+                  <div className="absolute bottom-3 left-3 z-10">
+                    <PhotoSource photo={activePhoto} />
+                  </div>
+                ) : null}
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                {activePhoto.credit ? (
+                {activeCreditLine ? (
                   <p className="text-sm text-muted-foreground">
-                    {t("works.detail.photoCredit", {
-                      credit: activePhoto.credit,
-                    })}
+                    {activeCreditLine}
                   </p>
                 ) : (
                   <span />

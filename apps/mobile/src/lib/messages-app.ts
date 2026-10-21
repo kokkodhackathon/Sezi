@@ -492,6 +492,16 @@ export const trApp = {
   'settings.storyPlayback': 'Anlatım sesleri',
   'settings.storyAuto': 'Otomatik oynat',
   'settings.storyTap': 'Dokununca oynat',
+  'commons.tag': 'Wikimedia Commons',
+  'commons.thumbTag': 'Commons',
+  'commons.tagLabel': 'Fotoğraf kaynağı ve lisans ayrıntıları',
+  'commons.sheetTitle': 'Wikimedia Commons',
+  'commons.photoBy': 'Fotoğraf: {author}',
+  'commons.authorMissing': 'Yazar belirtilmemiş',
+  'commons.license': 'Lisans: {license}',
+  'commons.openLicense': 'Lisansı incele',
+  'commons.modifications': 'Değişiklik: {modifications}',
+  'commons.openSource': "Commons'ta aç",
 } as const;
 
 export type AppMessageKey = keyof typeof trApp;
@@ -989,4 +999,14 @@ export const enApp: Record<AppMessageKey, string> = {
   'settings.storyPlayback': 'Story audio',
   'settings.storyAuto': 'Play automatically',
   'settings.storyTap': 'Play on tap',
+  'commons.tag': 'Wikimedia Commons',
+  'commons.thumbTag': 'Commons',
+  'commons.tagLabel': 'Photo source and license details',
+  'commons.sheetTitle': 'Wikimedia Commons',
+  'commons.photoBy': 'Photo: {author}',
+  'commons.authorMissing': 'Author not stated',
+  'commons.license': 'License: {license}',
+  'commons.openLicense': 'View license',
+  'commons.modifications': 'Changes: {modifications}',
+  'commons.openSource': 'Open on Commons',
 };

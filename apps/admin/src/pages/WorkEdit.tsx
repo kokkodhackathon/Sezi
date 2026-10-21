@@ -285,7 +285,7 @@ function Editor({ slug, data }: { slug: string; data: WorkDetail }) {
       toast.success('Fotoğraf güncellendi.');
     },
     onError: (err) => {
-      toast.error(`Fotoğraf güncellenemedi: ${err.message}`);
+      toast.error(err.message);
     },
   });
 
@@ -700,10 +700,45 @@ function Editor({ slug, data }: { slug: string; data: WorkDetail }) {
                       <div className="flex flex-wrap items-center gap-1.5">
                         <StatusBadge status={m.status} />
                         {i === 0 ? <Badge variant="secondary">Kapak</Badge> : null}
+                        {m.origin === 'commons' ? <Badge variant="secondary">Commons</Badge> : null}
                       </div>
-                      <span className="text-xs text-muted-foreground num">
-                        {m.source_page ? `Kitap: C${m.source_volume ?? '?'} s. ${m.source_page}` : 'Kitapta bulunamadı'}
-                      </span>
+                      {m.origin === 'commons' ? (
+                        <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                          <span
+                            className="line-clamp-2"
+                            title={[m.author || 'Yazar belirtilmemiş', m.license].filter(Boolean).join(' · ')}>
+                            {[m.author || 'Yazar belirtilmemiş', m.license].filter(Boolean).join(' · ')}
+                          </span>
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                            {m.source_url ? (
+                              <a
+                                href={m.source_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-0.5 text-primary hover:underline"
+                                aria-label="Wikimedia Commons dosya sayfası">
+                                <span>Commons</span>
+                                <ExternalLink className="size-3" aria-hidden />
+                              </a>
+                            ) : null}
+                            {m.wikidata_id ? (
+                              <a
+                                href={`https://www.wikidata.org/wiki/${m.wikidata_id}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center gap-0.5 text-muted-foreground hover:underline"
+                                aria-label={`Wikidata maddesi ${m.wikidata_id}`}>
+                                <span>{m.wikidata_id}</span>
+                                <ExternalLink className="size-3" aria-hidden />
+                              </a>
+                            ) : null}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground num">
+                          {m.source_page ? `Kitap: C${m.source_volume ?? '?'} s. ${m.source_page}` : 'Kitapta bulunamadı'}
+                        </span>
+                      )}
                       <div className="mt-auto flex flex-wrap items-center gap-1 pt-1">
                         {m.status !== 'verified' ? (
                           <Button

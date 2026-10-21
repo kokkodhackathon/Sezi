@@ -32,7 +32,8 @@ import { AccessibilityInfo } from 'react-native';
 
 import { blockableAhead, detourFrom, inPilotArea, landmarkNodes, planRoute, planStroll, startLocation, walkingSpeed, type PlannedRoute } from '../nav';
 import { navPoints, pointAudioUri, workPoints } from '../points';
-import { hapticAlert, hapticForTurn, playLandmarkCue } from '../sim/cues';
+import { hapticAlert, hapticForTurn } from '../sim/cues';
+import { cancelEarcons, playEarcon, preloadEarcons } from './earcons';
 import { stopSoundscape, updateSoundscape } from '../sim/soundscape-engine';
 import { prefetchChirp } from '../voice/chirp';
 import { createClipPlayer } from '../voice/clip-player';
@@ -213,12 +214,17 @@ function announce(step: GuidanceStep, arrived: boolean, at: LngLat, heading: num
     });
   }
   if (!canHear()) return;
-  if (step.landmark) playLandmarkCue(stereoPan(heading, bearingDeg(at, step.landmark.location)));
+  // Konuşmadan önce yön: dönüş sesi dönülecek kulakta, yer işareti sesi yer işaretinin yönünden.
+  // Varış adımında ses `arrive()` içinde çalar (iki kez çalmasın).
+  const side = step.turn === 'left' || step.turn === 'slight_left' ? -0.8 : step.turn === 'right' || step.turn === 'slight_right' ? 0.8 : 0;
+  if (!arrived && side !== 0) playEarcon('turn', side);
+  if (step.landmark) playEarcon('landmark', stereoPan(heading, bearingDeg(at, step.landmark.location)), !arrived && side !== 0 ? 0.35 : 0);
   speak(step.text);
 }
 
 function raise(kind: AlertKind, text: string) {
   void hapticAlert();
+  if (canHear()) playEarcon(kind === 'no_route' ? 'error' : 'warning');
   speak(text, true);
   emit({ alert: { id: ++alertId, kind, text }, cueCount: state.cueCount + 1 });
 }
@@ -246,6 +252,7 @@ function present(id: string) {
   }
   emit({ popup: id, cueCount: state.cueCount + 1 });
   if (cfg.profile.senses.haptic || !canHear()) void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+  if (canHear()) playEarcon('attention');
   AccessibilityInfo.announceForAccessibility(point.title[cfg.profile.lang] ?? point.title.tr);
   if (cfg.playback === 'auto') playPoint(id);
 }
@@ -511,6 +518,10 @@ function arrive() {
   const plan = state.plan;
   const slug = state.dest;
   emit({ phase: 'arrived', running: false, arrived: slug });
+  // Turda sıradaki durak varsa yumuşak, yürüyüşün sonuysa güçlü varış sesi (titreşim: varış adımının başarı deseni).
+  // Bekleyen dönüş / yer işareti sesi varıştan sonra çalmasın.
+  cancelEarcons();
+  if (canHear()) playEarcon(state.tour.length > 0 ? 'waypoint' : 'arrive');
   if (slug) {
     cfg.onArrive(slug);
     // Varılan eser sonraki duraklara giderken yeniden açılmaz.
@@ -539,6 +550,11 @@ async function begin() {
   walkerDone = false;
   const plan = state.plan;
   emit({ phase: 'active', source: sim ? 'sim' : 'gps', ...tracking(), position: plan?.geometry.line[0] ?? state.here, cueCount: state.cueCount });
+  // Başlangıç: ekran yürüyüş görünümüne geçer (görsel), titreşim ve ses birlikte.
+  cancelEarcons();
+  void preloadEarcons();
+  if (cfg.profile.senses.haptic || !canHear()) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  if (canHear()) playEarcon('start');
   if (sim) {
     stopWatch();
     walker = createWalker(plan!.geometry.line);
@@ -590,6 +606,12 @@ export const navigation = {
   begin,
   /** Yürüyüşü bitirir; plan ekranına döner. */
   stop() {
+    // Yürürken bitirilirse: ekran plana döner (görsel), titreşim ve kapanış sesi. Bekleyen ipuçları önce iptal.
+    cancelEarcons();
+    if (state.phase === 'active' && cfg) {
+      if (cfg.profile.senses.haptic || !canHear()) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      if (canHear()) playEarcon('stop');
+    }
     stopTimer();
     stopAudio();
     silence();
@@ -607,6 +629,7 @@ export const navigation = {
     stopWatch();
   },
   pause() {
+    cancelEarcons();
     stopTimer();
     silence();
     stopSoundscape();
@@ -652,7 +675,12 @@ export const navigation = {
     const noisy = !state.noisy;
     const text = noisy ? TEXT[cfg.profile.lang].crowdOn : TEXT[cfg.profile.lang].crowdOff;
     // Geçiş mesajı her iki durumda da okunur (gürültüde de denenir), ardından mod değişir.
-    if (cfg.profile.hearing !== 'deaf' && cfg.profile.senses.audio) say(text, { lang: cfg.profile.lang, rate: cfg.speechRate, interrupt: true });
+    // Geçişten önceki ipuçları iptal: kalabalıkta bekleyen dönüş / yer işareti sesi sonradan çalmasın.
+    cancelEarcons();
+    if (cfg.profile.hearing !== 'deaf' && cfg.profile.senses.audio) {
+      playEarcon(noisy ? 'crowdOn' : 'crowdOff');
+      say(text, { lang: cfg.profile.lang, rate: cfg.speechRate, interrupt: true });
+    }
     void hapticAlert();
     if (noisy) stopSoundscape();
     emit({ noisy, alert: { id: ++alertId, kind: noisy ? 'crowd_on' : 'crowd_off', text }, cueCount: state.cueCount + 1 });

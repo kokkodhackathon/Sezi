@@ -273,6 +273,7 @@ export function TourDetail({
                         alt={loc(cover?.alt, lang)}
                         className="size-14 shrink-0 rounded-lg"
                         sizes="60px"
+                        commonsTag
                       />
                       <div className="grid gap-0.5">
                         <Link

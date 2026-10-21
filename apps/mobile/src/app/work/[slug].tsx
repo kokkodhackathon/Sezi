@@ -1,4 +1,4 @@
-import { coverOf, hasLocation, inventorySource, loc, toneForType, type SweetTheme, type WorkRow } from '@sezi/shared';
+import { coverOf, hasLocation, inventorySource, isCommons, loc, toneForType, type SweetTheme, type WorkRow } from '@sezi/shared';
 import { Image } from 'expo-image';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -8,6 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { SeziMap, WorkPin } from '@/components/map';
 import { PhotoViewer } from '@/components/photo-viewer';
+import { formatCommonsCredit, PhotoSourceTag, PhotoSourceThumbTag } from '@/components/photo-source';
 import { ReadMore } from '@/components/read-more';
 import { Badge, Button, Card, EmptyState, ListRow } from '@/components/ui';
 import { ChevronIcon, ExternalIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
@@ -84,7 +85,14 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
   const access = profile && hasRouteTo(work.slug) ? planRoute(work.slug, profile) : null;
   const canHear = profile?.hearing !== 'deaf';
   const place = [work.district, city].filter(Boolean).join(', ');
-  const credit = work.photos.find((p) => p.credit)?.credit;
+  const commonsCredits = [
+    ...new Set(
+      work.photos
+        .filter(isCommons)
+        .map((p) => formatCommonsCredit(p, lang)),
+    ),
+  ];
+  const inventoryCredit = work.photos.find((p) => !isCommons(p) && p.credit)?.credit;
 
   useEffect(
     () => () => {
@@ -138,22 +146,25 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
         onScroll={(e) => setScrolled(e.nativeEvent.contentOffset.y > (cover ? 360 : 40))}>
         {/* Kapak: fotoğraf varsa tam genişlik, ad fotoğrafın üstünde; yoksa tür simgeli yumuşak alan. */}
         {cover ? (
-          <Pressable onPress={() => setViewer(0)} accessibilityRole="imagebutton" accessibilityLabel={`${loc(cover.alt, lang)}. ${tr('work.openPhotos')}`}>
-            <Image source={{ uri: photoUrl(cover, 'full') }} placeholder={{ uri: photoUrl(cover, 'thumb') }} style={s.heroImg} contentFit="cover" transition={150} accessible={false} />
-            <View style={s.shade} pointerEvents="none">
-              {/* Yumuşak karartma: çok sayıda ince şerit, yazının okunurluğu için (yerel degrade modülü gerektirmez). */}
-              {SHADE.map((o, i) => (
-                <View key={i} style={{ flex: 1, backgroundColor: `rgba(14,12,11,${o})` }} />
-              ))}
-            </View>
-            <View style={s.heroText} pointerEvents="none">
-              <Text style={[type.meta, s.onPhotoDim]}>{kind}</Text>
-              <Text style={[type.editorial, s.onPhoto]} accessibilityRole="header">
-                {name}
-              </Text>
-              <Text style={[type.meta, s.onPhotoDim]}>{place}</Text>
-            </View>
-          </Pressable>
+          <View style={{ position: 'relative' }}>
+            <Pressable onPress={() => setViewer(0)} accessibilityRole="imagebutton" accessibilityLabel={`${loc(cover.alt, lang)}. ${tr('work.openPhotos')}`}>
+              <Image source={{ uri: photoUrl(cover, 'full') }} placeholder={{ uri: photoUrl(cover, 'thumb') }} style={s.heroImg} contentFit="cover" transition={150} accessible={false} />
+              <View style={s.shade} pointerEvents="none">
+                {/* Yumuşak karartma: çok sayıda ince şerit, yazının okunurluğu için (yerel degrade modülü gerektirmez). */}
+                {SHADE.map((o, i) => (
+                  <View key={i} style={{ flex: 1, backgroundColor: `rgba(14,12,11,${o})` }} />
+                ))}
+              </View>
+              <View style={[s.heroText, isCommons(cover) && { paddingRight: 140 }]} pointerEvents="none">
+                <Text style={[type.meta, s.onPhotoDim]}>{kind}</Text>
+                <Text style={[type.editorial, s.onPhoto]} accessibilityRole="header">
+                  {name}
+                </Text>
+                <Text style={[type.meta, s.onPhotoDim]}>{place}</Text>
+              </View>
+            </Pressable>
+            <PhotoSourceTag photo={cover} />
+          </View>
         ) : (
           <View style={[s.plainHero, { paddingTop: insets.top + 64, backgroundColor: t.soft }, t.outlined && { borderBottomWidth: 2, borderBottomColor: t.border }]}>
             <View style={[s.glyphTile, { backgroundColor: tone.fill }, outline(t)]}>
@@ -205,6 +216,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
                 {work.photos.map((p, i) => (
                   <SoftPressable key={p.id} onPress={() => setViewer(i)} accessibilityRole="imagebutton" accessibilityLabel={loc(p.alt, lang)}>
                     <Image source={{ uri: photoUrl(p, 'thumb') }} style={[s.thumb, outline(t)]} contentFit="cover" accessible={false} />
+                    <PhotoSourceThumbTag photo={p} />
                   </SoftPressable>
                 ))}
               </ScrollView>
@@ -303,7 +315,12 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
               />
             ))}
             {!inv && otherSources.length === 0 ? <Text style={[type.body, { color: t.textMuted }]}>{tr('work.noSources')}</Text> : null}
-            {credit ? <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.photoCredit', { credit })}</Text> : null}
+            {commonsCredits.map((cLine) => (
+              <Text key={cLine} style={[type.meta, { color: t.textMuted }]}>
+                {cLine}
+              </Text>
+            ))}
+            {inventoryCredit ? <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.photoCredit', { credit: inventoryCredit })}</Text> : null}
           </Section>
         </View>
       </ScrollView>

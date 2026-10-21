@@ -99,6 +99,21 @@ npx supabase@latest db query --linked --project-ref jejsvycpzulpleftkssj -f supa
 
 **Yeni il:** kitap PDF'leri + arşiv klasörü + il slug'ı; kod değişmez.
 
+### Wikimedia Commons fotoğrafları
+
+Envanter fotoğrafı olmayan, Wikidata kimliği olan eserlere Wikidata P18 görselini ekler. Uygulamalar Wikimedia'ya istek atmaz; dosya ve atıf bilgisi bir kez veritabanına ve Storage'a yazılır.
+
+```bash
+# izole ortam: python -m venv data/.venv && data/.venv/Scripts/pip install pillow
+data/.venv/Scripts/python -I data/commons_photos.py --upload
+npx supabase@latest db query --linked --project-ref jejsvycpzulpleftkssj -f supabase/seed_media_commons.sql
+```
+
+- Lisans süzgeci: CC0, kamu malı, CC BY, CC BY-SA (NC / ND / bilinmeyen atlanır). Yazar, lisans, lisans bağlantısı, dosya sayfası ve yaptığımız değişiklik (`modifications`) satırda tutulur.
+- 1600 px ve 480 px WebP → `media/commons/`. İstekler saniyede en çok 1, `User-Agent` ile; yanıt önbelleği `data/raw/commons_cache.json`.
+- Satırlar `draft` girer. Yayın için eserin Wikidata eşleşmesi eşleştirme masasında kabul edilmiş olmalı (tetikleyici `media_commons_guard`). Yeni eşleşme kabul edilince betik yeniden çalıştırılır; admin kararlarını ezmez.
+- **Sonuç (21 Ekim):** 141 aday eserden 59'unda P18 görseli var; 59 taslak fotoğraf yüklendi. Eşleşmesi kabul edilmiş eser yok, bu yüzden henüz hiçbiri yayında değil.
+
 ## 3. Pilot alan navigasyon grafiği (OSM)
 
 **1. OSM yaya ağını indirin.** Merkez ve yarıçap `build_nav_graph.py › AREAS` sözlüğünde. Bursa Hanlar: 40.18415, 29.06135, 650 m (Heykel ve Tophane dahil; ana caddeler de ağda).

@@ -21,7 +21,7 @@ export interface WorkListRow {
   district: string | null;
   status: Status;
   location_precision: Precision;
-  photos: { id: string; thumb: string | null; path: string }[];
+  photos: { id: string; thumb: string | null; path: string; origin?: 'inventory' | 'commons' }[];
   sources: { kind: string; volume: number | null; page: string | null }[];
 }
 
@@ -35,6 +35,8 @@ export interface WorkFilters {
   review: string;
   /** 'with' | 'without' | '' */
   photo: string;
+  /** 'inventory' | 'commons' | '' */
+  origin?: string;
   page: number;
 }
 
@@ -56,6 +58,8 @@ export function useWorkList(f: WorkFilters) {
       if (f.precision) q = q.eq('location_precision', f.precision);
       if (f.photo === 'with') q = q.neq('photos', '[]');
       if (f.photo === 'without') q = q.eq('photos', '[]');
+      if (f.origin === 'commons') q = q.filter('photos', 'cs', '[{"origin":"commons"}]');
+      if (f.origin === 'inventory') q = q.filter('photos', 'cs', '[{"origin":"inventory"}]');
       if (f.review === '1') {
         // needs_review görünümde yok: önce tablodan kimlikler alınır.
         const { data: ids, error } = await supabase.from('works').select('id').eq('needs_review', true);
@@ -127,6 +131,13 @@ export interface MediaRow {
   source_file: string | null;
   source_volume: number | null;
   source_page: number | null;
+  origin: 'inventory' | 'commons';
+  author: string | null;
+  license: string | null;
+  license_url: string | null;
+  source_url: string | null;
+  modifications: LocalizedText | null;
+  wikidata_id: string | null;
 }
 
 export interface WorkSource {
@@ -161,7 +172,7 @@ export function useWork(slug: string) {
       const work = data as WorkRecord;
       const [view, media] = await Promise.all([
         supabase.from('works_view').select('lng, lat, sources, city_slug, audio_tr, audio_en').eq('id', work.id).single(),
-        supabase.from('media').select('id, storage_path, thumb_path, alt_text, status, kind, sort_order, credit, source_file, source_volume, source_page').eq('work_id', work.id).order('sort_order'),
+        supabase.from('media').select('id, storage_path, thumb_path, alt_text, status, kind, sort_order, credit, source_file, source_volume, source_page, origin, author, license, license_url, source_url, modifications, wikidata_id').eq('work_id', work.id).order('sort_order'),
       ]);
       if (view.error) throw view.error;
       if (media.error) throw media.error;
@@ -259,6 +270,13 @@ export interface InboxPhoto {
   folder: string | null;
   source_file: string | null;
   kind: 'photo' | 'aerial' | 'inscription';
+  origin: 'inventory' | 'commons';
+  author: string | null;
+  license: string | null;
+  license_url: string | null;
+  source_url: string | null;
+  modifications: LocalizedText | null;
+  wikidata_id: string | null;
 }
 
 export function useInbox() {
@@ -267,7 +285,7 @@ export function useInbox() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('media')
-        .select('id, storage_path, thumb_path, folder, source_file, kind')
+        .select('id, storage_path, thumb_path, folder, source_file, kind, origin, author, license, license_url, source_url, modifications, wikidata_id')
         .is('work_id', null)
         .order('folder')
         .order('source_file');

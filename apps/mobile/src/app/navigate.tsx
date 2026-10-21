@@ -10,6 +10,7 @@ import { CueFlash } from '@/components/cue-flash';
 import { EndPin, ExtraLines, PointsLayer, RouteLine, SeziMap, UserDot, type MapPoint, type SeziMapHandle } from '@/components/map';
 import { NavAlertBanner } from '@/components/nav-alert';
 import { PointPopup } from '@/components/point-popup';
+import { PhotoSourceTag } from '@/components/photo-source';
 import { ScenarioPanel } from '@/components/scenario-panel';
 import { SoundCaptions } from '@/components/sound-captions';
 import { Badge, Button, Chip, Note, Segmented } from '@/components/ui';
@@ -488,7 +489,10 @@ function ArrivalPanel({ state, points, canHear, t }: { state: NavState; points: 
       </FadeInItem>
       {cover ? (
         <FadeInItem index={1}>
-          <Image source={{ uri: photoUrl(cover) }} style={s.cover} contentFit="cover" accessibilityIgnoresInvertColors accessible={false} />
+          <View style={{ position: 'relative' }}>
+            <Image source={{ uri: photoUrl(cover) }} style={s.cover} contentFit="cover" accessibilityIgnoresInvertColors accessible={false} />
+            <PhotoSourceTag photo={cover} />
+          </View>
         </FadeInItem>
       ) : null}
       <FadeInItem index={2} style={{ gap: space.xs }}>

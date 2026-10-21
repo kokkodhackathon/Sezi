@@ -1,10 +1,11 @@
-import { loc, type WorkPhoto } from '@sezi/shared';
+import { isCommons, loc, type WorkPhoto } from '@sezi/shared';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CloseIcon } from '@/design/icons';
+import { formatCommonsCredit, PhotoSourceTag } from '@/components/photo-source';
 import { space, type } from '@/design/type';
 import { useT } from '@/lib/i18n';
 import { photoUrl } from '@/lib/works';
@@ -18,7 +19,9 @@ export function PhotoViewer({ photos, start, onClose }: { photos: WorkPhoto[]; s
   const insets = useSafeAreaInsets();
   const { t: tr, lang } = useT();
   const [index, setIndex] = useState(start ?? 0);
+  const [captionH, setCaptionH] = useState(0);
   const current = photos[index];
+  const credit = current ? (isCommons(current) ? formatCommonsCredit(current, lang) : current.credit) : null;
 
   return (
     <Modal visible={start !== null} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
@@ -50,12 +53,21 @@ export function PhotoViewer({ photos, start, onClose }: { photos: WorkPhoto[]; s
           <CloseIcon color="#FFFFFF" />
         </Pressable>
         {current ? (
-          <View style={[styles.caption, { paddingBottom: insets.bottom + space.lg }]} accessibilityLiveRegion="polite">
-            <Text style={[type.body, styles.light]}>{loc(current.alt, lang)}</Text>
-            <Text style={[type.meta, styles.dim]}>
-              {[photos.length > 1 ? tr('work.viewerPos', { i: index + 1, n: photos.length }) : null, current.credit].filter(Boolean).join(' · ')}
-            </Text>
-          </View>
+          <>
+            <PhotoSourceTag
+              photo={current}
+              style={{ bottom: (captionH || insets.bottom + 80) + space.sm, right: space.lg }}
+            />
+            <View
+              onLayout={(e) => setCaptionH(e.nativeEvent.layout.height)}
+              style={[styles.caption, { paddingBottom: insets.bottom + space.lg }]}
+              accessibilityLiveRegion="polite">
+              <Text style={[type.body, styles.light]}>{loc(current.alt, lang)}</Text>
+              <Text style={[type.meta, styles.dim]}>
+                {[photos.length > 1 ? tr('work.viewerPos', { i: index + 1, n: photos.length }) : null, credit].filter(Boolean).join(' · ')}
+              </Text>
+            </View>
+          </>
         ) : null}
       </View>
     </Modal>

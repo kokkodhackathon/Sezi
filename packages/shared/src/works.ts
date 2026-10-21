@@ -32,7 +32,11 @@ export const WorkExhibitionSchema = z.object({
 });
 export type WorkExhibition = z.infer<typeof WorkExhibitionSchema>;
 
-/** Envanter fotoğrafı (Storage `media` bucket'ı; yollar bucket içinden). */
+/**
+ * Eser fotoğrafı (Storage `media` bucket'ı; yollar bucket içinden). `origin`: `inventory` bize verilen envanter
+ * arşivi, `commons` Wikimedia Commons'tan alınmış (Wikidata P18). Commons fotoğrafında yazar, lisans, lisans
+ * bağlantısı, dosya sayfası ve dosyada yaptığımız değişiklik her zaman gösterilir (CC atfı).
+ */
 export const WorkPhotoSchema = z.object({
   id: z.string(),
   path: z.string(),
@@ -42,8 +46,18 @@ export const WorkPhotoSchema = z.object({
   kind: z.enum(["photo", "aerial", "inscription"]),
   width: z.number().nullable(),
   height: z.number().nullable(),
+  // Eski önbellek satırlarında bu alanlar yok: envanter fotoğrafı sayılır.
+  origin: z.enum(["inventory", "commons"]).default("inventory"),
+  author: z.string().nullable().default(null),
+  license: z.string().nullable().default(null),
+  license_url: z.string().nullable().default(null),
+  source_url: z.string().nullable().default(null),
+  modifications: DbText.nullable().default(null),
 });
 export type WorkPhoto = z.infer<typeof WorkPhotoSchema>;
+
+/** Commons fotoğrafı mı (atıf satırı ve fotoğraf üstü kaynak etiketi gerekir). */
+export const isCommons = (p: Pick<WorkPhoto, "origin"> | undefined): boolean => p?.origin === "commons";
 
 export const WorkConditionSchema = z.enum(["intact", "restored", "damaged", "destroyed", "unknown"]);
 export type WorkCondition = z.infer<typeof WorkConditionSchema>;

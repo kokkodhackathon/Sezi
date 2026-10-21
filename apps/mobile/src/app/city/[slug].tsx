@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { ExhibitionCard } from '@/components/exhibition-card';
+import { PhotoSourceTag } from '@/components/photo-source';
 import { Button, Card, ListRow, Note, SectionTitle } from '@/components/ui';
 import { ExternalIcon, InfoIcon } from '@/design/icons';
 import { outline } from '@/design/sweet/components';
@@ -46,7 +47,12 @@ export default function CityScreen() {
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
       <Stack.Screen options={{ title: '' }} />
-      {cover ? <Image source={{ uri: photoUrl(cover, 'full') }} placeholder={{ uri: photoUrl(cover, 'thumb') }} style={[s.cover, outline(t)]} contentFit="cover" transition={150} accessible={false} /> : null}
+      {cover ? (
+        <View style={{ position: 'relative' }}>
+          <Image source={{ uri: photoUrl(cover, 'full') }} placeholder={{ uri: photoUrl(cover, 'thumb') }} style={[s.cover, outline(t)]} contentFit="cover" transition={150} accessible={false} />
+          <PhotoSourceTag photo={cover} />
+        </View>
+      ) : null}
       <View style={s.hero}>
         <View style={{ flex: 1, gap: space.xs }}>
           <Text style={[type.editorial, { color: t.text }]} accessibilityRole="header">

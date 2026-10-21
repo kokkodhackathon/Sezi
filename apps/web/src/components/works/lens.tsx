@@ -20,6 +20,11 @@ export function Lens({ src, children }: { src: string; children: ReactNode }) {
       className="relative"
       onPointerMove={(e) => {
         if (e.pointerType === "touch" || !ref.current) return;
+        // Fotoğraf üstündeki düğmelerde (kaynak etiketi, tam ekran) büyüteç kapanır: düğme ve açılan kutu görünür kalır.
+        if (e.target instanceof Element && e.target.closest("button, a, [data-no-lens]")) {
+          setAt(null);
+          return;
+        }
         const r = ref.current.getBoundingClientRect();
         setAt({ x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height });
       }}

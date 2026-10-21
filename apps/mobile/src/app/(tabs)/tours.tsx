@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTabBarSpace } from '@/components/app-tabs';
 import { ScreenHeader } from '@/components/screen-header';
 import { EmptyState } from '@/components/ui';
+import { PhotoSourceTag } from '@/components/photo-source';
 import { SoundIcon } from '@/design/icons';
 import { outline, SoftPressable } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
@@ -88,6 +89,7 @@ export default function Tours() {
               {cover ? (
                 <View style={[s.imgWrap, { backgroundColor: t.soft }]}>
                   <Image source={{ uri: photoUrl(cover, 'full') }} placeholder={{ uri: photoUrl(cover, 'thumb') }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} accessible={false} />
+                  <PhotoSourceTag photo={cover} />
                 </View>
               ) : (
                 // Fotoğrafı olmayan tur: büyük boş alan yerine küçük simgeli kare.

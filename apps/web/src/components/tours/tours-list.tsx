@@ -2,6 +2,7 @@
 
 import {
   coverOf,
+  isCommons,
   loc,
   planTour,
   TOURS,
@@ -22,11 +23,13 @@ import {
 import { CardCarousel } from "@/components/card-carousel";
 import { Badge } from "@/components/ui/badge";
 import { WorkThumb } from "@/components/work-thumb";
+import { PhotoSource } from "@/components/works/photo-source";
 import type { NavOverlay, WorkListItem } from "@/lib/data";
 import { href, type MessageKey } from "@/lib/i18n";
 import { useT } from "@/lib/i18n-client";
 import { planner, usePlannerOverlay } from "@/lib/pilot";
 import { useProfile } from "@/lib/profile";
+import { cn } from "@/lib/utils";
 
 export const TOUR_TEXT_KEYS: Record<string, { title: MessageKey; body: MessageKey }> = {
   tum: { title: "tours.tum.title", body: "tours.tum.body" },
@@ -136,33 +139,44 @@ export function ToursList({
             const cover = covers[plan.id];
             const mins = Math.max(1, Math.ceil(plan.lengthM / walkingSpeed(activeProfile) / 60));
             const tourHref = href(lang, `/turlar/${plan.id}${profileQuery}`);
+            const isCommonsCover = cover?.photo && isCommons(cover.photo);
 
             return (
-              <Link
+              <div
                 key={plan.id}
-                href={tourHref}
-                className="group relative flex aspect-[3/4] flex-col justify-end overflow-hidden rounded-xl bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background contrast:outline-2 contrast:outline-border"
+                className="group relative flex aspect-[3/4] flex-col justify-end overflow-hidden rounded-xl bg-muted contrast:outline-2 contrast:outline-border"
               >
-                <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
-                  <WorkThumb
-                    photo={cover?.photo}
-                    typeSlug={cover?.typeSlug ?? "cami"}
-                    alt={loc(cover?.photo?.alt, lang)}
-                    className="size-full"
-                    sizes="320px"
-                  />
-                </div>
-                {/* Yazı fotoğrafın üstünde: alttan koyulaşan örtü okunurluğu sağlar (yüksek kontrastta düz zemin). */}
-                <div className="relative grid gap-2 bg-gradient-to-t from-foreground/90 via-foreground/70 to-transparent p-5 pt-16 text-background contrast:bg-foreground contrast:bg-none">
-                  <h2 className="font-heading text-xl font-extrabold leading-tight group-hover:underline">{title}</h2>
-                  <p className="num flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
-                    <span>{t("tours.stops", { n: plan.stops.length })}</span>
-                    <span aria-hidden>·</span>
-                    <span>{t("tours.statWalk", { n: mins })}</span>
-                    {plan.stairs === 0 ? <Badge variant="success">{t("tours.stepFree")}</Badge> : null}
-                  </p>
-                </div>
-              </Link>
+                <Link
+                  href={tourHref}
+                  aria-label={title}
+                  className="absolute inset-0 z-0 outline-none focus-visible:ring-3 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background rounded-xl"
+                >
+                  <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
+                    <WorkThumb
+                      photo={cover?.photo}
+                      typeSlug={cover?.typeSlug ?? "cami"}
+                      alt={loc(cover?.photo?.alt, lang)}
+                      className="size-full"
+                      sizes="320px"
+                    />
+                  </div>
+                  {/* Yazı fotoğrafın üstünde: alttan koyulaşan örtü okunurluğu sağlar (yüksek kontrastta düz zemin). */}
+                  <div className={cn("pointer-events-none relative grid gap-2 bg-gradient-to-t from-foreground/90 via-foreground/70 to-transparent p-5 pt-16 text-background contrast:bg-foreground contrast:bg-none", isCommonsCover && "pr-28 sm:pr-32")}>
+                    <h2 className="font-heading text-xl font-extrabold leading-tight group-hover:underline">{title}</h2>
+                    <p className="num flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                      <span>{t("tours.stops", { n: plan.stops.length })}</span>
+                      <span aria-hidden>·</span>
+                      <span>{t("tours.statWalk", { n: mins })}</span>
+                      {plan.stairs === 0 ? <Badge variant="success">{t("tours.stepFree")}</Badge> : null}
+                    </p>
+                  </div>
+                </Link>
+                {isCommonsCover ? (
+                  <div className="absolute bottom-3 right-3 z-10 sm:bottom-4 sm:right-4">
+                    <PhotoSource photo={cover.photo} align="end" side="top" />
+                  </div>
+                ) : null}
+              </div>
             );
           })}
         </CardCarousel>
