@@ -41,7 +41,8 @@ export const PROFILE_ICON: Record<ProfileChoice, ReactNode> = {
 
 /**
  * Harita uygulamalarındaki ulaşım türü seçici gibi: simge + kısa ad, tek sıra. Yanında profil ayarı düğmesi.
- * Seçili öğe dolgu ve kalın yazıyla ayrılır (renk tek başına değil). Radyo grubu: oklarla gezilir.
+ * Seçili öğenin altındaki dolgu yeni seçime kayar (sekme çubuğu gibi); seçili öğe ayrıca kalın yazılır
+ * (renk tek başına değil). Radyo grubu: oklarla gezilir. Hareket azaltmada dolgu anında yer değiştirir.
  */
 export function ProfileSelect({ value, onChange }: { value: ProfileChoice; onChange: (next: ProfileChoice) => void }) {
   const { t } = useT();
@@ -50,6 +51,7 @@ export function ProfileSelect({ value, onChange }: { value: ProfileChoice; onCha
   const beforeSnap = useRef<string | null>(null);
   const effective: ProfileChoice = value === "benim" && !saved ? "walker" : value;
   const choices: ProfileChoice[] = saved ? ["benim", ...PROFILE_KEYS] : [...PROFILE_KEYS];
+  const activeIndex = Math.max(0, choices.indexOf(effective));
 
   const handleOpenChange = (open: boolean) => {
     setDialogOpen(open);
@@ -75,7 +77,7 @@ export function ProfileSelect({ value, onChange }: { value: ProfileChoice; onCha
       <div
         role="radiogroup"
         aria-label={t("route.profile")}
-        className="grid flex-1 gap-1"
+        className="relative grid flex-1 gap-1"
         style={{ gridTemplateColumns: `repeat(${choices.length}, minmax(0, 1fr))` }}
         onKeyDown={(e) => {
           if (e.key === "ArrowRight" || e.key === "ArrowDown") {
@@ -87,6 +89,11 @@ export function ProfileSelect({ value, onChange }: { value: ProfileChoice; onCha
           }
         }}
       >
+        <span
+          aria-hidden
+          className="absolute inset-y-0 left-0 rounded-lg bg-primary transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] contrast:outline-2 contrast:outline-foreground"
+          style={{ width: `calc((100% - ${choices.length - 1} * 0.25rem) / ${choices.length})`, transform: `translateX(calc(${activeIndex} * (100% + 0.25rem)))` }}
+        />
         {choices.map((k) => {
           const on = k === effective;
           return (
@@ -99,8 +106,8 @@ export function ProfileSelect({ value, onChange }: { value: ProfileChoice; onCha
               tabIndex={on ? 0 : -1}
               onClick={() => onChange(k)}
               className={cn(
-                "flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-center text-[0.6875rem] leading-tight transition-[background-color,transform] duration-150 ease-out active:scale-[0.97]",
-                on ? "bg-primary font-bold text-primary-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                "relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-lg px-1 py-1.5 text-center text-[0.6875rem] leading-tight transition-[color,transform] duration-300 ease-out active:scale-[0.97]",
+                on ? "font-bold text-primary-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
               {PROFILE_ICON[k]}

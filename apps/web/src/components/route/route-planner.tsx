@@ -22,6 +22,7 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { SeziMap, type MapLine, type MapMarker } from "@/components/map";
 import { PlacePicker, type PlaceOption } from "@/components/route/place-picker";
 import { PROFILE_ICON, ProfileSelect, resolveProfileChoice, resolveUserProfile, type ProfileChoice } from "@/components/route/profile-select";
+import { RollingText } from "@/components/rolling-text";
 import { StepList, ViaList } from "@/components/route/step-list";
 import { Button } from "@/components/ui/button";
 import { useAppearance } from "@/lib/appearance";
@@ -323,8 +324,8 @@ export function RoutePlanner({ overlay, initial }: { overlay: NavOverlay; initia
           ) : (
             <div aria-live="polite" className="grid gap-2">
               <p className="flex items-baseline gap-3">
-                <span className="num font-heading text-3xl font-extrabold">{t("common.minutes", { n: current.minutes })}</span>
-                <span className="num text-muted-foreground">{formatDistance(current.stats.lengthM, lang)}</span>
+                <RollingText text={t("common.minutes", { n: current.minutes })} className="font-heading text-3xl font-extrabold" />
+                <RollingText text={formatDistance(current.stats.lengthM, lang)} className="text-muted-foreground" />
               </p>
               <ul className="flex flex-wrap gap-1.5 text-xs font-semibold">
                 <li className={cn("rounded-lg px-2.5 py-1", current.stats.stairs === 0 ? "bg-success text-success-foreground" : "bg-warning text-warning-foreground")}>

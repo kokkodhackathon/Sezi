@@ -9,6 +9,9 @@ export function SiteFooter({ lang }: { lang: Lang }) {
     <footer className="mt-16 border-t">
       <div className="mx-auto grid max-w-6xl gap-2 px-4 py-6 text-sm text-muted-foreground">
         <nav aria-label={t(lang, "nav.about")} className="flex flex-wrap gap-x-4">
+          <Link className={LINK} href={href(lang, "/sergiler")}>
+            {t(lang, "nav.exhibitions")}
+          </Link>
           <Link className={LINK} href={href(lang, "/hakkinda")}>
             {t(lang, "nav.about")}
           </Link>

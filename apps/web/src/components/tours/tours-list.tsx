@@ -19,6 +19,7 @@ import {
   resolveUserProfile,
   type ProfileChoice,
 } from "@/components/route/profile-select";
+import { CardCarousel } from "@/components/card-carousel";
 import { Badge } from "@/components/ui/badge";
 import { WorkThumb } from "@/components/work-thumb";
 import type { NavOverlay, WorkListItem } from "@/lib/data";
@@ -128,7 +129,7 @@ export function ToursList({
           {t("tours.none")}
         </div>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2">
+        <CardCarousel label={t("tours.title")} itemClassName="w-[17rem] sm:w-80">
           {plans.map((plan) => {
             const keys = TOUR_TEXT_KEYS[plan.id];
             const title = keys ? t(keys.title) : plan.id;
@@ -140,37 +141,31 @@ export function ToursList({
               <Link
                 key={plan.id}
                 href={tourHref}
-                className="group flex flex-col overflow-hidden rounded-lg border bg-card transition-colors hover:border-primary/50"
+                className="group relative flex aspect-[3/4] flex-col justify-end overflow-hidden rounded-xl bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background contrast:outline-2 contrast:outline-border"
               >
-                <WorkThumb
-                  photo={cover?.photo}
-                  typeSlug={cover?.typeSlug ?? "cami"}
-                  alt={loc(cover?.photo?.alt, lang)}
-                  className="aspect-[16/9] w-full"
-                  sizes="(min-width: 640px) 50vw, 100vw"
-                />
-                <div className="flex flex-1 flex-col justify-between gap-2 p-4">
-                  <h2 className="font-heading text-lg font-bold text-foreground group-hover:underline">
-                    {title}
-                  </h2>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground num">
-                    <Badge variant="secondary">
-                      {t("tours.stops", { n: plan.stops.length })}
-                    </Badge>
+                <div className="absolute inset-0 transition-transform duration-500 ease-out group-hover:scale-[1.03]">
+                  <WorkThumb
+                    photo={cover?.photo}
+                    typeSlug={cover?.typeSlug ?? "cami"}
+                    alt={loc(cover?.photo?.alt, lang)}
+                    className="size-full"
+                    sizes="320px"
+                  />
+                </div>
+                {/* Yazı fotoğrafın üstünde: alttan koyulaşan örtü okunurluğu sağlar (yüksek kontrastta düz zemin). */}
+                <div className="relative grid gap-2 bg-gradient-to-t from-foreground/90 via-foreground/70 to-transparent p-5 pt-16 text-background contrast:bg-foreground contrast:bg-none">
+                  <h2 className="font-heading text-xl font-extrabold leading-tight group-hover:underline">{title}</h2>
+                  <p className="num flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                    <span>{t("tours.stops", { n: plan.stops.length })}</span>
                     <span aria-hidden>·</span>
                     <span>{t("tours.statWalk", { n: mins })}</span>
-                    {plan.stairs === 0 ? (
-                      <>
-                        <span aria-hidden>·</span>
-                        <Badge variant="success">{t("tours.stepFree")}</Badge>
-                      </>
-                    ) : null}
-                  </div>
+                    {plan.stairs === 0 ? <Badge variant="success">{t("tours.stepFree")}</Badge> : null}
+                  </p>
                 </div>
               </Link>
             );
           })}
-        </div>
+        </CardCarousel>
       )}
     </div>
   );

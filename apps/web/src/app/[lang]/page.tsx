@@ -5,6 +5,7 @@ import { PageContainer } from "@/components/page";
 import { getCities, getWorkIndex } from "@/lib/data";
 import { toExploreItem } from "@/lib/explore";
 import { isLang, t } from "@/lib/i18n";
+import { buildTurkeyMap } from "@/lib/turkey-map";
 
 export const revalidate = 600;
 
@@ -16,11 +17,12 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
   const { lang } = await params;
   if (!isLang(lang)) notFound();
   const [works, cities] = await Promise.all([getWorkIndex(), getCities()]);
+  const items = works.map(toExploreItem);
+  const cityOrder = cities.map((c) => c.slug);
 
   return (
     <PageContainer className="grid gap-6 pt-6 sm:pt-10">
-      <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">{t(lang, "home.title")}</h1>
-      <Explore items={works.map(toExploreItem)} cityOrder={cities.map((c) => c.slug)} />
+      <Explore title={t(lang, "home.title")} items={items} cityOrder={cityOrder} map={buildTurkeyMap(items, cityOrder)} />
     </PageContainer>
   );
 }

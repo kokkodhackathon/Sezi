@@ -42,7 +42,7 @@ export default async function LangLayout({ children, params }: { children: React
         <script dangerouslySetInnerHTML={{ __html: APPEARANCE_SCRIPT }} />
         <style dangerouslySetInnerHTML={{ __html: themeCss() }} />
       </head>
-      <body className="flex min-h-dvh flex-col">
+      <body className="flex min-h-dvh flex-col pb-[calc(4.25rem+env(safe-area-inset-bottom))] lg:pb-0">
         <Providers lang={lang}>
           <SiteHeader />
           <main id="icerik" tabIndex={-1} className="flex-1 outline-none">

@@ -6,6 +6,15 @@ export const tr = {
   "home.routeTitle": "Bursa Hanlar Bölgesi'nde yürüyün",
   "home.routeBody": "Profilinize uygun yürüyüş rotası.",
   "home.routeCta": "Rota planla",
+  "home.nearTitle": "Yakınınızda",
+  "home.nearPrompt": "Size en yakın vakıf eserlerini görün. Konumunuz kaydedilmez.",
+  "home.nearUse": "Konumumu kullan",
+  "home.nearLocating": "Konum alınıyor",
+  "home.nearDenied": "Konum izni verilmedi. Tarayıcı ayarlarından izin verip yeniden deneyin.",
+  "home.nearError": "Konum alınamadı. Yeniden deneyin.",
+  "home.nearDistance": "{d} uzakta",
+  "home.mapLabel": "İl seçin",
+  "home.mapCity": "{name}, {n} eser",
 };
 
 export const en: Record<keyof typeof tr, string> = {
@@ -15,4 +24,13 @@ export const en: Record<keyof typeof tr, string> = {
   "home.routeTitle": "Walk Bursa's Inns District",
   "home.routeBody": "A walking route that fits your profile.",
   "home.routeCta": "Plan a route",
+  "home.nearTitle": "Near you",
+  "home.nearPrompt": "See the foundation works closest to you. Your location is not stored.",
+  "home.nearUse": "Use my location",
+  "home.nearLocating": "Finding your location",
+  "home.nearDenied": "Location permission was not given. Allow it in your browser settings and try again.",
+  "home.nearError": "Could not get your location. Try again.",
+  "home.nearDistance": "{d} away",
+  "home.mapLabel": "Choose a province",
+  "home.mapCity": "{name}, {n} works",
 };

@@ -69,6 +69,19 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Fotoğraf yer tutucusunda gezen ışık (WorkThumb). Hareket azaltmada genel kural tek ve anlık oynatır. */
+@theme {
+  --animate-shimmer: shimmer 1.6s ease-in-out infinite;
+  @keyframes shimmer {
+    from {
+      background-position: 150% 0;
+    }
+    to {
+      background-position: -50% 0;
+    }
+  }
+}
+
 :root {
   --radius: 0.5rem;
 }

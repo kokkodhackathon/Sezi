@@ -1,17 +1,21 @@
 "use client";
 
 import { loc } from "@sezi/shared";
-import { CheckIcon, ListIcon, MapIcon, RouteIcon, SearchIcon, XIcon } from "lucide-react";
+import { CheckIcon, ListIcon, MapIcon, RouteIcon } from "lucide-react";
 import Link from "next/link";
 import { useDeferredValue, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
+import { CityMap } from "@/components/explore/city-map";
 import { FilterSelect, type FilterOption } from "@/components/explore/filter-select";
+import { SearchField } from "@/components/explore/search-field";
+import { CityTabs } from "@/components/explore/city-tabs";
 import { Button } from "@/components/ui/button";
 import { WorkCard } from "@/components/works/work-card";
 import { WorksMapView } from "@/components/works/works-map-view";
 import { applyFilters, EMPTY_FILTERS, filtersToQuery, hasActiveFilters, parseFilters, type ExploreFilters, type ExploreItem } from "@/lib/explore";
 import { formatNumber, href } from "@/lib/i18n";
 import { useT } from "@/lib/i18n-client";
+import type { TurkeyMapData } from "@/lib/turkey-map";
 import { cn } from "@/lib/utils";
 
 const PAGE = 24;
@@ -41,10 +45,11 @@ const chipOff = "bg-secondary font-semibold text-secondary-foreground hover:bg-m
 const chipOn = "bg-primary font-bold text-primary-foreground";
 
 /**
- * Ana sayfa keşfi: arama kutusu, il çipleri, tür / ilçe seçimi, fotoğraflı / kesin konum anahtarları ve sonuçlar.
+ * Ana sayfa keşfi: üstte başlık + arama kutusu, yanında il seçen büyük noktalı Türkiye haritası; altında il sekmeleri
+ * (kayan seçim dolgusu), tür / ilçe seçimi, fotoğraflı / kesin konum anahtarları ve sonuçlar.
  * Süzme yazarken anında (form gönderme yok); sonuçlar 24'erli açılır, harita görünümü aynı süzülmüş listeyi gösterir.
  */
-export function Explore({ items, cityOrder }: { items: ExploreItem[]; cityOrder: string[] }) {
+export function Explore({ title, items, cityOrder, map }: { title: string; items: ExploreItem[]; cityOrder: string[]; map: TurkeyMapData }) {
   const { t, lang } = useT();
   const search = useSyncExternalStore(subscribe, readSearch, () => "");
   const filters = useMemo(() => (search ? parseFilters(search) : EMPTY_FILTERS), [search]);
@@ -74,6 +79,25 @@ export function Explore({ items, cityOrder }: { items: ExploreItem[]; cityOrder:
     if (patch.il !== undefined && patch.il !== filters.il) next.ilce = "";
     writeFilters(next);
   };
+
+  // Yer tutucu örnekleri gerçek veriden: farklı türlerden üç fotoğraflı eserin adı ve en kalabalık iki "ilçe + tür".
+  const examples = useMemo(() => {
+    const names: string[] = [];
+    const seen = new Set<string>();
+    for (const w of items) {
+      if (names.length >= 3) break;
+      if (w.photos.length === 0 || seen.has(w.type_slug)) continue;
+      seen.add(w.type_slug);
+      names.push(loc(w.name, lang));
+    }
+    const pairs = new Map<string, number>();
+    for (const w of items) if (w.district) {
+      const k = `${w.district} ${loc(w.type_name, lang).toLocaleLowerCase(lang)}`;
+      pairs.set(k, (pairs.get(k) ?? 0) + 1);
+    }
+    const top = [...pairs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([k]) => k);
+    return [names[0], top[0], names[1], top[1], names[2]].filter((x): x is string => Boolean(x));
+  }, [items, lang]);
 
   const results = useMemo(() => applyFilters(items, active, lang), [items, active.q, active.il, active.tur, active.ilce, active.foto, active.kesin, lang]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -111,60 +135,40 @@ export function Explore({ items, cityOrder }: { items: ExploreItem[]; cityOrder:
 
   return (
     <div className="grid gap-6">
-      <div className="grid gap-3">
-        <div role="search" className="relative max-w-2xl">
-          <label htmlFor="explore-q" className="sr-only">
-            {t("home.searchLabel")}
-          </label>
-          <SearchIcon className="pointer-events-none absolute top-1/2 left-4 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
-          <input
-            id="explore-q"
-            type="search"
+      <div className="grid items-center gap-x-10 gap-y-6 lg:grid-cols-2">
+        <div className="grid gap-5">
+          <h1 className="text-3xl font-extrabold tracking-tight text-balance sm:text-5xl">{title}</h1>
+          <SearchField
             value={q}
-            onChange={(e) => {
+            onChange={(v) => {
               setShown(PAGE);
-              setQ(e.target.value);
+              setQ(v);
             }}
-            placeholder={t("home.searchPlaceholder")}
-            autoComplete="off"
-            className="h-14 w-full rounded-lg border border-input bg-card pr-12 pl-12 text-base outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/40 [&::-webkit-search-cancel-button]:hidden"
+            onClear={() => {
+              setQ("");
+              set({ q: "" });
+            }}
+            examples={examples}
           />
-          {q ? (
-            <Button size="icon-sm" variant="ghost" className="absolute top-1/2 right-3 -translate-y-1/2 rounded-lg" aria-label={t("works.filter.clear")} onClick={() => {
-                setQ("");
-                set({ q: "" });
-              }}>
-              <XIcon aria-hidden />
-            </Button>
-          ) : null}
         </div>
+        <CityMap data={map} cities={cities} value={filters.il} onChange={(il) => set({ il })} />
+      </div>
 
-        <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-          <div role="radiogroup" aria-label={t("works.filter.cityLabel")} className="contents">
-            {[{ value: "", label: t("works.filter.cityAll"), count: items.length }, ...cities].map((c) => {
-              const on = filters.il === c.value;
-              return (
-                <button key={c.value || "all"} type="button" role="radio" aria-checked={on} onClick={() => set({ il: c.value })} className={cn(chip, on ? chipOn : chipOff)}>
-                  {c.label}
-                  <span className={cn("num font-sans text-xs font-normal", on ? "text-primary-foreground/85" : "text-muted-foreground")}>{formatNumber(lang, c.count)}</span>
-                </button>
-              );
-            })}
-          </div>
-          <span className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden />
-          <FilterSelect label={t("works.filter.typeLabel")} allLabel={t("works.filter.typeAll")} value={filters.tur} options={types} onChange={(v) => set({ tur: v })} searchable />
-          {filters.il ? (
-            <FilterSelect label={t("works.filter.districtLabel")} allLabel={t("works.filter.districtAll")} value={filters.ilce} options={districts} onChange={(v) => set({ ilce: v })} searchable={districts.length > 8} />
-          ) : null}
-          <button type="button" aria-pressed={filters.foto} onClick={() => set({ foto: !filters.foto })} className={cn(chip, filters.foto ? chipOn : chipOff)}>
-            {filters.foto ? <CheckIcon className="size-4" aria-hidden /> : null}
-            {t("works.filter.onlyPhotos")}
-          </button>
-          <button type="button" aria-pressed={filters.kesin} onClick={() => set({ kesin: !filters.kesin })} className={cn(chip, filters.kesin ? chipOn : chipOff)}>
-            {filters.kesin ? <CheckIcon className="size-4" aria-hidden /> : null}
-            {t("works.filter.onlyExact")}
-          </button>
-        </div>
+      <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+        <CityTabs tabs={[{ value: "", label: t("works.filter.cityAll"), count: items.length }, ...cities]} value={filters.il} onChange={(il) => set({ il })} />
+        <span className="mx-1 hidden h-6 w-px bg-border sm:block" aria-hidden />
+        <FilterSelect label={t("works.filter.typeLabel")} allLabel={t("works.filter.typeAll")} value={filters.tur} options={types} onChange={(v) => set({ tur: v })} searchable />
+        {filters.il ? (
+          <FilterSelect label={t("works.filter.districtLabel")} allLabel={t("works.filter.districtAll")} value={filters.ilce} options={districts} onChange={(v) => set({ ilce: v })} searchable={districts.length > 8} />
+        ) : null}
+        <button type="button" aria-pressed={filters.foto} onClick={() => set({ foto: !filters.foto })} className={cn(chip, filters.foto ? chipOn : chipOff)}>
+          {filters.foto ? <CheckIcon className="size-4" aria-hidden /> : null}
+          {t("works.filter.onlyPhotos")}
+        </button>
+        <button type="button" aria-pressed={filters.kesin} onClick={() => set({ kesin: !filters.kesin })} className={cn(chip, filters.kesin ? chipOn : chipOff)}>
+          {filters.kesin ? <CheckIcon className="size-4" aria-hidden /> : null}
+          {t("works.filter.onlyExact")}
+        </button>
       </div>
 
       <div className="flex items-center justify-between gap-3">
@@ -183,7 +187,12 @@ export function Explore({ items, cityOrder }: { items: ExploreItem[]; cityOrder:
             </button>
           ) : null}
         </p>
-        <div role="radiogroup" aria-label={t("works.view.label")} className="flex gap-1 rounded-lg bg-secondary p-1">
+        <div role="radiogroup" aria-label={t("works.view.label")} className="relative flex gap-1 rounded-lg bg-secondary p-1">
+          <span
+            aria-hidden
+            className="absolute top-1 left-1 size-10 rounded-lg bg-card shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] contrast:outline-2 contrast:outline-foreground"
+            style={{ transform: filters.harita ? "translateX(calc(100% + 0.25rem))" : undefined }}
+          />
           {[
             { on: !filters.harita, label: t("works.view.list"), icon: <ListIcon className="size-4" aria-hidden />, harita: false },
             { on: filters.harita, label: t("works.view.map"), icon: <MapIcon className="size-4" aria-hidden />, harita: true },
@@ -196,7 +205,7 @@ export function Explore({ items, cityOrder }: { items: ExploreItem[]; cityOrder:
               aria-label={v.label}
               title={v.label}
               onClick={() => set({ harita: v.harita })}
-              className={cn("flex size-10 items-center justify-center rounded-full transition-colors", v.on ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground")}
+              className={cn("relative flex size-10 items-center justify-center rounded-lg transition-colors", v.on ? "text-foreground" : "text-muted-foreground hover:text-foreground")}
             >
               {v.icon}
             </button>
@@ -235,7 +244,7 @@ export function Explore({ items, cityOrder }: { items: ExploreItem[]; cityOrder:
         <WorksMapView works={results} lang={lang} />
       ) : (
         <>
-          <ul className="grid grid-cols-2 gap-x-4 gap-y-7 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
             {results.slice(0, shown).map((w, i) => (
               <li key={w.slug}>
                 <WorkCard work={w} lang={lang} priority={i < 4} />

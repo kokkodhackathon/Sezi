@@ -1,20 +1,22 @@
 "use client";
 
-import { ALargeSmallIcon, ContrastIcon, MenuIcon, UserRoundIcon } from "lucide-react";
+import { ALargeSmallIcon, ContrastIcon, UserRoundIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar } from "@/components/account/avatar";
+import { BottomNav } from "@/components/bottom-nav";
+import { SiteSearch } from "@/components/site-search";
 import { useAccount } from "@/lib/account";
 import { setAppearance, TEXT_SIZES, useAppearance } from "@/lib/appearance";
 import { href, type MessageKey } from "@/lib/i18n";
 import { useT } from "@/lib/i18n-client";
 import { useIdentity } from "@/lib/identity";
+import { useSlidingBox } from "@/lib/use-sliding-box";
 import { cn } from "@/lib/utils";
 
 const LINKS: { path: string; label: MessageKey }[] = [
@@ -98,7 +100,7 @@ function LangSwitch() {
 }
 
 /** Hesap düğmesi: girişsizken "Giriş yap", girişliyken avatar + ad → hesap sayfası. */
-function AccountLink({ onNavigate }: { onNavigate?: () => void }) {
+function AccountLink() {
   const { t, lang } = useT();
   const { ready, user } = useAccount();
   const { identity, avatar } = useIdentity();
@@ -106,7 +108,7 @@ function AccountLink({ onNavigate }: { onNavigate?: () => void }) {
   if (!user) {
     return (
       <Button variant="default" asChild>
-        <Link href={href(lang, "/hesap/giris")} onClick={onNavigate}>
+        <Link href={href(lang, "/hesap/giris")}>
           <UserRoundIcon aria-hidden />
           {t("nav.signIn")}
         </Link>
@@ -116,7 +118,7 @@ function AccountLink({ onNavigate }: { onNavigate?: () => void }) {
   const name = identity?.display_name || user.email || t("nav.account");
   return (
     <Button variant="ghost" asChild>
-      <Link href={href(lang, "/hesap")} onClick={onNavigate} aria-label={`${t("nav.account")}: ${name}`}>
+      <Link href={href(lang, "/hesap")} aria-label={`${t("nav.account")}: ${name}`}>
         <Avatar identity={identity} src={avatar} size={28} />
         <span className="max-w-36 truncate">{name}</span>
       </Link>
@@ -124,69 +126,91 @@ function AccountLink({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+/**
+ * Üst menü (Aceternity "Resizable Navbar" gibi): sayfanın başında tam genişlikte düz çubuk; aşağı kayınca daralıp
+ * ortada yüzen, bulanık zeminli bir çubuğa dönüşür, yukarı dönünce açılır. Sayfa bağlantıları ortada (logo solda,
+ * eylemler sağda; üç sütun). Rota / Turlar / Sergiler'de dolgu
+ * üzerine gelinen bağlantının arkasına kayar, imleç yokken seçili sayfada durur (seçili sayfa ayrıca kalın ve koyu).
+ * Arama (Ctrl+K), dil, görünüm ve hesap sağda. Telefon ve tablette sayfalar alttaki sekme çubuğunda (`BottomNav`);
+ * Sergiler, Hakkında ve Bildirim alt bilgide. Hareket azaltmada geçişler anlık.
+ */
 export function SiteHeader() {
   const { t, lang } = useT();
-  const { isActive } = useActive();
-  const [open, setOpen] = useState(false);
+  const { rest, isActive } = useActive();
+  const navRef = useRef<HTMLElement>(null);
+  const active = LINKS.findIndex((l) => isActive(l.path));
+  const [hovered, setHovered] = useState<number | null>(null);
+  const pill = useSlidingBox(navRef, "a", hovered ?? active, [lang]);
+  const [scrolled, setScrolled] = useState(false);
 
-  const links = (onNavigate?: () => void, vertical = false) =>
-    LINKS.map((l) => (
-      <Link
-        key={l.path}
-        href={href(lang, l.path)}
-        onClick={onNavigate}
-        aria-current={isActive(l.path) ? "page" : undefined}
-        className={cn(
-          "inline-flex min-h-12 items-center rounded-lg px-3 font-heading text-[0.9375rem] font-bold text-muted-foreground hover:bg-muted hover:text-foreground",
-          "aria-[current=page]:text-foreground aria-[current=page]:underline aria-[current=page]:decoration-2 aria-[current=page]:underline-offset-8",
-          vertical && "w-full",
-        )}
-      >
-        {t(l.label)}
-      </Link>
-    ));
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85">
-      <a
-        href="#icerik"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
+    <>
+      <header
+        data-scrolled={scrolled}
+        className={cn(
+          // Yükseklik değişmez (sayfa kaymasın); yüzen çubuk yalnız `transform` ile aşağı iner.
+          "group/header sticky top-0 z-40 border-b px-3 transition-[background-color,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] sm:px-4",
+          scrolled ? "border-transparent" : "bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/85",
+        )}
       >
-        {t("nav.skip")}
-      </a>
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-2 px-4">
-        <Link href={href(lang)} className="mr-2 inline-flex min-h-12 min-w-12 items-center justify-center font-heading text-2xl font-extrabold tracking-tight text-link" aria-label={t("nav.home")}>
-          {t("site.name")}
-        </Link>
-        <nav aria-label={t("nav.main")} className="hidden flex-1 items-center gap-1 lg:flex">
-          {links()}
-        </nav>
-        <div className="ml-auto flex items-center gap-1">
-          <LangSwitch />
-          <AppearanceMenu />
-          <div className="hidden sm:block">
-            <AccountLink />
+        <a
+          href="#icerik"
+          className="sr-only focus:not-sr-only focus:absolute focus:left-3 focus:top-3 focus:z-50 focus:rounded-lg focus:bg-primary focus:px-4 focus:py-3 focus:text-primary-foreground"
+        >
+          {t("nav.skip")}
+        </a>
+        <div
+          className={cn(
+            "mx-auto flex h-16 items-center gap-2 border px-1 lg:grid lg:grid-cols-[1fr_auto_1fr] transition-[max-width,border-radius,background-color,box-shadow,border-color,transform,padding] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)]",
+            scrolled
+              ? "max-w-4xl translate-y-2 rounded-xl px-3 border-border bg-background/80 shadow-lg shadow-foreground/5 backdrop-blur-md contrast:border-2 contrast:border-foreground contrast:bg-background"
+              : "max-w-6xl rounded-none border-transparent",
+          )}
+        >
+          <Link href={href(lang)} className="mr-2 inline-flex min-h-12 min-w-12 items-center justify-center justify-self-start font-heading text-2xl font-extrabold tracking-tight text-link" aria-label={t("nav.home")}>
+            {t("site.name")}
+          </Link>
+          <nav ref={navRef} aria-label={t("nav.main")} className="relative hidden items-center gap-1 justify-self-center lg:flex" onMouseLeave={() => setHovered(null)}>
+            <span
+              aria-hidden
+              className={cn(
+                "pointer-events-none absolute top-1/2 left-0 h-10 rounded-lg bg-secondary transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] contrast:outline-2 contrast:outline-foreground",
+                pill ? "opacity-100" : "opacity-0",
+              )}
+              style={pill ? { width: pill.width, transform: `translate(${pill.left}px, -50%)` } : undefined}
+            />
+            {LINKS.map((l, i) => (
+              <Link
+                key={l.path}
+                href={href(lang, l.path)}
+                aria-current={isActive(l.path) ? "page" : undefined}
+                onMouseEnter={() => setHovered(i)}
+                onFocus={() => setHovered(i)}
+                onBlur={() => setHovered(null)}
+                className="relative inline-flex min-h-12 items-center rounded-lg px-4 font-heading text-[0.9375rem] font-bold text-muted-foreground transition-colors outline-none hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 aria-[current=page]:font-extrabold aria-[current=page]:text-foreground"
+              >
+                {t(l.label)}
+              </Link>
+            ))}
+          </nav>
+          <div className="ml-auto flex items-center gap-1 justify-self-end">
+            <SiteSearch />
+            <LangSwitch />
+            <AppearanceMenu />
+            <div className="hidden lg:block">
+              <AccountLink />
+            </div>
           </div>
-          <Sheet open={open} onOpenChange={setOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden" aria-label={t("nav.menu")}>
-                <MenuIcon aria-hidden />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-72">
-              <SheetHeader>
-                <SheetTitle>{t("nav.menuTitle")}</SheetTitle>
-              </SheetHeader>
-              <nav aria-label={t("nav.main")} className="grid gap-1 px-4">
-                {links(() => setOpen(false), true)}
-                <div className="pt-3 sm:hidden">
-                  <AccountLink onNavigate={() => setOpen(false)} />
-                </div>
-              </nav>
-            </SheetContent>
-          </Sheet>
         </div>
-      </div>
-    </header>
+      </header>
+      <BottomNav rest={rest} />
+    </>
   );
 }
