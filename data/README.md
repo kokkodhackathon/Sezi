@@ -42,6 +42,8 @@ npx supabase@latest db query --linked --project-ref jejsvycpzulpleftkssj -f supa
 `data/geo_overrides.json`: anahtar eser slug'ı, değer OSM kimliğiyle koordinat.
 - `"lng": null` yanlış otomatik eşleşmeyi kaldırır.
 - `"type"` türü elle düzeltir.
+
+`data/name_overrides.json`: içindekiler ayrıştırmasının TR/EN satırlarını karıştırdığı eser adları ("and Graveyard Meydancık Camii" gibi); doğru ad {tr, en} eserin kitaptaki başlığından alındı. `inventory_import.py` adı ve türü buradan alır, slug değişmez.
 - Düzeltmeden sonra `inventory_import.py` ve seed adımlarını yeniden çalıştırın.
 
 ### Konum adayları (eşleştirme masası)
