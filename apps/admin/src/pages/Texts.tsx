@@ -412,7 +412,7 @@ export function Texts() {
           </Card>
 
           {draft && form ? (
-            <div className="grid min-w-0 items-start gap-4 xl:grid-cols-2">
+            <div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
             <BookPage url={draft.source.url} pdfPage={draft.pdf_page} printedPage={draft.page} pageEnd={draft.page_end} />
             <section className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-4 xl:max-h-[calc(100vh-32px)] xl:overflow-y-auto xl:pr-2 [&>*]:shrink-0" aria-label="Taslak düzenleme">
               <Card>
