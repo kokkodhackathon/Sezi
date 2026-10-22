@@ -21,6 +21,7 @@ import { toast } from 'sonner';
 
 import { BookPage } from '@/components/book-page';
 import { PageHeader } from '@/components/page-header';
+import { ArchitectureSuggest, BuiltYearSuggest } from '@/components/text-suggestions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -552,6 +553,12 @@ export function Texts() {
                       <FieldLabel htmlFor="draft-built-year">Yapım yılı</FieldLabel>
                       <Input id="draft-built-year" type="number" min={1000} max={2100} step={1} className="min-h-12" value={form.built_year} readOnly={draft.status === 'rejected' || busy} onChange={(e) => setForm({ ...form, built_year: e.target.value })} />
                       <FieldDescription>İsteğe bağlı; kitapta kesin yıl verilmemişse boş bırakın.</FieldDescription>
+                      <BuiltYearSuggest
+                        text={[form.history.tr, form.architecture.tr].filter(Boolean).join('\n\n')}
+                        current={form.built_year.trim()}
+                        disabled={draft.status === 'rejected' || busy}
+                        onPick={(year) => setForm({ ...form, built_year: String(year) })}
+                      />
                     </Field>
                     <Field>
                       <FieldLabel htmlFor="draft-founder">Banisi</FieldLabel>
@@ -590,6 +597,20 @@ export function Texts() {
                         );
                       })}
                     </FieldGroup>
+                    {key === 'history' && draft.status !== 'rejected' ? (
+                      <div className={cn('mt-4 grid gap-4', langView === 'both' && 'md:grid-cols-2')}>
+                        {visibleLangs.map((l) => (
+                          <ArchitectureSuggest
+                            key={`${draft.id}-${l}-${form.history[l].length}-${form.architecture[l].length}`}
+                            history={form.history[l]}
+                            architecture={form.architecture[l]}
+                            lang={l}
+                            disabled={busy}
+                            onApply={(next) => setForm({ ...form, history: { ...form.history, [l]: next.history }, architecture: { ...form.architecture, [l]: next.architecture } })}
+                          />
+                        ))}
+                      </div>
+                    ) : null}
                   </CardContent>
                 </Card>
               ))}

@@ -19,3 +19,4 @@ export * from "./account";
 export * from "./compare";
 export * from "./sentences";
 export * from "./speech-queue";
+export * from "./text-suggest";
