@@ -1,0 +1,47 @@
+{
+  "_note": "Elle doğrulanmış eser adları. İçindekiler ayrıştırması bu kayıtlarda TR/EN satırlarını karıştırmıştı; doğru ad eserin kitaptaki başlığından (Bursa Vakıf Eserleri, Acuta/Black başlık + İngilizce alt başlık) alındı, 22 Ekim 2026. Slug değişmez (bağlantılar kırılmasın).",
+  "bursa-and-graveyard-meydancik-camii": {
+    "tr": "Meydancık Camii",
+    "en": "Meydancık Mosque"
+  },
+  "bursa-and-graveyard-kanberler-sitti-hatun-camii": {
+    "tr": "Kanberler (Sitti Hatun) Camii",
+    "en": "Kanberler (Sitti Hatun) Mosque"
+  },
+  "bursa-and-graveyard-candarli-ibrahim-pasa-mahkeme-hoca-muslihuddin-camii": {
+    "tr": "Çandarlı İbrahim Paşa (Mahkeme - Hoca Muslihuddin) Camii",
+    "en": "Çandarlı İbrahim Paşa (Mahkeme - Hoca Muslihuddin) Mosque"
+  },
+  "bursa-and-graveyard-besikciler-sinan-dede-camii-ve-haziresi": {
+    "tr": "Beşikçiler (Sinan Dede) Camii ve Haziresi",
+    "en": "Beşikçiler (Sinan Dede) Mosque and Graveyard"
+  },
+  "bursa-ve-haziresi": {
+    "tr": "Çakır Ağa (Mecnun Dede) Camii ve Haziresi",
+    "en": "Çakır Ağa (Mecnun Dede) Mosque and Graveyard"
+  },
+  "bursa-graveyard-timurtas-pasa-hamami": {
+    "tr": "Timurtaş Paşa Hamamı",
+    "en": "Timurtaş Paşa Bath"
+  },
+  "bursa-balabancik-camii": {
+    "tr": "Molla Arap (Balabancık) Camii",
+    "en": "Molla Arap (Balabancık) Mosque"
+  },
+  "bursa-balabancik-mosque-musa-baba-camii-ve-haziresi": {
+    "tr": "Musa Baba Camii ve Haziresi",
+    "en": "Musa Baba Mosque and Graveyard"
+  },
+  "bursa-resulzade-camii": {
+    "tr": "Mücelliddin Ömer Ağa (Resulzade) Camii",
+    "en": "Mücelliddin Ömer Ağa (Resulzade) Mosque"
+  },
+  "bursa-resulzade-mosque-namazgah-sufi-mehmed-yeni-camii": {
+    "tr": "Namazgâh (Sufi Mehmed-Yeni) Camii",
+    "en": "Namazgâh (Sufi Mehmed-Yeni) Mosque"
+  },
+  "bursa-koimesis-tes-theotokos-hyakinthos-manastiri-kilisesii": {
+    "tr": "Koimesis Tes Theotokos Hyakinthos Manastırı Kilisesi",
+    "en": "Koimesis Tes Theotokos Hyakinthos Monastery Church"
+  }
+}

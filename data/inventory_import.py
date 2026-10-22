@@ -21,6 +21,8 @@ ROOT = Path(__file__).resolve().parent.parent
 IN = ROOT / "data/out/inventory_geo.json"
 OUT = ROOT / "supabase/seed_inventory.sql"
 OVERRIDES = ROOT / "data/geo_overrides.json"
+# İçindekiler ayrıştırmasının bozduğu adlar; kitaptaki başlıkla elle doğrulandı (slug aynı kalır).
+NAME_OVERRIDES = ROOT / "data/name_overrides.json"
 
 # Ad içindeki tür sözcüğü → work_types.slug. Sıra önemlidir: "Camii ve Türbesi" → cami (ilk ana yapı).
 TYPE_RULES = [
@@ -75,6 +77,7 @@ def sql(s) -> str:
 def main():
     rows = json.loads(IN.read_text(encoding="utf-8"))
     overrides = json.loads(OVERRIDES.read_text(encoding="utf-8"))
+    names = json.loads(NAME_OVERRIDES.read_text(encoding="utf-8"))
     out, slugs = [], set()
     for r in rows:
         base = slugify(f"{r['city']}-{r['name_tr']}")
@@ -100,8 +103,8 @@ def main():
         out.append(
             {
                 "slug": slug,
-                "name": {"tr": r["name_tr"], **({"en": r["name_en"]} if r.get("name_en") else {})},
-                "type": (fix or {}).get("type") or type_of(r["name_tr"]),
+                "name": names.get(slug) or {"tr": r["name_tr"], **({"en": r["name_en"]} if r.get("name_en") else {})},
+                "type": (fix or {}).get("type") or type_of((names.get(slug) or {}).get("tr") or r["name_tr"]),
                 "city": r["city"].lower(),
                 "district": r["district"],
                 "lng": geo["lng"] if geo else None,
