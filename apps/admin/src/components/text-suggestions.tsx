@@ -9,7 +9,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 /**
  * Tarihçe metninde mimari bölüm önerisi: önerilen paragraflar işaretli gelir, admin kitapla karşılaştırıp
  * işaretleri düzeltir ve Mimari alanına taşır. Form kaydedilene kadar hiçbir şey veritabanına yazılmaz.
- * Metin değişince (ör. taşıma sonrası) bileşen `key` ile yeniden kurulur; öneri yeni metinden hesaplanır.
+ * Tarihçe metni herhangi bir şekilde değişince (aynı uzunlukta düzenleme, paragraf bölme, taşıma) seçim yeni
+ * metnin önerisinden yeniden kurulur: eski paragraf numaraları başka paragrafları göstermesin.
  */
 export function ArchitectureSuggest({ history, architecture, lang, disabled, onApply }: {
   history: string;
@@ -20,11 +21,18 @@ export function ArchitectureSuggest({ history, architecture, lang, disabled, onA
 }) {
   const paragraphs = useMemo(() => paragraphsOf(history), [history]);
   const suggestion = useMemo(() => suggestArchitecture(paragraphs, lang), [paragraphs, lang]);
-  const [picked, setPicked] = useState<Set<number>>(() => {
+  const initial = () => {
     const s = new Set<number>();
     if (suggestion) for (let i = suggestion.start; i < suggestion.end; i++) s.add(i);
     return s;
-  });
+  };
+  const [picked, setPicked] = useState<Set<number>>(initial);
+  const [pickedFor, setPickedFor] = useState(history);
+  // Render sırasında eşitlenir (efektte değil): değişen metinle eski seçim bir kare bile görünmez.
+  if (pickedFor !== history) {
+    setPickedFor(history);
+    setPicked(initial());
+  }
   // Mimari zaten ayrılmışsa öneri yalnız gürültüdür (sonradan taşınan paragraf kitap sırasını bozar).
   if (!suggestion || architecture.trim()) return null;
   const toggle = (i: number, on: boolean) => {

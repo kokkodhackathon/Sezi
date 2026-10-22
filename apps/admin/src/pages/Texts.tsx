@@ -601,7 +601,7 @@ export function Texts() {
                       <div className={cn('mt-4 grid gap-4', langView === 'both' && 'md:grid-cols-2')}>
                         {visibleLangs.map((l) => (
                           <ArchitectureSuggest
-                            key={`${draft.id}-${l}-${form.history[l].length}-${form.architecture[l].length}`}
+                            key={`${draft.id}-${l}`}
                             history={form.history[l]}
                             architecture={form.architecture[l]}
                             lang={l}
