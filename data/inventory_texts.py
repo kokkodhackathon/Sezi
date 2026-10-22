@@ -44,8 +44,8 @@ PART_BYTES = 500_000  # uzak sorgu boyut sınırı (413) yüzünden çıktı par
 
 MAX_PAGES = 8  # bir eserin en çok kaç basılı sayfa okunacağı
 # Yazı tipine göre okunan kitaplarda bitiş sonraki eserin başlığıyla kesin bulunur; sınır yalnız güvenlik içindir
-# (Ulucami gibi uzun eserler 8 sayfayı aşıyor).
-MAX_PAGES_FONTS = 24
+# (Ulucami ve Yeşil Camii 24 sayfayı da aşıyor: Ulucami 37–71).
+MAX_PAGES_FONTS = 40
 TRANSLATION_PARA = re.compile(r"^(Mealen|Bu kitabenin meali|Translation|Meaning|It reads|Which reads|The inscription reads)\b[^:]{0,20}:")
 SIZE_TOLERANCE = 0.9  # gövde yazı boyutundan en çok bu kadar sapan bloklar gövdedir
 CACHE = ROOT / "data/raw/texts_cache"
