@@ -230,6 +230,10 @@ const textDraftSchema = draftFieldsSchema.extend({
   warnings: z.array(z.string()),
   status: z.enum(['pending', 'published', 'rejected']),
   decided_at: z.string().nullable(),
+  /** Admin metin alanlarını değiştirdiyse: veri hattı bu taslağı yeniden üretimde ezmez. */
+  edited_at: z.string().nullable(),
+  /** Eserin kitaptaki başlığı (yazı tipinden okunur); uygulamadaki addan farklıysa düzeltme önerilir. */
+  book_title: LocalizedText.nullable(),
   source: z.object({ title: z.string(), url: z.string().nullable(), volume: z.number().nullable() }),
   work: z.object({
     id: z.string(),
@@ -247,13 +251,15 @@ const textDraftSchema = draftFieldsSchema.extend({
 export type TextDraft = z.infer<typeof textDraftSchema>;
 
 export const WARNING_LABEL: Record<string, string> = {
-  tr_en_unbalanced: 'TR ve EN uzunlukları çok farklı',
-  range_capped: 'Sayfa aralığı kısaltıldı',
-  no_address: 'Adres cümlesi bulunamadı',
-  unclassified_blocks: 'Dili belirlenemeyen bölüm var',
-  needs_review_entry: 'Kitap kaydı kuşkulu',
+  tr_en_unbalanced: 'TR ve EN uzunlukları çok farklı; eksik paragraf olabilir',
+  range_capped: '8 sayfadan uzun ya da bölüm sonu: son sayfayı kitapla karşılaştırın',
+  no_address: 'Adres cümlesi bulunamadı; adresi kitaptan ekleyin',
+  unclassified_blocks: 'Dili belirlenemeyen bölüm atıldı',
+  needs_review_entry: 'İçindekiler kaydı kuşkulu',
   address_loose: 'Adres cümlesi tarihçe bilgisi de içerebilir',
   shared_page: 'Sayfayı başka bir eserle paylaşıyor; metinler karışmış olabilir',
+  inscription_removed: 'Kitabe/belge alıntısı çıkarıldı ([…]); cümlenin akışına bakın',
+  no_heading: 'Kitapta eserin başlığı bulunamadı; başlangıcı kontrol edin',
 };
 
 export const DRAFT_STATUS_LABEL: Record<DraftStatus, string> = { pending: 'Bekliyor', published: 'Yayında', rejected: 'Reddedildi' };
@@ -267,7 +273,7 @@ export function useTextDrafts(citySlug: string, status: DraftStatus) {
           supabase
             .from('text_drafts')
             .select(
-              'id, work_id, page, page_end, pdf_page, address, history, architecture, built_year, founder, period, summary, warnings, status, decided_at, source:sources!inner(title, url, volume), work:works!inner(id, slug, name, district, address, history, architecture, cities!inner(slug))',
+              'id, work_id, page, page_end, pdf_page, address, history, architecture, built_year, founder, period, summary, warnings, status, decided_at, edited_at, book_title, source:sources!inner(title, url, volume), work:works!inner(id, slug, name, district, address, history, architecture, cities!inner(slug))',
             )
             .eq('status', status)
             .eq('work.cities.slug', citySlug)
@@ -297,6 +303,13 @@ export async function publishDraft(d: TextDraft, fields: DraftFields): Promise<v
 export async function setDraftStatus(id: string, status: DraftStatus): Promise<void> {
   const { error } = await supabase.from('text_drafts').update({ status }).eq('id', id);
   if (error) throw error;
+}
+
+/** Eserin adını kitaptaki başlıkla değiştirir (EN başlık kitapta yoksa uygulamadaki EN ad kalır). */
+export async function renameWorkFromBook(d: TextDraft): Promise<void> {
+  if (!d.book_title) return;
+  const name = { tr: d.book_title.tr, en: d.book_title.en ?? d.work.name.en ?? d.book_title.tr };
+  await expectOne(supabase.from('works').update({ name }).eq('id', d.work.id).select('id'));
 }
 
 /** Kitap PDF'inde sayfaya bağlantı (tarayıcı PDF görüntüleyicisi `#page=` ile açar). PDF sayfası bilinmiyorsa kitabın başı. */

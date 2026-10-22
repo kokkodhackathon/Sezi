@@ -64,6 +64,7 @@ Her eser için birden çok kaynaktan konum **adayı** üretilir; karar admin pan
 
 ```bash
 python -I data/inventory_texts.py   # → supabase/seed_text_drafts_01…08.sql + seed_text_drafts_cleanup.sql (PDF ayrıştırması data/raw/texts_cache/'e önbelleğe alınır; ilk çalıştırma ~4 dk)
+python -I data/text_drafts_diff.py  # uygulamadan önce: uzaktaki taslaklarla fark → data/out/text_drafts_diff.md
 for f in supabase/seed_text_drafts_0*.sql supabase/seed_text_drafts_cleanup.sql; do npx supabase@latest db query --linked --project-ref jejsvycpzulpleftkssj -f $f; done
 ```
 
@@ -72,9 +73,15 @@ Envanter kitaplarının (`data/raw/books/`) eser metinleri `text_drafts` tablosu
 - **`pdf_page`:** metnin başladığı PDF sayfası (1 tabanlı, tarayıcıda `#page=`); `(basılı sayfa − sabit) // 2 + 1`.
 - **Ayıklama:** yalnız gövde yazı boyutundaki bloklar alınır (başlık, altyazı, sayfa numarası, dikey ilçe harfleri atılır); satır sonu tirelemesi birleştirilir. Bursa'nın bozuk glifleri düzeltilir (`!` → ş, `%` → Ş/İ ya da ff).
 - **TR/EN:** bloklar Türkçe harf ve sık sözcük puanıyla sınıflanır; sütun düzeni gözetilerek okuma sırası korunur. `history = {tr, en}`; mimari ayrımı güvenilir yapılamadığından `architecture` boştur.
+- **Bursa: yazı tipine göre okuma (22 Ekim).** Üç ciltte düzen yazı tipiyle kesin: TR gövde BrandonGrotesque-Regular 11 pt, EN gövde -Light 11 pt, kitabe/belge alıntısı -LightIt, alt bölüm başlığı -Black/-Medium 14–15 pt, eser başlığı Acuta-Bold ~29 pt. Bu ciltlerde dil sözcük puanıyla tahmin edilmez, yazı tipinden okunur.
+  - **Başlangıç:** eserin adına uyan TR alt başlık ya da eser başlığı (içindekiler sayfası ±1 yayılım; bulunamazsa sonraki 12 sayfada yalnız iki yönlü güçlü eşleşme). Hiç bulunamazsa içindekiler sayfası ve `no_heading`.
+  - **Bitiş:** sonraki eserin başlangıcı ya da sonraki sayfalardaki yeni eser başlığı; böylece bir eserin metni sonrakine taşmaz (ör. Orhan Bey Hamamı taslağında Emir Hanı'nın metni vardı).
+  - **Bölüm başlıkları** (külliye/hazire bölümleri) okunur biçimde paragraf olarak korunur ("Alâeddin Bey Camii Haziresi").
+  - **Kitabe:** 6 sözcük ve daha uzun italik alıntılar çıkarılır (`[…]`; bloğun tamamıysa blok atılır); düz yazıyla basılmış çeviri paragrafları ("Mealen: …", "Translation: …", "Meaning: …") da alınmaz (ENVANTER.md §5). Uyarı `inscription_removed`. Daha kısa italik (terim, kısa ayet) metinde kalır; yalnız italikten oluşan kısa bloğun dili aynı sayfadaki komşu gövde bloğundan alınır, sayfada dilli blok yoksa atılır ve `unclassified_blocks` uyarısı çıkar (sessiz kayıp yok). Kurallar: `python -I data/test_inventory_texts.py`.
+  - **`book_title`:** eserin kitaptaki başlığı {tr, en}; uygulamadaki ad farklıysa admin panelinde "Adı kitaptakiyle değiştir" önerisi çıkar (içindekiler ayrıştırmasındaki "and Graveyard …" gibi kaymalar).
 - **Adres:** TR metnin ilk cümlesi konum bildiriyorsa (…Mahallesi, …Sokak’ta bulunmaktadır) `address` olur ve gövdeden çıkarılır; EN karşılığı eşlenir. Yüklemi konum bildirmeyen ama adres öğeleri taşıyan cümle `address_loose` uyarısıyla alınır; bulunamazsa `no_address` ve alan boş.
-- **Uyarılar (`warnings`):** `range_capped`, `shared_page` (aynı sayfada birden çok eser), `no_address`, `address_loose`, `tr_en_unbalanced` (EN uzunluğu TR'nin %50'sinden az / %200'ünden çok), `unclassified_blocks` (dil puanı eşit, atılan blok), `needs_review_entry` (TOC kaydı şüpheli).
-- **Kararların korunması:** yalnız `status = 'pending'` taslaklar güncellenir; artık üretilmeyen pending taslaklar silinir (`cleanup` dosyası, en son uygulanır), yayınlanmış/reddedilmiş taslaklara dokunulmaz. Çıktı, uzak sorgu boyut sınırı (413) yüzünden ≤ 500 KB'lık parçalara bölünür.
+- **Uyarılar (`warnings`):** `range_capped`, `shared_page` (aynı sayfada birden çok eser), `no_address`, `address_loose`, `tr_en_unbalanced` (EN uzunluğu TR'nin %50'sinden az / %200'ünden çok), `unclassified_blocks` (dil puanı eşit, atılan blok), `needs_review_entry` (TOC kaydı şüpheli), `inscription_removed`, `no_heading`.
+- **Kararların ve düzenlemelerin korunması:** yalnız `status = 'pending'` ve `edited_at` boş taslaklar güncellenir/silinir. `edited_at`'ı bir admin metin alanlarını değiştirince tetikleyici yazar (`text_drafts_mark_edited`; seed'de `auth.uid()` olmadığı için işaret konmaz). Yayınlanmış, reddedilmiş ve elle düzenlenmiş taslaklara yeni metin uygulanmaz; yalnız `book_title` güncellenir. `text_drafts_diff.py` bunları "korunacak" diye ayrı listeler. Çıktı, uzak sorgu boyut sınırı (413) yüzünden ≤ 500 KB'lık parçalara bölünür.
 
 ## 2. Envanter fotoğraf arşivi
 

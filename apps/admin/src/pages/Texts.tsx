@@ -58,7 +58,50 @@ import {
   WARNING_LABEL,
   type DraftStatus,
   type TextDraft,
+  renameWorkFromBook,
 } from '@/lib/review';
+
+const plain = (s: string) => s.toLocaleLowerCase('tr').replace(/[^\p{L}\p{N}]/gu, '');
+
+/** Kitaptaki başlık uygulamadaki addan farklıysa (içindekiler ayrıştırmasındaki kaymalar) düzeltme önerisi. */
+function NameFromBook({ draft }: { draft: TextDraft }) {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const title = draft.book_title;
+  if (!title || plain(title.tr) === plain(draft.work.name.tr)) return null;
+  const apply = async () => {
+    setBusy(true);
+    try {
+      await renameWorkFromBook(draft);
+      toast.success(`Eserin adı “${title.tr}” oldu.`);
+      await queryClient.invalidateQueries({ queryKey: ['text-drafts'] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Ad değiştirilemedi.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <CardContent className="pt-0">
+      <Alert>
+        <BookOpen />
+        <AlertTitle>Kitaptaki başlık farklı</AlertTitle>
+        <AlertDescription className="flex flex-col gap-2">
+          <p>
+            Uygulamada: <strong>{draft.work.name.tr}</strong>
+            <br />
+            Kitapta: <strong>{title.tr}</strong>
+            {title.en ? <> · EN: <strong>{title.en}</strong></> : null}
+          </p>
+          <Button variant="outline" size="sm" className="min-h-10 self-start" disabled={busy} onClick={() => void apply()}>
+            {busy ? <Spinner /> : <Check data-icon="inline-start" />}
+            Adı kitaptakiyle değiştir
+          </Button>
+        </AlertDescription>
+      </Alert>
+    </CardContent>
+  );
+}
 
 type DraftFieldKey = 'address' | 'history' | 'architecture' | 'period' | 'summary';
 const FIELDS: { key: DraftFieldKey; label: string; rows: number }[] = [
@@ -423,6 +466,7 @@ export function Texts() {
                       {DRAFT_STATUS_LABEL[draft.status]}
                     </Badge>
                     {isDirty ? <Badge variant="warning">Kaydedilmemiş değişiklik var</Badge> : null}
+                    {draft.edited_at ? <Badge variant="outline" title="Veri hattı bu taslağı yeniden üretimde ezmez">Elle düzenlendi</Badge> : null}
                   </div>
                   <CardDescription>
                     Kaynak atfı: <strong>{draft.source.title}</strong>
@@ -463,6 +507,7 @@ export function Texts() {
                     </Alert>
                   </CardContent>
                 ) : null}
+                <NameFromBook draft={draft} />
               </Card>
 
               {err ? (
