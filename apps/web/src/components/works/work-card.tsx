@@ -1,4 +1,4 @@
-import { coverOf, isCommons, loc, type WorkPhoto } from "@sezi/shared";
+import { coverOf, isAttributed, loc, type WorkPhoto } from "@sezi/shared";
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
@@ -72,7 +72,7 @@ export function WorkCard({ work, lang, priority = false }: { work: ExploreItem; 
           </span>
         </span>
       </Link>
-      {cover && isCommons(cover) ? (
+      {cover && isAttributed(cover) ? (
         // Üst köşede: alttaki ad, tür ve yer satırını örtmez.
         <div className="absolute right-2.5 top-2.5 z-10 sm:right-3 sm:top-3">
           <PhotoSource photo={cover} align="end" side="bottom" />

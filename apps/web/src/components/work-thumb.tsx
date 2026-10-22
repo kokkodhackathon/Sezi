@@ -1,13 +1,13 @@
 "use client";
 
-import { isCommons, type WorkPhoto } from "@sezi/shared";
+import { isAttributed, type WorkPhoto } from "@sezi/shared";
 import { LandmarkIcon } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
 import { photoUrl } from "@/lib/media";
 import { toneClass } from "@/lib/tone";
-import { CommonsBadge } from "@/components/works/photo-source";
+import { PhotoSourceBadge } from "@/components/works/photo-source";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,7 +25,7 @@ export function WorkThumb({
   className,
   imageClassName,
   priority,
-  commonsTag,
+  sourceTag,
 }: {
   photo: WorkPhoto | undefined;
   typeSlug: string;
@@ -36,8 +36,8 @@ export function WorkThumb({
   className?: string;
   imageClassName?: string;
   priority?: boolean;
-  /** Küçük liste karolarında etkileşimsiz mini Commons etiketi */
-  commonsTag?: boolean;
+  /** Küçük liste karolarında etkileşimsiz kaynak etiketi */
+  sourceTag?: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
 
@@ -54,7 +54,7 @@ export function WorkThumb({
           onLoad={() => setLoaded(true)}
           className={cn("object-cover transition-[opacity,transform] duration-500 ease-out", loaded ? "opacity-100" : "opacity-0", imageClassName)}
         />
-        {commonsTag && isCommons(photo) ? <CommonsBadge /> : null}
+        {sourceTag && isAttributed(photo) ? <PhotoSourceBadge photo={photo} /> : null}
       </div>
     );
   }

@@ -1,5 +1,6 @@
-import type { LocalizedText } from '@sezi/shared';
+import { LocalizedText } from '@sezi/shared';
 import { useQuery } from '@tanstack/react-query';
+import { z } from 'zod';
 
 import type { Precision, Status } from './data';
 import { supabase } from './supabase';
@@ -208,31 +209,42 @@ export async function rejectAll(workId: string, clearLocation: boolean): Promise
 
 export type DraftStatus = 'pending' | 'published' | 'rejected';
 
-export interface TextDraft {
-  id: string;
-  work_id: string;
-  page: number;
-  page_end: number | null;
-  /** Metnin başladığı PDF sayfası (veri hattı hesaplar; kitaplar çift sayfa yayılımı). */
-  pdf_page: number | null;
-  address: LocalizedText | null;
-  history: LocalizedText | null;
-  architecture: LocalizedText | null;
-  warnings: string[];
-  status: DraftStatus;
-  decided_at: string | null;
-  source: { title: string; url: string | null; volume: number | null };
-  work: {
-    id: string;
-    slug: string;
-    name: LocalizedText;
-    district: string | null;
-    address: LocalizedText | null;
-    history: LocalizedText | null;
-    architecture: LocalizedText | null;
-    cities: { slug: string };
-  };
-}
+const draftFieldsSchema = z.object({
+  address: LocalizedText.nullable(),
+  history: LocalizedText.nullable(),
+  architecture: LocalizedText.nullable(),
+  built_year: z.number().int().min(1000).max(2100).nullable(),
+  founder: z.string().nullable(),
+  period: LocalizedText.nullable(),
+  summary: LocalizedText.nullable(),
+});
+
+export type DraftFields = z.infer<typeof draftFieldsSchema>;
+
+const textDraftSchema = draftFieldsSchema.extend({
+  id: z.string(),
+  work_id: z.string(),
+  page: z.number(),
+  page_end: z.number().nullable(),
+  pdf_page: z.number().nullable(),
+  warnings: z.array(z.string()),
+  status: z.enum(['pending', 'published', 'rejected']),
+  decided_at: z.string().nullable(),
+  source: z.object({ title: z.string(), url: z.string().nullable(), volume: z.number().nullable() }),
+  work: z.object({
+    id: z.string(),
+    slug: z.string(),
+    name: LocalizedText,
+    district: z.string().nullable(),
+    address: LocalizedText.nullable(),
+    history: LocalizedText.nullable(),
+    architecture: LocalizedText.nullable(),
+    cities: z.object({ slug: z.string() }),
+  }),
+  hasPhotos: z.boolean(),
+});
+
+export type TextDraft = z.infer<typeof textDraftSchema>;
 
 export const WARNING_LABEL: Record<string, string> = {
   tr_en_unbalanced: 'TR ve EN uzunlukları çok farklı',
@@ -249,18 +261,28 @@ export const DRAFT_STATUS_LABEL: Record<DraftStatus, string> = { pending: 'Bekli
 export function useTextDrafts(citySlug: string, status: DraftStatus) {
   return useQuery({
     queryKey: ['text-drafts', citySlug, status],
-    queryFn: () =>
-      fetchAll<TextDraft>((a, b) =>
-        supabase
-          .from('text_drafts')
-          .select(
-            'id, work_id, page, page_end, pdf_page, address, history, architecture, warnings, status, decided_at, source:sources!inner(title, url, volume), work:works!inner(id, slug, name, district, address, history, architecture, cities!inner(slug))',
-          )
-          .eq('status', status)
-          .eq('work.cities.slug', citySlug)
-          .order('page')
-          .range(a, b),
-      ),
+    queryFn: async () => {
+      const [drafts, photos] = await Promise.all([
+        fetchAll<unknown>((a, b) =>
+          supabase
+            .from('text_drafts')
+            .select(
+              'id, work_id, page, page_end, pdf_page, address, history, architecture, built_year, founder, period, summary, warnings, status, decided_at, source:sources!inner(title, url, volume), work:works!inner(id, slug, name, district, address, history, architecture, cities!inner(slug))',
+            )
+            .eq('status', status)
+            .eq('work.cities.slug', citySlug)
+            .order('page')
+            .range(a, b),
+        ),
+        supabase.from('media').select('work_id').eq('status', 'verified').not('work_id', 'is', null),
+      ]);
+      if (photos.error) throw photos.error;
+      const photoIds = new Set(z.array(z.object({ work_id: z.string() })).parse(photos.data).map((p) => p.work_id));
+      return drafts.map((raw) => {
+        const row = z.object({ work_id: z.string() }).passthrough().parse(raw);
+        return textDraftSchema.parse({ ...row, hasPhotos: photoIds.has(row.work_id) });
+      });
+    },
   });
 }
 
@@ -268,7 +290,7 @@ export function useTextDrafts(citySlug: string, status: DraftStatus) {
  * Düzenlenmiş metni yayınlar. Tek istek: taslak satırı düzenlenmiş metinle "yayında" yapılır; tetikleyici
  * (`apply_text_publish`) aynı işlemde esere yazar. Boş alan esere null olarak yazılır.
  */
-export async function publishDraft(d: TextDraft, fields: { address: LocalizedText | null; history: LocalizedText | null; architecture: LocalizedText | null }): Promise<void> {
+export async function publishDraft(d: TextDraft, fields: DraftFields): Promise<void> {
   await expectOne(supabase.from('text_drafts').update({ ...fields, status: 'published' }).eq('id', d.id).select('id'));
 }
 

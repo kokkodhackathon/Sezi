@@ -1,13 +1,13 @@
 import { hasLocation, inventorySource, loc, normalize, toneForType, type SweetTheme, type WorkRow } from '@sezi/shared';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { FlatList, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { SeziMap, WorkClusters } from '@/components/map';
 import { Badge, Button, Chip, EmptyState, Eyebrow, Segmented } from '@/components/ui';
-import { WorkThumb, workEra, workExcerpt, workPlace } from '@/components/work-preview';
+import { WorkThumb, workEra, workExcerpt } from '@/components/work-preview';
 import { ChevronIcon } from '@/design/icons';
-import { outline, SoftPressable } from '@/design/sweet/components';
+import { FadeInItem, outline, SoftPressable } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
@@ -21,6 +21,13 @@ export default function Search() {
   const { t: tr, lang } = useT();
   const { data: works } = useWorks();
   const [q, setQ] = useState('');
+  const [revealedSlots] = useState(() => new Set<number>());
+  const changeQuery = (value: string) => {
+    if (!value.trim()) revealedSlots.clear();
+    setQ(value);
+    setOpen(null);
+    setPin(null);
+  };
   // Açık kart: sonuca dokununca bilgiler bu ekranda açılır, eser sayfasına geçmeden.
   const [open, setOpen] = useState<string | null>(null);
   const [view, setView] = useState<'list' | 'map'>('list');
@@ -51,11 +58,7 @@ export default function Search() {
       <View style={s.searchBar}>
         <TextInput
           value={q}
-          onChangeText={(v) => {
-            setQ(v);
-            setOpen(null);
-            setPin(null);
-          }}
+          onChangeText={changeQuery}
           autoFocus
           placeholder={tr('search.placeholder')}
           placeholderTextColor={t.textMuted}
@@ -105,7 +108,7 @@ export default function Search() {
       ) : (
         <FlatList
           data={results}
-          keyExtractor={(w) => w.id}
+          keyExtractor={(_, index) => String(index)}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={s.list}
           ListHeaderComponent={
@@ -118,7 +121,7 @@ export default function Search() {
                 <Eyebrow text={tr('search.recent')} />
                 <View style={s.chips}>
                   {suggestions.map((x) => (
-                    <Chip key={x} label={x} selected={false} onPress={() => setQ(x)} />
+                    <Chip key={x} label={x} selected={false} onPress={() => changeQuery(x)} />
                   ))}
                 </View>
                 {districts.length ? (
@@ -126,7 +129,7 @@ export default function Search() {
                     <Eyebrow text={tr('inv.district')} />
                     <View style={s.chips}>
                       {districts.map((x) => (
-                        <Chip key={x} label={x} selected={false} onPress={() => setQ(x)} />
+                        <Chip key={x} label={x} selected={false} onPress={() => changeQuery(x)} />
                       ))}
                     </View>
                   </>
@@ -136,11 +139,22 @@ export default function Search() {
           }
           ListEmptyComponent={q.trim() ? <EmptyState title={tr('search.empty')} /> : null}
           extraData={open}
-          renderItem={({ item }) => <ResultCard work={item} open={open === item.id} onToggle={() => setOpen(open === item.id ? null : item.id)} t={t} />}
+          renderItem={({ item, index }) => (
+            <ResultEntry index={index} revealed={revealedSlots}>
+              <ResultCard work={item} open={open === item.id} onToggle={() => setOpen(open === item.id ? null : item.id)} t={t} />
+            </ResultEntry>
+          )}
         />
       )}
     </View>
   );
+}
+
+/** Sonuç yuvaları sorgu boyunca aynı kalır; her harfte yeniden giriş oynatılmaz. */
+function ResultEntry({ index, revealed, children }: { index: number; revealed: Set<number>; children: ReactNode }) {
+  const [animate] = useState(() => index < 6 && !revealed.has(index));
+  useEffect(() => { revealed.add(index); }, [index, revealed]);
+  return animate ? <FadeInItem index={index}>{children}</FadeInItem> : <View>{children}</View>;
 }
 
 const makeStyles = (t: SweetTheme) =>
@@ -152,8 +166,9 @@ const makeStyles = (t: SweetTheme) =>
     chips: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
     list: { paddingHorizontal: space.lg, paddingBottom: space.xxl, gap: space.md },
     card: { borderRadius: radius.lg, borderCurve: 'continuous', padding: space.md, gap: space.md },
-    head: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md, minHeight: 72 },
+    head: { flexDirection: 'row', alignItems: 'flex-start', gap: space.md, minHeight: 104 },
     badges: { flexDirection: 'row', flexWrap: 'wrap', gap: space.xs, marginTop: space.xs },
+    typeChip: { alignSelf: 'flex-start', paddingHorizontal: space.sm, paddingVertical: space.xs, borderRadius: radius.sm },
     actions: { flexDirection: 'row', gap: space.sm },
   });
 
@@ -167,13 +182,14 @@ function ResultCard({ work, open, onToggle, t }: { work: WorkRow; open: boolean;
   const { t: tr, lang } = useT();
   const { visited } = useSettings();
   const name = loc(work.name, lang);
-  const place = workPlace(work, lang);
+  const place = [work.district, loc(work.city_name, lang)].filter(Boolean).join(', ');
   const era = workEra(work, lang);
   const excerpt = workExcerpt(work, lang, open ? 420 : 140);
   const address = loc(work.address, lang);
   const inv = inventorySource(work);
   const ref = inv?.page ? (inv.volume ? tr('inv.refShort', { v: inv.volume, page: inv.page }) : tr('inv.refPage', { page: inv.page })) : null;
   const route = hasRouteTo(work.slug);
+  const tone = t.tones[toneForType(work.type_slug)];
   const openPage = () => router.push({ pathname: '/work/[slug]', params: { slug: work.slug } });
 
   return (
@@ -182,14 +198,17 @@ function ResultCard({ work, open, onToggle, t }: { work: WorkRow; open: boolean;
         onPress={onToggle}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel={`${name}. ${place}${era ? `. ${era}` : ''}`}
+        accessibilityLabel={`${name}. ${loc(work.type_name, lang)}. ${place}${era ? `. ${era}` : ''}`}
         accessibilityHint={open ? tr('search.collapse') : tr('search.expand')}
         style={s.head}>
-        {open && work.photos.length > 0 ? null : <WorkThumb work={work} size={open ? 56 : 84} />}
+        {open && work.photos.length > 0 ? null : <WorkThumb work={work} size={open ? 64 : 104} />}
         <View style={{ flex: 1, gap: 2 }}>
           <Text style={[type.itemTitle, { color: t.text }]} numberOfLines={open ? undefined : 2}>
             {name}
           </Text>
+          <View style={[s.typeChip, { backgroundColor: tone.fill }, outline(t)]}>
+            <Text style={[type.bubble, { color: tone.ink }]}>{loc(work.type_name, lang)}</Text>
+          </View>
           <Text style={[type.meta, { color: t.textMuted }]}>{place}</Text>
           {era ? <Text style={[type.meta, { color: t.textMuted }]}>{era}</Text> : null}
           {!open && excerpt ? (

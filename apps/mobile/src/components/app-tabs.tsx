@@ -85,7 +85,7 @@ export default function AppTabs() {
   );
 }
 
-/** Sekme düğmesi. Seçili kapsül 150 ms'de yatayda açılır (sık tekrarlanan eylem: kısa). Reduce motion: yalnız opacity. */
+/** Gösterge 150 ms'de açılır; dolu simge ve kalın etiket anlık değişir. */
 function TabButton({ isFocused = false, label, icon, ...props }: TabTriggerSlotProps & { label: string; icon: TabIcon }) {
   const t = useSweetTheme();
   const reduced = useReducedMotion();
@@ -93,7 +93,7 @@ function TabButton({ isFocused = false, label, icon, ...props }: TabTriggerSlotP
   useEffect(() => {
     on.set(withTiming(isFocused ? 1 : 0, { duration: reduced ? 0 : duration.fade, easing: ease.out }));
   }, [isFocused, reduced, on]);
-  const pill = useAnimatedStyle(() => ({ opacity: on.value, transform: [{ scaleX: reduced ? 1 : 0.6 + on.value * 0.4 }] }));
+  const pill = useAnimatedStyle(() => ({ opacity: on.get(), transform: [{ scaleX: reduced ? 1 : 0.6 + on.get() * 0.4 }] }));
   return (
     <Pressable {...props} accessibilityRole="tab" accessibilityLabel={label} accessibilityState={{ selected: isFocused }} style={s.tab}>
       <View style={s.iconWrap}>

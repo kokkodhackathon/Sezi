@@ -34,8 +34,8 @@ export type WorkExhibition = z.infer<typeof WorkExhibitionSchema>;
 
 /**
  * Eser fotoğrafı (Storage `media` bucket'ı; yollar bucket içinden). `origin`: `inventory` bize verilen envanter
- * arşivi, `commons` Wikimedia Commons'tan alınmış (Wikidata P18). Commons fotoğrafında yazar, lisans, lisans
- * bağlantısı, dosya sayfası ve dosyada yaptığımız değişiklik her zaman gösterilir (CC atfı).
+ * arşivi, `commons` Wikimedia Commons'tan alınmış (Wikidata P18), `upload` admin panelinden yüklenmiş (fotoğrafçı
+ * ve kullanım izni zorunlu). Commons ve yüklenen fotoğrafta yazar, lisans ve kaynak her zaman gösterilir.
  */
 export const WorkPhotoSchema = z.object({
   id: z.string(),
@@ -47,7 +47,7 @@ export const WorkPhotoSchema = z.object({
   width: z.number().nullable(),
   height: z.number().nullable(),
   // Eski önbellek satırlarında bu alanlar yok: envanter fotoğrafı sayılır.
-  origin: z.enum(["inventory", "commons"]).default("inventory"),
+  origin: z.enum(["inventory", "commons", "upload"]).default("inventory"),
   author: z.string().nullable().default(null),
   license: z.string().nullable().default(null),
   license_url: z.string().nullable().default(null),
@@ -56,8 +56,21 @@ export const WorkPhotoSchema = z.object({
 });
 export type WorkPhoto = z.infer<typeof WorkPhotoSchema>;
 
-/** Commons fotoğrafı mı (atıf satırı ve fotoğraf üstü kaynak etiketi gerekir). */
+/** Commons fotoğrafı mı (Wikidata bağlantısı ve CC atfı). */
 export const isCommons = (p: Pick<WorkPhoto, "origin"> | undefined): boolean => p?.origin === "commons";
+
+/** Fotoğraf üstünde kaynak etiketi ve atıf satırı gereken fotoğraf (Commons ya da admin'in yüklediği). */
+export const isAttributed = (p: Pick<WorkPhoto, "origin"> | undefined): boolean => p?.origin === "commons" || p?.origin === "upload";
+
+/** Bilgi kartının (yapım yılı, bani, dönem, özet) geldiği kitap sayfası. */
+export const FactsSourceSchema = z.object({
+  title: z.string(),
+  url: z.string().nullable(),
+  volume: z.number().nullable(),
+  page: z.string().nullable(),
+  pdf_page: z.number().nullable(),
+});
+export type FactsSource = z.infer<typeof FactsSourceSchema>;
 
 export const WorkConditionSchema = z.enum(["intact", "restored", "damaged", "destroyed", "unknown"]);
 export type WorkCondition = z.infer<typeof WorkConditionSchema>;
@@ -97,7 +110,22 @@ export const WorkRowSchema = z.object({
   /** Admin panelinden yüklenen ses kaydının Storage yolu (audio bucket); yoksa metin okunur. */
   audio_tr: z.string().nullable(),
   audio_en: z.string().nullable(),
+  // Eski önbellek satırlarında aşağıdakiler yok.
+  facts_source: FactsSourceSchema.nullable().default(null),
+  /** Gitmeden önce: kaynağı (`visit_source`) ve kontrol tarihi olmadan veritabanına girmez. */
+  visit_steps: z.number().nullable().default(null),
+  visit_ramp: z.boolean().nullable().default(null),
+  visit_hours: DbText.nullable().default(null),
+  visit_minutes: z.number().nullable().default(null),
+  visit_note: DbText.nullable().default(null),
+  visit_source: z.string().nullable().default(null),
+  visit_checked_on: z.string().nullable().default(null),
 });
+
+/** PDF'i kitabın ilgili sayfasında açan adres (`#page=`); sayfa bilinmiyorsa kitabın kendisi. */
+export function bookPageUrl(url: string, pdfPage: number | null | undefined): string {
+  return pdfPage ? `${url}#page=${pdfPage}` : url;
+}
 export type WorkRow = z.infer<typeof WorkRowSchema>;
 
 /** Haritada gösterilebilir eser (konumu bilinen). */

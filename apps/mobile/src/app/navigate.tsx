@@ -3,11 +3,13 @@ import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Linking, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CueFlash } from '@/components/cue-flash';
 import { EndPin, ExtraLines, PointsLayer, RouteLine, SeziMap, UserDot, type MapPoint, type SeziMapHandle } from '@/components/map';
+import { LynchLine, type LynchStop } from '@/components/lynch-line';
+import { NavSheet } from '@/components/nav-sheet';
 import { NavAlertBanner } from '@/components/nav-alert';
 import { PointPopup } from '@/components/point-popup';
 import { PhotoSourceTag } from '@/components/photo-source';
@@ -42,7 +44,6 @@ export default function Navigate() {
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
   const { profile } = useProfile();
   const { settings, markVisited } = useSettings();
   const state = useNavigation();
@@ -86,7 +87,6 @@ export default function Navigate() {
     return () => void deactivateKeepAwake('navigate');
   }, [state.phase]);
 
-  const mapH = Math.round(height * (state.phase === 'plan' ? 0.44 : state.phase === 'active' ? 0.5 : 0.3));
 
   // Plan değişince rota ekrana sığdırılır; yürürken kamera kullanıcıyı izler.
   const plan = state.plan;
@@ -125,7 +125,7 @@ export default function Navigate() {
     <View style={s.screen}>
       <SeziMap
         ref={mapRef}
-        style={{ height: mapH }}
+        style={{ flex: 1 }}
         initial={plan ? plan.geometry.line : starts.map((p) => p.location)}
         initialPadding={{ top: insets.top + 72 }}
         onPress={onMapPress}
@@ -155,18 +155,15 @@ export default function Navigate() {
         </View>
       ) : null}
 
-      <View style={[s.panel, outline(t)]}>
-        <View style={[s.handle, { backgroundColor: t.border }]} />
-        <ScrollView contentContainerStyle={[s.panelBody, { paddingBottom: insets.bottom + space.xl }, popupPoint && { paddingBottom: 380 }]}>
-          {state.phase === 'plan' ? (
-            <PlanPanel state={state} starts={starts} points={points} order={order} picking={picking} setPicking={setPicking} sim={sim} t={t} />
-          ) : state.phase === 'active' ? (
-            <ActivePanel state={state} points={points} order={order} sim={sim} canHear={canHear} hearing={profile.hearing} mps={walkingSpeed(profile)} t={t} />
-          ) : (
-            <ArrivalPanel state={state} points={points} canHear={canHear} t={t} />
-          )}
-        </ScrollView>
-      </View>
+      <NavSheet phase={state.phase} popup={!!popupPoint}>
+        {state.phase === 'plan' ? (
+          <PlanPanel state={state} starts={starts} points={points} order={order} picking={picking} setPicking={setPicking} sim={sim} t={t} />
+        ) : state.phase === 'active' ? (
+          <ActivePanel state={state} points={points} order={order} sim={sim} canHear={canHear} hearing={profile.hearing} mps={walkingSpeed(profile)} t={t} />
+        ) : (
+          <ArrivalPanel state={state} points={points} canHear={canHear} t={t} />
+        )}
+      </NavSheet>
 
       {/* Varış ekranında eserin bilgisi kartta; gezintinin son noktası ise pop-up'ta açılır. */}
       {popupPoint && (state.phase !== 'arrived' || !state.arrived) ? (
@@ -260,8 +257,6 @@ function PlanPanel({
         </View>
       ) : null}
 
-      {plan && plan.via.pointIds.length ? <ViaList plan={plan} points={points} order={order} fired={state.fired} t={t} /> : null}
-
       {sim ? <Note text={tr('nav.simNote')} /> : null}
       <Button
         label={state.dest ? tr('nav.begin') : tr('nav.beginStroll')}
@@ -273,6 +268,9 @@ function PlanPanel({
       {state.dest ? (
         <Button variant="ghost" label={tr('nav.compare')} onPress={() => router.push({ pathname: '/compare/[slug]', params: { slug: state.dest! } })} />
       ) : null}
+
+      {/* Rota hattı uzun olabilir: başlatma düğmesi altında kalmasın diye en sonda. */}
+      {plan ? <ViaList plan={plan} points={points} order={order} fired={state.fired} t={t} startTitle={state.start.kind === 'here' ? tr('nav.here') : state.start.kind === 'pick' ? tr('nav.picked') : starts.find((p) => state.start.kind === 'point' && p.id === state.start.id)?.name[lang] ?? plan.start.name?.[lang] ?? plan.start.name?.tr ?? tr('nav.from')} /> : null}
     </>
   );
 }
@@ -300,32 +298,46 @@ function RouteSummary({ plan, mps, t }: { plan: PlannedRoute; mps: number; t: Sw
   );
 }
 
-/** Rotanın uğradığı noktalar, haritadaki numaralarıyla. */
-function ViaList({ plan, points, order, fired, t }: { plan: PlannedRoute; points: NavPoint[]; order: Map<string, number>; fired: string[]; t: SweetTheme }) {
-  const s = makeStyles(t);
+/** Yer işaretleri ve anlatım durakları rota üzerindeki gerçek mesafeye göre sıralanır. */
+function ViaList({ plan, points, order, fired, t, startTitle }: { plan: PlannedRoute; points: NavPoint[]; order: Map<string, number>; fired: string[]; t: SweetTheme; startTitle: string }) {
   const { t: tr, lang } = useT();
+  const items: { atM: number; stop: LynchStop }[] = [];
+  const viaPoints = plan.via.pointIds.flatMap((id) => points.filter((p) => p.id === id));
+  for (const landmark of plan.passedLandmarks) {
+    if (landmark.pointId && plan.via.pointIds.includes(landmark.pointId)) continue;
+    // Aynı eser hem yer işareti hem anlatım durağıysa bir kez, durak olarak görünür.
+    if (landmark.workSlug && viaPoints.some((p) => p.workSlug === landmark.workSlug)) continue;
+    const index = plan.route.nodeIds.indexOf(landmark.id);
+    items.push({
+      atM: plan.geometry.nodeAtM[index] ?? 0,
+      stop: { key: `landmark:${landmark.id}`, kind: 'landmark', title: landmark.name?.[lang] ?? landmark.name?.tr ?? tr('lynch.landmark') },
+    });
+  }
+  plan.via.pointIds.forEach((id, index) => {
+    const point = points.find((p) => p.id === id);
+    if (!point) return;
+    items.push({
+      atM: plan.via.atM[index] ?? 0,
+      stop: {
+        key: `story:${id}`,
+        kind: 'stop',
+        title: point.title[lang] ?? point.title.tr,
+        subtitle: point.audio.tr || point.audio.en ? tr('nav.hasAudio') : tr('nav.point'),
+        index: order.get(id),
+        done: fired.includes(id),
+      },
+    });
+  });
+  items.sort((a, b) => a.atM - b.atM);
+  const stops: LynchStop[] = [
+    { key: 'start', kind: 'start', title: startTitle },
+    ...items.map((item) => item.stop),
+    { key: 'arrival', kind: 'arrival', title: plan.end.name?.[lang] ?? plan.end.name?.tr ?? tr('nav.stroll') },
+  ];
   return (
     <View style={{ gap: space.sm }}>
-      <Text style={s.label}>{tr('nav.onTheWay')}</Text>
-      <View style={[s.viaBox, { backgroundColor: t.soft }, outline(t)]}>
-        {plan.via.pointIds.map((id) => {
-          const p = points.find((x) => x.id === id);
-          if (!p) return null;
-          const done = fired.includes(id);
-          const name = p.title[lang] ?? p.title.tr;
-          return (
-            <View key={id} style={s.viaRow} accessible accessibilityLabel={`${order.get(id)}. ${name}${done ? `. ${tr('nav.seen')}` : ''}`}>
-              <View style={[s.num, { backgroundColor: done ? t.surface : t.accent.fill }, outline(t)]}>
-                <Text style={[type.meta, { color: done ? t.textMuted : t.accent.ink, fontFamily: type.button.fontFamily }]}>{order.get(id)}</Text>
-              </View>
-              <Text style={[type.body, { color: done ? t.textMuted : t.text, flex: 1 }]} numberOfLines={2}>
-                {name}
-              </Text>
-              {p.audio.tr || p.audio.en ? <Badge label={tr('nav.hasAudio')} /> : null}
-            </View>
-          );
-        })}
-      </View>
+      <Text style={[type.eyebrow, { color: t.textMuted }]}>{tr('nav.onTheWay')}</Text>
+      <LynchLine stops={stops} />
     </View>
   );
 }
@@ -466,11 +478,13 @@ function ArrivalPanel({ state, points, canHear, t }: { state: NavState; points: 
           {tr('nav.strollDone')}
         </Text>
         <Text style={[type.lead, { color: t.textMuted }]}>{tr('nav.seenCount', { n: seen.length })}</Text>
-        {seen.map((p) => (
-          <Text key={p.id} style={[type.body, { color: t.text }]}>
-            · {p.title[lang] ?? p.title.tr}
-          </Text>
-        ))}
+        <LynchLine stops={seen.map((point, index) => ({
+          key: point.id,
+          kind: point.roles.includes('landmark') ? 'landmark' : 'stop',
+          title: point.title[lang] ?? point.title.tr,
+          index: index + 1,
+          done: true,
+        }))} />
         <Button label={tr('nav.finish')} onPress={() => router.back()} />
       </>
     );
@@ -571,14 +585,9 @@ const makeStyles = (t: SweetTheme) =>
     screen: { flex: 1, backgroundColor: t.background },
     mapBar: { position: 'absolute', left: space.lg, right: space.lg, flexDirection: 'row', justifyContent: 'space-between' },
     pickBanner: { position: 'absolute', alignSelf: 'center', backgroundColor: t.primary.fill, paddingHorizontal: space.lg, paddingVertical: space.sm, borderRadius: radius.pill, borderCurve: 'continuous' },
-    panel: { flex: 1, marginTop: -radius.xl, backgroundColor: t.background, borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, borderCurve: 'continuous' },
-    handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, marginTop: space.sm },
-    panelBody: { paddingHorizontal: space.xl, paddingTop: space.lg, gap: space.lg },
     label: { ...type.eyebrow, color: t.textMuted },
     chips: { gap: space.sm, paddingHorizontal: space.xl },
     chipScroll: { marginHorizontal: -space.xl },
-    viaBox: { borderRadius: radius.lg, borderCurve: 'continuous', padding: space.md, gap: space.sm },
-    viaRow: { flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 32 },
     num: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
     instruction: { flexDirection: 'row', alignItems: 'center', gap: space.lg, padding: space.lg, borderRadius: radius.xl, borderCurve: 'continuous' },
     track: { height: 8, borderRadius: radius.pill, borderCurve: 'continuous', overflow: 'hidden' },

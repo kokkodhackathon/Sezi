@@ -15,10 +15,11 @@ import {
   TriangleAlert,
   X,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 
+import { BookPage } from '@/components/book-page';
 import { PageHeader } from '@/components/page-header';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
@@ -35,10 +36,11 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardAction, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from '@/components/ui/empty';
 import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from '@/components/ui/input-group';
+import { Input } from '@/components/ui/input';
+import { Kbd } from '@/components/ui/kbd';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -46,6 +48,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { localized, tr, useLookups } from '@/lib/data';
+import { PILOT_AREAS } from '@/lib/pilot';
 import {
   bookPageUrl,
   DRAFT_STATUS_LABEL,
@@ -57,13 +60,15 @@ import {
   type TextDraft,
 } from '@/lib/review';
 
-type DraftFieldKey = 'address' | 'history' | 'architecture';
+type DraftFieldKey = 'address' | 'history' | 'architecture' | 'period' | 'summary';
 const FIELDS: { key: DraftFieldKey; label: string; rows: number }[] = [
   { key: 'address', label: 'Adres', rows: 4 },
   { key: 'history', label: 'Tarihçe', rows: 14 },
   { key: 'architecture', label: 'Mimari', rows: 8 },
+  { key: 'period', label: 'Dönem', rows: 2 },
+  { key: 'summary', label: 'Sade özet', rows: 4 },
 ];
-type Form = Record<DraftFieldKey, { tr: string; en: string }>;
+type Form = Record<DraftFieldKey, { tr: string; en: string }> & { built_year: string; founder: string };
 type LangView = 'tr' | 'en' | 'both';
 
 function toForm(d: TextDraft): Form {
@@ -71,10 +76,19 @@ function toForm(d: TextDraft): Form {
     address: { tr: d.address?.tr ?? '', en: d.address?.en ?? '' },
     history: { tr: d.history?.tr ?? '', en: d.history?.en ?? '' },
     architecture: { tr: d.architecture?.tr ?? '', en: d.architecture?.en ?? '' },
+    period: { tr: d.period?.tr ?? '', en: d.period?.en ?? '' },
+    summary: { tr: d.summary?.tr ?? '', en: d.summary?.en ?? '' },
+    built_year: d.built_year?.toString() ?? '',
+    founder: d.founder ?? '',
   };
 }
 
 const STATUSES: DraftStatus[] = ['pending', 'published', 'rejected'];
+const PILOT_WORKS = new Set(PILOT_AREAS['bursa-hanlar'].nodes.flatMap((n) => n.workSlug ? [n.workSlug] : []));
+const GROUP_LABELS = ['Pilot alan', 'Fotoğraflı eserler', 'Diğer eserler'];
+function draftGroup(draft: TextDraft) {
+  return PILOT_WORKS.has(draft.work.slug) ? 0 : draft.hasPhotos ? 1 : 2;
+}
 
 /**
  * Kitaptan metin taslakları: veri hattı her eserin sayfalarından adres, tarihçe ve mimari metnini (TR/EN) ayırır.
@@ -83,7 +97,8 @@ const STATUSES: DraftStatus[] = ['pending', 'published', 'rejected'];
 export function Texts() {
   const [params, setParams] = useSearchParams();
   const city = params.get('city') ?? 'bursa';
-  const status = (params.get('status') as DraftStatus | null) ?? 'pending';
+  const requestedStatus = params.get('status');
+  const status: DraftStatus = requestedStatus === 'published' || requestedStatus === 'rejected' ? requestedStatus : 'pending';
   const q = params.get('q') ?? '';
   const slug = params.get('work');
   const set = (patch: Record<string, string | null>) => {
@@ -101,7 +116,7 @@ export function Texts() {
 
   const list = useMemo(() => {
     const needle = q.trim().toLocaleLowerCase('tr');
-    // Kitap sırası: cilt, sonra sayfa.
+    // Öncelik grubu içinde kitap sırası: cilt, sonra basılı sayfa.
     return (data ?? [])
       .filter(
         (d) =>
@@ -109,13 +124,13 @@ export function Texts() {
           tr(d.work.name).toLocaleLowerCase('tr').includes(needle) ||
           (d.work.district ?? '').toLocaleLowerCase('tr').includes(needle),
       )
-      .sort((a, b) => (a.source.volume ?? 0) - (b.source.volume ?? 0) || a.page - b.page);
-  }, [data, q]);
+      .sort((a, b) => (status === 'pending' ? draftGroup(a) - draftGroup(b) : 0) || (a.source.volume ?? 0) - (b.source.volume ?? 0) || a.page - b.page);
+  }, [data, q, status]);
   const draft = list.find((d) => d.work.slug === slug) ?? list[0] ?? null;
 
   const [form, setForm] = useState<Form | null>(null);
-  const [checked, setChecked] = useState(false);
   const [busy, setBusy] = useState(false);
+  const actionRunning = useRef(false);
   const [err, setErr] = useState('');
   const [shownDraft, setShownDraft] = useState<string | null>(null);
   const [langView, setLangView] = useState<LangView>('tr');
@@ -124,14 +139,14 @@ export function Texts() {
   if ((draft?.id ?? null) !== shownDraft) {
     setShownDraft(draft?.id ?? null);
     setForm(draft ? toForm(draft) : null);
-    setChecked(false);
     setErr('');
   }
 
   const isDirty = useMemo(() => {
     if (!draft || !form) return false;
     const base = toForm(draft);
-    return FIELDS.some(({ key }) => form[key].tr !== base[key].tr || form[key].en !== base[key].en);
+    return form.built_year !== base.built_year || form.founder !== base.founder ||
+      FIELDS.some(({ key }) => form[key].tr !== base[key].tr || form[key].en !== base[key].en);
   }, [draft, form]);
 
   const go = (delta: number) => {
@@ -141,8 +156,9 @@ export function Texts() {
     if (next) set({ work: next.work.slug });
   };
 
-  const act = async (fn: () => Promise<void>, successMessage: string) => {
-    if (!draft) return;
+  const act = async (fn: () => Promise<void>, successMessage: string, advance = true) => {
+    if (!draft || actionRunning.current) return;
+    actionRunning.current = true;
     setBusy(true);
     setErr('');
     const i = list.findIndex((d) => d.id === draft.id);
@@ -153,22 +169,36 @@ export function Texts() {
       void qc.invalidateQueries({ queryKey: ['work', draft.work.slug] });
       void qc.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success(successMessage);
-      set({ work: next?.work.slug ?? null });
+      if (advance) set({ work: next?.work.slug ?? null });
+      else {
+        setForm(toForm(draft));
+        setShownDraft(null);
+      }
     } catch (e) {
       const msg = typeof e === 'object' && e && 'message' in e ? String(e.message) : String(e);
       setErr(msg);
       toast.error(msg);
     } finally {
       setBusy(false);
+      actionRunning.current = false;
     }
   };
 
   const publish = () => {
-    if (!draft || !form) return;
+    if (!draft || !form || busy || draft.status === 'rejected' || (draft.status === 'published' && !isDirty)) return;
+    const year = form.built_year.trim() ? Number(form.built_year) : null;
+    if (year !== null && (!Number.isInteger(year) || year < 1000 || year > 2100)) {
+      setErr('Yapım yılı 1000–2100 arasında tam sayı olmalı.');
+      return;
+    }
     const fields = {
       address: localized(form.address),
       history: localized(form.history),
       architecture: localized(form.architecture),
+      built_year: year,
+      founder: form.founder.trim() || null,
+      period: localized(form.period),
+      summary: localized(form.summary),
     };
     if (!fields.address && !fields.history && !fields.architecture) {
       const msg = 'Yayınlanacak Türkçe metin yok.';
@@ -176,8 +206,20 @@ export function Texts() {
       toast.error(msg);
       return;
     }
-    void act(() => publishDraft(draft, fields), 'Metin taslağı esere yayınlandı.');
+    void act(() => publishDraft(draft, fields), draft.status === 'published' ? 'Yayınlanmış metin ve bilgiler kaydedildi.' : 'Metin taslağı esere yayınlandı.', draft.status !== 'published');
   };
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.repeat &&
+        !document.querySelector('[role="alertdialog"], [role="dialog"]')) {
+        event.preventDefault();
+        publish();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  });
 
   const cities = (lookups?.cities ?? []).filter((c) => c.slug !== 'istanbul');
   const page = draft ? (draft.page_end && draft.page_end !== draft.page ? `s. ${draft.page}–${draft.page_end}` : `s. ${draft.page}`) : '';
@@ -275,7 +317,7 @@ export function Texts() {
       ) : null}
 
       {data ? (
-        <div className="grid items-start gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="grid items-start gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
           <Card className="py-3 lg:sticky lg:top-4">
             <CardHeader className="border-b px-3 pb-2.5">
               <CardTitle className="text-sm">{DRAFT_STATUS_LABEL[status]} taslaklar</CardTitle>
@@ -319,10 +361,13 @@ export function Texts() {
               ) : (
                 <ScrollArea className="h-[calc(100vh-280px)] min-h-[380px]">
                   <ul aria-label="Taslaklar" className="flex flex-col gap-1 pr-2">
-                    {list.map((d) => {
+                    {list.map((d, index) => {
                       const isSelected = d.id === draft?.id;
                       return (
                         <li key={d.id}>
+                          {status === 'pending' && (index === 0 || draftGroup(list[index - 1]) !== draftGroup(d)) ? (
+                            <h3 className="px-3 pt-4 pb-2 text-xs font-semibold text-muted-foreground">{GROUP_LABELS[draftGroup(d)]}</h3>
+                          ) : null}
                           <button
                             type="button"
                             aria-current={isSelected}
@@ -348,6 +393,8 @@ export function Texts() {
                               <span>
                                 {d.work.district ?? '—'} · {d.source.volume ? `C${d.source.volume} ` : ''}s. {d.page}
                               </span>
+                              {PILOT_WORKS.has(d.work.slug) ? <Badge variant="secondary">Pilot</Badge> : null}
+                              {d.hasPhotos ? <Badge variant="outline">Fotoğraflı</Badge> : null}
                               {d.warnings.length > 0 ? (
                                 <Badge variant="warning" className="num">
                                   {d.warnings.length} uyarı
@@ -365,7 +412,9 @@ export function Texts() {
           </Card>
 
           {draft && form ? (
-            <section className="flex flex-col gap-4" aria-label="Taslak düzenleme">
+            <div className="grid min-w-0 items-start gap-4 xl:grid-cols-2">
+            <BookPage url={draft.source.url} pdfPage={draft.pdf_page} printedPage={draft.page} pageEnd={draft.page_end} />
+            <section className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-4 xl:max-h-[calc(100vh-32px)] xl:overflow-y-auto xl:pr-2 [&>*]:shrink-0" aria-label="Taslak düzenleme">
               <Card>
                 <CardHeader>
                   <div className="flex flex-wrap items-center gap-2">
@@ -425,7 +474,7 @@ export function Texts() {
               ) : null}
 
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <Tabs value={langView} onValueChange={(v) => setLangView(v as LangView)}>
+                <Tabs value={langView} onValueChange={(v) => { if (v === 'tr' || v === 'en' || v === 'both') setLangView(v); }}>
                   <TabsList aria-label="Düzenleme dili">
                     <TabsTrigger value="tr" className="gap-1.5 px-3">
                       <span>Türkçe (TR)</span>
@@ -439,7 +488,7 @@ export function Texts() {
                   </TabsList>
                 </Tabs>
 
-                {isDirty && draft.status === 'pending' ? (
+                {isDirty && draft.status !== 'rejected' ? (
                   <Button variant="ghost" size="sm" disabled={busy} onClick={() => setForm(toForm(draft))}>
                     <RotateCcw data-icon="inline-start" />
                     Değişiklikleri geri al
@@ -447,13 +496,33 @@ export function Texts() {
                 ) : null}
               </div>
 
+              <Card>
+                <CardHeader>
+                  <CardTitle>Kitaptan bilgiler</CardTitle>
+                  <CardDescription>Yalnızca kitapta belirtilen bilgileri girin; yayınlanınca bu sayfa kaynak olarak gösterilir.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FieldGroup>
+                    <Field>
+                      <FieldLabel htmlFor="draft-built-year">Yapım yılı</FieldLabel>
+                      <Input id="draft-built-year" type="number" min={1000} max={2100} step={1} className="min-h-12" value={form.built_year} readOnly={draft.status === 'rejected' || busy} onChange={(e) => setForm({ ...form, built_year: e.target.value })} />
+                      <FieldDescription>İsteğe bağlı; kitapta kesin yıl verilmemişse boş bırakın.</FieldDescription>
+                    </Field>
+                    <Field>
+                      <FieldLabel htmlFor="draft-founder">Banisi</FieldLabel>
+                      <Input id="draft-founder" className="min-h-12" value={form.founder} readOnly={draft.status === 'rejected' || busy} onChange={(e) => setForm({ ...form, founder: e.target.value })} />
+                    </Field>
+                  </FieldGroup>
+                </CardContent>
+              </Card>
+
               {FIELDS.map(({ key, label, rows }) => (
                 <Card key={key}>
                   <CardHeader>
                     <CardTitle className="text-base">{label}</CardTitle>
-                    <CardAction>
-                      <PublishedNote value={draft.work[key]} draft={draft[key]} />
-                    </CardAction>
+                  {key === 'address' || key === 'history' || key === 'architecture' ? <CardAction>
+                    <PublishedNote value={draft.work[key]} draft={draft[key]} />
+                  </CardAction> : null}
                   </CardHeader>
                   <CardContent>
                     <FieldGroup className={cn(langView === 'both' && 'grid gap-4 md:grid-cols-2')}>
@@ -467,10 +536,11 @@ export function Texts() {
                               rows={rows}
                               lang={l}
                               value={form[key][l]}
-                              readOnly={draft.status !== 'pending'}
+                              readOnly={draft.status === 'rejected' || busy}
                               onChange={(e) => setForm({ ...form, [key]: { ...form[key], [l]: e.target.value } })}
                             />
                             <FieldDescription className="num">{form[key][l].length} karakter</FieldDescription>
+                            {key === 'summary' ? <FieldDescription>Kitap metninden, kaynakta olmayan bilgi eklemeden 2–3 cümlelik sade özet</FieldDescription> : null}
                           </Field>
                         );
                       })}
@@ -488,21 +558,12 @@ export function Texts() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Field orientation="horizontal">
-                      <Checkbox
-                        id="confirm-book-comparison"
-                        checked={checked}
-                        onCheckedChange={(v) => setChecked(v === true)}
-                      />
-                      <FieldLabel htmlFor="confirm-book-comparison" className="font-normal">
-                        Metni kitaptaki sayfayla karşılaştırdım; ayrıştırma hatası (yanlış dil, eksik paragraf, başka eserin metni) yok.
-                      </FieldLabel>
-                    </Field>
+                    <p className="text-sm text-muted-foreground">Yayınlayarak metni kitap sayfasıyla karşılaştırdığınızı onaylarsınız. Yanlış dil, eksik paragraf veya başka eserin metni olmadığını kontrol edin.</p>
                   </CardContent>
                   <CardFooter className="flex flex-wrap items-center gap-2">
-                    <Button disabled={busy || !checked} onClick={publish}>
+                    <Button className="min-h-12" disabled={busy} onClick={publish} aria-keyshortcuts="Control+Enter Meta+Enter">
                       {busy ? <Spinner data-icon="inline-start" /> : <Check data-icon="inline-start" />}
-                      Esere yayınla
+                      Kitapla karşılaştırdım · Yayınla <Kbd>Ctrl+Enter</Kbd>
                     </Button>
 
                     <AlertDialog>
@@ -546,9 +607,12 @@ export function Texts() {
                         {DRAFT_STATUS_LABEL[draft.status]}
                       </Badge>
                       <span className="text-sm text-muted-foreground">
-                        Taslak yeniden düzenlenebilir olur; eserdeki yayınlanmış metin değişmez.
+                        {draft.status === 'published' ? 'Kaydettiğiniz düzeltmeler aynı kitap atfıyla esere de uygulanır.' : 'Beklemeye alarak taslağı yeniden düzenleyebilirsiniz; eserdeki metin değişmez.'}
                       </span>
                     </div>
+                    {draft.status === 'published' ? <Button className="min-h-12" disabled={busy || !isDirty} onClick={publish} aria-keyshortcuts="Control+Enter Meta+Enter">
+                      {busy ? <Spinner data-icon="inline-start" /> : <Check data-icon="inline-start" />} Kaydet <Kbd>Ctrl+Enter</Kbd>
+                    </Button> : null}
                     <Button
                       variant="outline"
                       size="sm"
@@ -563,6 +627,7 @@ export function Texts() {
                 </Card>
               )}
             </section>
+            </div>
           ) : (
             <Card>
               <CardContent>

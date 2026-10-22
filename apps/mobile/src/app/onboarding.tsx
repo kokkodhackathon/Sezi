@@ -1,9 +1,11 @@
 import { defaultSenses, sweetThemes, type SweetTheme, type UserProfile } from '@sezi/shared';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { AccessibilityInfo, findNodeHandle, ScrollView, StyleSheet, Text, useColorScheme, View, type TextStyle, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { z } from 'zod';
+import { ProfileCard } from '@/components/profile-card';
 
 import { CheckIcon } from '@/design/icons';
 import { CengelMark } from '@/design/motif';
@@ -22,7 +24,9 @@ export default function Onboarding() {
   const scheme = useColorScheme();
   const { settings } = useSettings();
 
-  const [step, setStep] = useState<Step>(editing ? 'lang' : 'welcome');
+  const params = useLocalSearchParams<{ step?: string }>();
+  const requestedStep = z.enum(['lang', 'vision', 'hearing', 'mobility', 'senses']).safeParse(params.step);
+  const [step, setStep] = useState<Step>(editing ? (requestedStep.success ? requestedStep.data : 'lang') : 'welcome');
   const [lang, setLang] = useState<Lang>(profile?.lang ?? 'tr');
   const [vision, setVision] = useState<UserProfile['vision']>(profile?.vision ?? 'full');
   const [hearing, setHearing] = useState<UserProfile['hearing']>(profile?.hearing ?? 'full');
@@ -193,22 +197,7 @@ export default function Onboarding() {
             <Text ref={titleRef} style={s.title} accessibilityRole="header">
               {tr('onb.summary.title')}
             </Text>
-            {(
-              [
-                `onb.summary.${mobility}`,
-                vision === 'blind' && 'onb.summary.blind',
-                vision === 'low' && 'onb.summary.low',
-                hearing === 'deaf' && 'onb.summary.deaf',
-                hearing === 'hard' && 'onb.summary.hard',
-                senses.audio && 'onb.summary.audio',
-                senses.haptic && 'onb.summary.haptic',
-              ].filter(Boolean) as MessageKey[]
-            ).map((key) => (
-              <View key={key} style={s.summaryRow}>
-                <View style={[s.summaryDot, { backgroundColor: t.accentText }]} />
-                <Text style={s.lead}>{tr(key)}</Text>
-              </View>
-            ))}
+            <ProfileCard profile={{ lang, vision, hearing, mobility, senses }} theme={t} onEdit={(field) => setStep(field)} />
             <Text style={s.hint}>{tr('onb.summary.change')}</Text>
           </>
         )}
@@ -344,8 +333,6 @@ const makeStyles = (t: SweetTheme) =>
     optionDesc: { ...type.meta, color: t.textMuted },
     radio: { width: 26, height: 26, borderRadius: 13, borderCurve: 'continuous', borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
     check: { width: 26, height: 26, borderRadius: 8, borderCurve: 'continuous', borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
-    summaryRow: { flexDirection: 'row', gap: space.md, alignItems: 'flex-start' },
-    summaryDot: { width: 10, height: 10, borderRadius: 2, marginTop: 9, transform: [{ rotate: '45deg' }] },
     footer: { flexDirection: 'row', gap: space.md, paddingHorizontal: space.xl, paddingVertical: space.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: t.border, backgroundColor: t.background },
     primaryBtn: { flex: 2, minHeight: 54, paddingVertical: space.md, paddingHorizontal: space.xl, borderRadius: radius.md, borderCurve: 'continuous', backgroundColor: t.primary.fill, alignItems: 'center', justifyContent: 'center' },
     primaryBtnText: { ...type.button, color: t.primary.ink },

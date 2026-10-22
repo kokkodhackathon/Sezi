@@ -21,6 +21,7 @@ import { AudioField } from '@/components/AudioField';
 import { LocationMap } from '@/components/LocationMap';
 import { PageHeader } from '@/components/page-header';
 import { StatusBadge } from '@/components/status-badge';
+import { VisitFields } from '@/components/visit-fields';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -51,6 +52,10 @@ import {
   CONDITION_LABEL,
   localized,
   mediaUrl,
+  toVisitForm,
+  visitError,
+  visitPatch,
+  type VisitForm,
   tr,
   useLookups,
   useWork,
@@ -80,6 +85,7 @@ interface Form {
   needs_review: boolean;
   point: [number, number] | null;
   precision: Precision;
+  visit: VisitForm;
   /** Yeni seçilen ses dosyaları. */
   files: Partial<Record<Lang, File>>;
   /** Mevcut kayıtları kaldır. */
@@ -106,6 +112,7 @@ function toForm(w: WorkRecord, lng: number | null, lat: number | null): Form {
     needs_review: w.needs_review,
     point: lng !== null && lat !== null ? [lng, lat] : null,
     precision: w.location_precision,
+    visit: toVisitForm(w),
     files: {},
     removed: { tr: false, en: false },
     rev: 0,
@@ -131,6 +138,7 @@ function isFormDirty(a: Form, b: Form): boolean {
   if ((a.point === null) !== (b.point === null)) return true;
   if (a.point && b.point && (a.point[0] !== b.point[0] || a.point[1] !== b.point[1])) return true;
   if (a.files.tr || a.files.en || a.removed.tr || a.removed.en) return true;
+  if (JSON.stringify(a.visit) !== JSON.stringify(b.visit)) return true;
   return false;
 }
 
@@ -218,6 +226,8 @@ function Editor({ slug, data }: { slug: string; data: WorkDetail }) {
   const save = useMutation({
     mutationFn: async (f: Form) => {
       if (!f.name.tr.trim()) throw new Error('Türkçe ad boş olamaz.');
+      const invalidVisit = visitError(f.visit);
+      if (invalidVisit) throw new Error(invalidVisit);
       const old: Record<Lang, string | null> = { tr: data.work.audio_tr_id, en: data.work.audio_en_id };
       const audioIds = { ...old };
       const uploaded: Uploaded[] = [];
@@ -247,6 +257,7 @@ function Editor({ slug, data }: { slug: string; data: WorkDetail }) {
             location_precision: f.point ? f.precision : 'unknown',
             audio_tr_id: audioIds.tr,
             audio_en_id: audioIds.en,
+            ...visitPatch(f.visit),
           })
           .eq('id', data.work.id);
         if (e) throw e;
@@ -439,6 +450,15 @@ function Editor({ slug, data }: { slug: string; data: WorkDetail }) {
             </CardHeader>
             <CardContent>
               <FieldGroup>
+                <Field>
+                  <FieldLabel>Sade özet (TR)</FieldLabel>
+                  <p className="whitespace-pre-wrap text-sm">{data.work.summary?.tr || 'Henüz girilmedi.'}</p>
+                  <FieldLabel>Sade özet (EN)</FieldLabel>
+                  <p className="whitespace-pre-wrap text-sm">{data.work.summary?.en || 'Henüz girilmedi.'}</p>
+                  <p className="text-sm">Yapım yılı: {data.work.built_year ?? 'Bilinmiyor'} · Yaptıran: {data.work.founder || 'Bilinmiyor'}</p>
+                  <Link className="inline-flex min-h-12 items-center text-primary underline" to={`/metinler?work=${slug}&status=published`}>Eser metinleri'nde kitap sayfasıyla düzenle</Link>
+                </Field>
+                <VisitFields value={form.visit} onChange={(v) => set('visit', v)} />
                 <Pair idPrefix="period" label="Dönem" value={form.period} onChange={(l, v) => setText('period', l, v)} />
                 <Pair
                   idPrefix="history"
@@ -667,6 +687,9 @@ function Editor({ slug, data }: { slug: string; data: WorkDetail }) {
               <CardDescription>
                 Taslak fotoğraflar uygulamada görünmez. Eşleşmeyi kitaptaki sayfayla karşılaştırıp onaylayın.
               </CardDescription>
+              <CardAction>
+                <Button variant="outline" className="min-h-12" asChild><Link to={`/fotograflar?tab=upload&work=${slug}`}>Fotoğraf yükle</Link></Button>
+              </CardAction>
             </CardHeader>
             <CardContent>
               {data.media.length === 0 ? (
@@ -701,8 +724,9 @@ function Editor({ slug, data }: { slug: string; data: WorkDetail }) {
                         <StatusBadge status={m.status} />
                         {i === 0 ? <Badge variant="secondary">Kapak</Badge> : null}
                         {m.origin === 'commons' ? <Badge variant="secondary">Commons</Badge> : null}
+                        {m.origin === 'upload' ? <Badge variant="secondary">Yüklendi</Badge> : null}
                       </div>
-                      {m.origin === 'commons' ? (
+                      {m.origin === 'commons' || m.origin === 'upload' ? (
                         <div className="flex flex-col gap-1 text-xs text-muted-foreground">
                           <span
                             className="line-clamp-2"
@@ -716,8 +740,8 @@ function Editor({ slug, data }: { slug: string; data: WorkDetail }) {
                                 target="_blank"
                                 rel="noreferrer"
                                 className="inline-flex items-center gap-0.5 text-primary hover:underline"
-                                aria-label="Wikimedia Commons dosya sayfası">
-                                <span>Commons</span>
+                                aria-label={m.origin === 'upload' ? 'Fotoğrafın kaynak adresi' : 'Wikimedia Commons dosya sayfası'}>
+                                <span>{m.origin === 'upload' ? 'Kaynak' : 'Commons'}</span>
                                 <ExternalLink className="size-3" aria-hidden />
                               </a>
                             ) : null}

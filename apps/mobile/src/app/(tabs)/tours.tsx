@@ -1,24 +1,29 @@
-import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTabBarSpace } from '@/components/app-tabs';
 import { ScreenHeader } from '@/components/screen-header';
 import { EmptyState } from '@/components/ui';
-import { PhotoSourceTag } from '@/components/photo-source';
+import { PhotoCard } from '@/components/photo-card';
 import { SoundIcon } from '@/design/icons';
-import { outline, SoftPressable } from '@/design/sweet/components';
+import { FadeInItem, outline, SoftPressable } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
-import { WorkGlyphInline } from '@/design/work-glyph';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT, type MessageKey } from '@/lib/i18n';
 import { defaultStart, formatDistance, planner, useNavVersion, walkingSpeed } from '@/lib/nav';
 import { useNavPoints } from '@/lib/points';
 import { useProfile } from '@/lib/profile';
-import { planTour, toneForType, TOURS } from '@sezi/shared';
-import { photoUrl, useWorks } from '@/lib/works';
+import { planTour, TOURS } from '@sezi/shared';
+import { useWorks } from '@/lib/works';
+
+const TOUR_LABELS: Record<string, { title: MessageKey; body: MessageKey }> = {
+  tum: { title: 'tours.tum.title', body: 'tours.tum.body' },
+  hanlar: { title: 'tours.hanlar.title', body: 'tours.hanlar.body' },
+  camiler: { title: 'tours.camiler.title', body: 'tours.camiler.body' },
+  su: { title: 'tours.su.title', body: 'tours.su.body' },
+};
 
 /** Turlar: her tur bir fotoğraf kartı; açıklama ekran okuyucu etiketinde, görünen metin tek satır. */
 export default function Tours() {
@@ -26,6 +31,8 @@ export default function Tours() {
   const { t: tr, lang } = useT();
   const { profile } = useProfile();
   const tabSpace = useTabBarSpace();
+  const { width } = useWindowDimensions();
+  const cardWidth = Math.min(width - space.xl * 2, 360);
   const { data: works } = useWorks('bursa');
   const navVersion = useNavVersion();
   const stories = useNavPoints().filter((p) => p.roles.includes('story')).length;
@@ -69,42 +76,25 @@ export default function Tours() {
           </View>
         </SoftPressable>
         {!plans.some((plan) => plan?.stops.length) ? <EmptyState title={tr('tours.none')} /> : null}
-        {plans.map((plan, i) => {
-          if (!plan?.stops.length) return null;
-          const id = TOURS[i]!.id;
-          const title = tr(`tours.${id}.title` as MessageKey);
-          const minutes = Math.max(1, Math.round(plan.lengthM / walkingSpeed(profile) / 60));
-          const access = plan.stairs === 0 ? tr('tours.stepFree') : tr('tours.stairs', { n: plan.stairs });
-          const meta = [tr('tours.stops', { n: plan.stops.length }), formatDistance(plan.lengthM, lang), tr('common.min', { n: minutes })].join(' · ');
-          const cover = covers[i];
-          const tone = t.tones[toneForType(plan.stops[0]!.type)];
-          return (
-            <SoftPressable
-              key={id}
-              onPress={() => router.push({ pathname: '/tour/[id]', params: { id } })}
-              accessibilityRole="button"
-              accessibilityLabel={`${title}. ${tr(`tours.${id}.body` as MessageKey)} ${meta}. ${access}`}
-              accessibilityHint={tr('design.tourOpen')}
-              style={[s.card, { backgroundColor: t.surface }, outline(t), !cover && s.compact]}>
-              {cover ? (
-                <View style={[s.imgWrap, { backgroundColor: t.soft }]}>
-                  <Image source={{ uri: photoUrl(cover, 'full') }} placeholder={{ uri: photoUrl(cover, 'thumb') }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} accessible={false} />
-                  <PhotoSourceTag photo={cover} />
-                </View>
-              ) : (
-                // Fotoğrafı olmayan tur: büyük boş alan yerine küçük simgeli kare.
-                <View style={[s.tile, { backgroundColor: tone.fill }]}>
-                  <WorkGlyphInline slug={plan.stops[0]!.type} color={tone.ink} size={30} />
-                </View>
-              )}
-              <View style={[s.cap, !cover && { flex: 1, paddingLeft: 0 }]}>
-                <Text style={[type.title, { color: t.text }]}>{title}</Text>
-                <Text style={[type.meta, { color: t.textMuted }]}>{meta}</Text>
-                <Text style={[type.meta, { color: plan.stairs === 0 ? t.primaryText : t.accentText, fontFamily: type.button.fontFamily }]}>{access}</Text>
-              </View>
-            </SoftPressable>
-          );
-        })}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={cardWidth + space.md} decelerationRate="fast"
+          style={{ marginHorizontal: -space.xl }} contentContainerStyle={s.carousel}>
+          {plans.map((plan, i) => {
+            const id = TOURS[i]?.id;
+            const copy = id ? TOUR_LABELS[id] : undefined;
+            if (!plan?.stops.length || !id || !copy) return null;
+            const title = tr(copy.title);
+            const minutes = Math.max(1, Math.round(plan.lengthM / walkingSpeed(profile) / 60));
+            const access = plan.stairs === 0 ? tr('tours.stepFree') : tr('tours.stairs', { n: plan.stairs });
+            const meta = [tr('tours.stops', { n: plan.stops.length }), formatDistance(plan.lengthM, lang), tr('common.min', { n: minutes })].join(' · ');
+            return (
+              <FadeInItem key={id} index={i}>
+                <PhotoCard width={cardWidth} title={title} meta={meta} detail={access} photo={covers[i]} typeSlug={plan.stops[0]!.type}
+                  onPress={() => router.push({ pathname: '/tour/[id]', params: { id } })}
+                  accessibilityLabel={`${title}. ${tr(copy.body)} ${meta}. ${access}`} accessibilityHint={tr('design.tourOpen')} />
+              </FadeInItem>
+            );
+          })}
+        </ScrollView>
       </ScrollView>
     </SafeAreaView>
   );
@@ -113,7 +103,7 @@ export default function Tours() {
 const s = StyleSheet.create({
   body: { paddingHorizontal: space.xl, paddingBottom: space.xxl, gap: space.xl },
   card: { borderRadius: radius.xl, borderCurve: 'continuous', padding: space.sm, gap: space.xs },
-  imgWrap: { width: '100%', aspectRatio: 16 / 10, borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden' },
+  carousel: { paddingHorizontal: space.xl, gap: space.md },
   cap: { paddingHorizontal: space.md, paddingVertical: space.sm, gap: 2 },
   compact: { flexDirection: 'row', alignItems: 'center', padding: space.md, gap: space.md },
   tile: { width: 64, height: 64, borderRadius: radius.md, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },

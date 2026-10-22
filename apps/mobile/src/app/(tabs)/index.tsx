@@ -1,4 +1,4 @@
-import { coverOf, loc, toneForType } from '@sezi/shared';
+import { coverOf, loc, toneForType, type WorkRow } from '@sezi/shared';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
@@ -8,8 +8,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { CheckIcon, ChevronIcon, InfoIcon, PlayIcon, SearchIcon } from '@/design/icons';
 import { useTabBarSpace } from '@/components/app-tabs';
 import { Button } from '@/components/ui';
+import { CityMap } from '@/components/city-map';
+import { PhotoCard, WorkPreviewSheet } from '@/components/photo-card';
 import { PhotoSourceTag } from '@/components/photo-source';
-import { FadeInItem, outline, PhotoTile, Skeleton, SoftPressable, SweetSheet, sweetShadow, TypeTile } from '@/design/sweet/components';
+import { FadeInItem, outline, Skeleton, SoftPressable, SweetSheet, sweetShadow, TypeTile } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
@@ -18,7 +20,7 @@ import { useSettings } from '@/lib/settings';
 import { photoUrl, useCities, useWorks } from '@/lib/works';
 
 const HIGHLIGHT_W = 248;
-const HIGHLIGHT_H = 300;
+const HIGHLIGHT_H = HIGHLIGHT_W * 5 / 4;
 
 /**
  * Keşfet vitrini: az yazı, önce fotoğraf. Şehir adı, arama alanı, pilot kartı, tür kutucukları,
@@ -35,8 +37,10 @@ export default function Explore() {
   const citySlug = active.some((c) => c.slug === settings.city) ? settings.city : (active[0]?.slug ?? settings.city);
   const city = active.find((c) => c.slug === citySlug);
   const { data: works, isLoading, error, refetch, isRefetching } = useWorks(citySlug);
+  const { data: allWorks } = useWorks();
   const [kind, setKind] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
+  const [preview, setPreview] = useState<WorkRow | null>(null);
 
   // Türler, eser sayısına göre: en kalabalık türler önce (yatay şeritte ilk görünenler).
   const types = useMemo(() => {
@@ -54,7 +58,7 @@ export default function Explore() {
   const highlights = visible.filter((w) => coverOf(w)).slice(0, 8);
   const grid = visible.filter((w) => !highlights.includes(w));
   const tileW = (width - 2 * space.xl - space.md) / 2;
-  const tileH = Math.round(tileW * 1.15);
+  const tileH = Math.round(tileW * 5 / 4);
 
   const open = (slug: string) => router.push({ pathname: '/work/[slug]', params: { slug } });
   const reload = () => {
@@ -156,11 +160,10 @@ export default function Explore() {
             decelerationRate="fast"
             style={{ marginHorizontal: -space.xl }}
             contentContainerStyle={s.carousel}
-            renderItem={({ item, index }) => (
-              <FadeInItem index={index}>
-                <PhotoTile work={item} width={HIGHLIGHT_W} imageHeight={HIGHLIGHT_H} onPress={() => open(item.slug)} />
-              </FadeInItem>
-            )}
+            renderItem={({ item, index }) => {
+              const card = <PhotoCard work={item} width={HIGHLIGHT_W} onPress={() => open(item.slug)} onLongPress={() => setPreview(item)} />;
+              return index < 6 ? <FadeInItem index={index}>{card}</FadeInItem> : card;
+            }}
           />
         </View>
       ) : null}
@@ -220,15 +223,15 @@ export default function Explore() {
         // Aşağı çekip yenile: admin panelinde onaylanan içerik hemen gelir.
         refreshing={isRefetching}
         onRefresh={reload}
-        renderItem={({ item, index }) => (
-          <FadeInItem index={index}>
-            <PhotoTile work={item} width={tileW} imageHeight={tileH} onPress={() => open(item.slug)} />
-          </FadeInItem>
-        )}
+        renderItem={({ item, index }) => {
+          const card = <PhotoCard work={item} width={tileW} onPress={() => open(item.slug)} onLongPress={() => setPreview(item)} />;
+          return index < 6 ? <FadeInItem index={index}>{card}</FadeInItem> : card;
+        }}
       />
 
       <SweetSheet visible={sheet} onClose={() => setSheet(false)} title={tr('design.chooseCity')}>
         <ScrollView contentContainerStyle={s.sheetBody}>
+          <CityMap cities={active} works={allWorks ?? []} value={citySlug} onChange={(slug) => { update({ city: slug }); setKind(null); }} />
           {active.map((c) => {
             const selected = c.slug === citySlug;
             return (
@@ -262,6 +265,7 @@ export default function Explore() {
           ) : null}
         </ScrollView>
       </SweetSheet>
+      <WorkPreviewSheet work={preview} onClose={() => setPreview(null)} onOpen={open} />
     </SafeAreaView>
   );
 }

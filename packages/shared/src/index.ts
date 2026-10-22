@@ -17,3 +17,5 @@ export * from "./works";
 export * from "./search";
 export * from "./account";
 export * from "./compare";
+export * from "./sentences";
+export * from "./speech-queue";

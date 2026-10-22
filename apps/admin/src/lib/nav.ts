@@ -50,7 +50,7 @@ export const NAV: NavGroup[] = [
       {
         to: '/fotograflar',
         title: 'Fotoğraf kutusu',
-        hint: 'Esere bağlanmamış ya da onay bekleyen fotoğraflar.',
+        hint: 'Esere bağlanmamış ya da onay bekleyen fotoğraflar; esere kaynaklı fotoğraf yükleme.',
         icon: Images,
         badge: (d) => d.photos.unlinked + d.photos.draftLinked,
       },

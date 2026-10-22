@@ -15,10 +15,11 @@ import {
   ZoomIn,
 } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 
 import { PageHeader } from '@/components/page-header';
+import { PhotoUpload } from '@/components/photo-upload';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -46,7 +47,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { mediaUrl, searchWorks, tr, useInbox, type InboxPhoto } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
 
-type InboxTab = 'unlinked' | 'draft';
+type InboxTab = 'unlinked' | 'draft' | 'upload';
 
 interface DraftMediaRow {
   id: string;
@@ -59,7 +60,7 @@ interface DraftMediaRow {
   source_page: number | null;
   kind: 'photo' | 'aerial' | 'inscription';
   alt_text: LocalizedText | null;
-  origin: 'inventory' | 'commons';
+  origin: 'inventory' | 'commons' | 'upload';
   author: string | null;
   license: string | null;
   license_url: string | null;
@@ -98,8 +99,10 @@ function districtHint(folder: string | null): string {
  * Admin fotoğrafa bakıp esere bağlar ya da taslak eşleşmeyi onaylar; onaylanan fotoğraf uygulamada görünür.
  */
 export function Inbox() {
-  const [tab, setTab] = useState<InboxTab>('unlinked');
-  const [origin, setOrigin] = useState<'all' | 'inventory' | 'commons'>('all');
+  const [params, setParams] = useSearchParams();
+  const requestedTab = params.get('tab');
+  const tab: InboxTab = requestedTab === 'upload' || requestedTab === 'draft' ? requestedTab : 'unlinked';
+  const [origin, setOrigin] = useState<'all' | 'inventory' | 'commons' | 'upload'>('all');
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const { data: unlinkedData, isLoading: unlinkedLoading, error: unlinkedError, refetch: refetchUnlinked } = useInbox();
   const {
@@ -172,7 +175,7 @@ export function Inbox() {
         </Alert>
       ) : null}
 
-      <Tabs value={tab} onValueChange={(v) => setTab(v as InboxTab)}>
+      <Tabs value={tab} onValueChange={(v) => { if (v === 'unlinked' || v === 'draft' || v === 'upload') setParams((p) => { p.set('tab', v); return p; }); }}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <TabsList aria-label="Fotoğraf durumu">
             <TabsTrigger value="unlinked">
@@ -191,13 +194,14 @@ export function Inbox() {
                 </Badge>
               ) : null}
             </TabsTrigger>
+            <TabsTrigger value="upload" className="min-h-12">Yükle</TabsTrigger>
           </TabsList>
 
           <div className="flex items-center gap-2">
             <FieldLabel htmlFor="inbox-origin-filter" className="text-xs text-muted-foreground whitespace-nowrap">
               Kaynak:
             </FieldLabel>
-            <Select value={origin} onValueChange={(v) => setOrigin(v as 'all' | 'inventory' | 'commons')}>
+            <Select value={origin} onValueChange={(v) => { if (v === 'all' || v === 'inventory' || v === 'commons' || v === 'upload') setOrigin(v); }}>
               <SelectTrigger id="inbox-origin-filter" className="h-8 w-36 text-xs">
                 <SelectValue placeholder="Tümü" />
               </SelectTrigger>
@@ -206,6 +210,7 @@ export function Inbox() {
                   <SelectItem value="all">Tümü</SelectItem>
                   <SelectItem value="inventory">Envanter</SelectItem>
                   <SelectItem value="commons">Commons</SelectItem>
+                  <SelectItem value="upload">Yüklenen</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -281,6 +286,7 @@ export function Inbox() {
             </div>
           )}
         </TabsContent>
+        <TabsContent value="upload" className="pt-2"><PhotoUpload /></TabsContent>
       </Tabs>
 
       <Dialog open={preview !== null} onOpenChange={(open) => !open && setPreview(null)}>
@@ -492,9 +498,10 @@ function UnlinkedPhotoCard({
         <div className="flex flex-wrap items-center justify-between gap-1.5 pt-1">
           <div className="flex flex-wrap items-center gap-1.5">
             {photo.origin === 'commons' ? <Badge variant="secondary">Commons</Badge> : null}
+            {photo.origin === 'upload' ? <Badge variant="secondary">Yüklendi</Badge> : null}
             <Badge variant="outline">{KIND_LABEL[photo.kind]}</Badge>
           </div>
-          {photo.origin !== 'commons' ? (
+          {photo.origin === 'inventory' ? (
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <BookOpen className="size-3" aria-hidden />
               {bookRef}
@@ -502,7 +509,7 @@ function UnlinkedPhotoCard({
           ) : null}
         </div>
 
-        {photo.origin === 'commons' ? (
+        {photo.origin === 'commons' || photo.origin === 'upload' ? (
           <div className="flex flex-col gap-1 text-xs text-muted-foreground">
             <span className="truncate" title={[photo.author || 'Yazar belirtilmemiş', photo.license].filter(Boolean).join(' · ')}>
               {[photo.author || 'Yazar belirtilmemiş', photo.license].filter(Boolean).join(' · ')}
@@ -514,9 +521,9 @@ function UnlinkedPhotoCard({
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-0.5 text-primary hover:underline"
-                  aria-label="Wikimedia Commons dosya sayfası"
+                  aria-label={photo.origin === 'upload' ? 'Fotoğrafın kaynak adresi' : 'Wikimedia Commons dosya sayfası'}
                 >
-                  <span>Commons</span>
+                  <span>{photo.origin === 'upload' ? 'Kaynak' : 'Commons'}</span>
                   <ExternalLink className="size-3" aria-hidden />
                 </a>
               ) : null}
@@ -693,9 +700,10 @@ function DraftLinkedPhotoCard({
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge variant="warning">Taslak</Badge>
             {photo.origin === 'commons' ? <Badge variant="secondary">Commons</Badge> : null}
+            {photo.origin === 'upload' ? <Badge variant="secondary">Yüklendi</Badge> : null}
             <Badge variant="outline">{KIND_LABEL[photo.kind]}</Badge>
           </div>
-          {photo.origin !== 'commons' ? (
+          {photo.origin === 'inventory' ? (
             <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
               <BookOpen className="size-3" aria-hidden />
               {bookRef}
@@ -703,7 +711,7 @@ function DraftLinkedPhotoCard({
           ) : null}
         </div>
 
-        {photo.origin === 'commons' ? (
+        {photo.origin === 'commons' || photo.origin === 'upload' ? (
           <div className="flex flex-col gap-1 text-xs text-muted-foreground">
             <span className="truncate" title={[photo.author || 'Yazar belirtilmemiş', photo.license].filter(Boolean).join(' · ')}>
               {[photo.author || 'Yazar belirtilmemiş', photo.license].filter(Boolean).join(' · ')}
@@ -715,9 +723,9 @@ function DraftLinkedPhotoCard({
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-0.5 text-primary hover:underline"
-                  aria-label="Wikimedia Commons dosya sayfası"
+                  aria-label={photo.origin === 'upload' ? 'Fotoğrafın kaynak adresi' : 'Wikimedia Commons dosya sayfası'}
                 >
-                  <span>Commons</span>
+                  <span>{photo.origin === 'upload' ? 'Kaynak' : 'Commons'}</span>
                   <ExternalLink className="size-3" aria-hidden />
                 </a>
               ) : null}

@@ -61,7 +61,10 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 
 **Eşleştirme masası** (veri hattının önerileri; yalnız admin okur/yazar, uygulama okumaz)
 - `location_candidates`: eser başına konum adayları (`wikidata` / `osm` / `nominatim` / `override` / `current`), puan, gerekçe (`reasons`: ad benzerliği, tür, ilçe, uyuşan kaynaklar), `vetoed` (tür ya da ilçe çelişkisi), `status` (pending / accepted / rejected). Üretici `data/location_candidates.py`. Admin kabul edince eserin `location`, `location_precision` (yapı düzeyi → exact) ve `external_ids` alanları yazılır; `seed_inventory.sql` kabul edilmiş konumu ezmez.
-- `text_drafts`: envanter kitabından çıkarılan TR/EN adres ve tarihçe taslağı (kitap, basılı sayfa aralığı, PDF sayfası, uyarılar). Üretici `data/inventory_texts.py`. Admin "Esere yayınla" deyince eserin `address` / `history` / `architecture` alanlarına yazılır.
+- `text_drafts`: envanter kitabından çıkarılan TR/EN adres ve tarihçe taslağı (kitap, basılı sayfa aralığı, PDF sayfası, uyarılar). Üretici `data/inventory_texts.py`. Admin kitap sayfasından ayrıca yapım yılı, bani, dönem ve sade dil özeti (`summary`) girer. Yayınlanınca (ya da yayındaki taslak düzeltilince) bunlar esere yazılır; bilgi kartı/özet varsa kaynağı da (`works.facts_source_id`, `facts_page`, `facts_pdf_page`).
+- **Eser metinleri sayfası:** kitap sayfası PDF.js ile editörün yanında çizilir. Yayıncının PDF'i iframe'e izin vermiyor (`X-Frame-Options`) ve parça indirmeyi desteklemiyor; dosya ilk açılışta bir kez indirilir, tarayıcının Cache Storage'ında (`sezi-books`) URL anahtarıyla saklanır. Bekleyen liste: pilot alan eserleri → fotoğraflı eserler → diğerleri. Tek düğme ya da Ctrl+Enter ile yayınlanır, sıradaki taslağa geçilir.
+- Ziyaret bilgisi (`works.visit_*`: basamak, rampa, açık saat, gezme süresi, not) yalnız kaynağı (`visit_source`) ve kontrol tarihiyle girer (check `works_visit_sourced`); admin **Eserler** düzenleme sayfasında.
+- `media.origin`: `inventory` (arşiv), `commons` (Wikidata P18), `upload` (admin'in **Fotoğraf kutusu → Yükle** ile eklediği; fotoğrafçı ve kullanım izni zorunlu, check `media_upload_attribution`). Yüklenen dosya tarayıcıda 1600/480 px WebP'ye çevrilir, `media/uploads/<eser>/`.
 - Kararlar tek işlemde: istemci yalnız karar satırının `status`'unu günceller; eser değişikliğini aynı transaction'da tetikleyici yapar (`apply_candidate_decision`, `apply_text_publish`; security invoker, RLS geçerli). Eser yazılamazsa karar da yazılmaz. Bir eserin en çok bir kabul edilmiş adayı olur (kısmi tekil dizin); yeni kabul öncekini reddeder. Karar zamanı ve karar veren (`decided_at`, `decided_by`) de tetikleyiciyle yazılır (`stamp_decision`).
 
 **Hesap (isteğe bağlı)**
@@ -80,7 +83,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 - `tts_usage` + `tts_reserve`: yeni üretilen karakterlerin günlük toplamı; sınır `TTS_DAILY_CHAR_LIMIT` (30.000). Aşılınca 429, uygulama cihaz sesine düşer. Google anahtarı `GOOGLE_TTS_API_KEY` secret'ı.
 
 **Okuma arayüzü**
-- `works_view` (security_invoker): eser, il, tür, külliye, `lng/lat`, kaynaklar, sergiler, fotoğraflar ve ses kaydı yolları (`audio_tr`, `audio_en`) tek satırda.
+- `works_view` (security_invoker): eser, il, tür, külliye, `lng/lat`, kaynaklar, sergiler, fotoğraflar (envanter → yüklenen → Commons), ses kaydı yolları (`audio_tr`, `audio_en`), bilgi kartı kaynağı (`facts_source`) ve ziyaret bilgisi tek satırda.
 - Mobil uygulama yalnızca bu view'u ve `cities`, `sources`, `exhibitions` tablolarını okur; içerik sorguları `status = 'verified'` süzer (admin hesabıyla giriş yapılsa da taslak görünmez).
 
 **RLS**
@@ -141,7 +144,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 | `(tabs)/tours`, `tour/[id]` | Pilot alan turları; durak sırası grafikten hesaplanır | gömülü grafik |
 | `(tabs)/ask` | Sezi'ye Sor: **yerel anahtar kelime eşleştirme** (LLM yok) | `works_view` |
 | `(tabs)/profile` | Profil, ayarlar, bildirimler, sergiler, hakkında | cihaz |
-| `work/[slug]` | Eser: envanter atfı (cilt/sayfa + PDF), durum, UNESCO, konum kesinliği, anlatım metni | `works_view` |
+| `work/[slug]` | Eser: bölümlere hızlı geçiş (çip; ekran okuyucu odağı başlığa geçer), kısaca (sade özet), kaynak numaralı bilgi kartı, gitmeden önce (giriş, saat, süre, pilotta yürüme), tarihçe/mimari (her bölüm ayrı dinlenir, okunan cümle vurgulanır: `lib/voice/read-along.ts` + `shared/sentences.ts`; konuşma kuyruğu `shared/speech-queue.ts`, `onDone` içinden başlayan sonraki cümle araya giren talimatla kesilmez), konum, kaynaklar | `works_view` |
 | `city/[slug]` | İl: envanter istatistikleri, kitaplar, sergiler, ilçeler | `cities`, `sources`, `exhibitions` |
 | `navigate` | Tek navigasyon ekranı: nereden (konumum / başlangıç noktası / haritada seçilen yer) → nereye (eser, tur ya da gezinti) → yol üstündeki noktalara uğrayan rota → canlı rehberlik (GPS ya da simülasyon) → varış kartı ve sesi | `nav_points_view`, gömülü grafik |
 | `compare/[slug]` | Aynı başlangıç ve hedef için üç profilin rotası; başlangıç ve hedef seçilebilir | gömülü grafik |

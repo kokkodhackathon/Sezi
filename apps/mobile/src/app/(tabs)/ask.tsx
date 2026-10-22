@@ -1,14 +1,16 @@
 import { loc, searchWorks, type SweetTheme, type WorkRow } from '@sezi/shared';
 import { router } from 'expo-router';
-import { useMemo, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, FlatList, KeyboardAvoidingView, StyleSheet, Text, TextInput, View } from 'react-native';
+import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTabBarSpace } from '@/components/app-tabs';
 import { ScreenHeader } from '@/components/screen-header';
 import { Chip, Eyebrow, Note } from '@/components/ui';
 import { ChevronIcon, InfoIcon, TurnIcon } from '@/design/icons';
-import { outline, SoftPressable } from '@/design/sweet/components';
+import { FadeInItem, outline, SoftPressable } from '@/design/sweet/components';
+import { duration, ease, stagger } from '@/design/sweet/motion';
 import { radius, space, type } from '@/design/type';
 import { WorkGlyph } from '@/design/work-glyph';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
@@ -29,20 +31,36 @@ export default function Ask() {
   const [input, setInput] = useState('');
   const listRef = useRef<FlatList<Message>>(null);
   const nextId = useRef(1);
+  const animatedIds = useRef(new Set<number>());
+  const [waiting, setWaiting] = useState(false);
+  const pending = useRef(false);
+  const job = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => () => clearTimeout(job.current), []);
 
   const ask = (question: string) => {
     const q = question.trim();
-    if (!q) return;
-    const found = searchWorks(q, works ?? []).slice(0, 10);
-    const answer: Message = {
-      id: nextId.current++,
-      role: 'sezi',
-      text: found.length ? tr('ask.found', { n: found.length }) : tr('ask.notFound'),
-      works: found,
-    };
-    setMessages((m) => [...m, { id: nextId.current++, role: 'user', text: q }, answer]);
+    if (!q || pending.current) return;
+    pending.current = true;
+    const message: Message = { id: nextId.current++, role: 'user', text: q };
+    setMessages((m) => [...m, message]);
+    setWaiting(true);
     setInput('');
-    setTimeout(() => listRef.current?.scrollToEnd({ animated: !reducedMotion }), 50);
+    AccessibilityInfo.announceForAccessibility(tr('ask.waiting'));
+    // Arama işi sıraya alınır; gösterge için yapay bekleme eklenmez.
+    job.current = setTimeout(() => {
+      const found = searchWorks(q, works ?? []).slice(0, 10);
+      const answer: Message = {
+        id: nextId.current++,
+        role: 'sezi',
+        text: found.length ? tr('ask.found', { n: found.length }) : tr('ask.notFound'),
+        works: found,
+      };
+      setMessages((m) => [...m, answer]);
+      setWaiting(false);
+      pending.current = false;
+      job.current = undefined;
+      AccessibilityInfo.announceForAccessibility(answer.text);
+    }, 0);
   };
 
   const suggestions = [tr('ask.suggest1'), tr('ask.suggest2'), tr('ask.suggest3')];
@@ -52,8 +70,10 @@ export default function Ask() {
       <ScreenHeader title={tr('ask.title')} />
       <Text style={[type.body, { color: t.text }]}>{tr('design.askIntro')}</Text>
       <View style={s.suggestions}>
-        {suggestions.map((q) => (
-          <Chip key={q} label={q} selected={false} onPress={() => ask(q)} />
+        {suggestions.map((q, index) => (
+          <FadeInItem key={q} index={index}>
+            <Chip label={q} selected={false} onPress={() => ask(q)} />
+          </FadeInItem>
         ))}
       </View>
       <Note text={tr('design.askScope')} icon={<InfoIcon color={t.textMuted} />} />
@@ -71,7 +91,9 @@ export default function Ask() {
           keyExtractor={(m) => String(m.id)}
           ListHeaderComponent={header}
           contentContainerStyle={s.list}
-          renderItem={({ item }) => (item.role === 'user' ? <UserBubble text={item.text} t={t} label={tr('ask.you')} /> : <SeziAnswer msg={item} t={t} />)}
+          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: !reducedMotion })}
+          ListFooterComponent={waiting ? <WaitingIndicator label={tr('ask.waiting')} /> : null}
+          renderItem={({ item }) => <MessageReveal id={item.id} eligible={item.id >= nextId.current - 2} animatedIds={animatedIds.current}>{item.role === 'user' ? <UserBubble text={item.text} t={t} label={tr('ask.you')} /> : SeziAnswer({ msg: item, t })}</MessageReveal>}
         />
         {/* Yazı alanı yüzen sekme çubuğunun üstünde durur; klavye açıkken çubuk gizli, boşluk küçülür. */}
         <View style={[s.composer, { marginBottom: tabSpace - space.lg }]}>
@@ -88,11 +110,11 @@ export default function Ask() {
           />
           <SoftPressable
             onPress={() => ask(input)}
-            disabled={!input.trim()}
+            disabled={!input.trim() || waiting}
             accessibilityRole="button"
             accessibilityLabel={tr('ask.send')}
-            accessibilityState={{ disabled: !input.trim() }}
-            style={[s.sendBtn, outline(t), !input.trim() && { opacity: 0.4 }]}>
+            accessibilityState={{ disabled: !input.trim() || waiting }}
+            style={[s.sendBtn, outline(t), (!input.trim() || waiting) && { opacity: 0.4 }]}>
             <TurnIcon turn="straight" color={t.primary.ink} size={24} />
           </SoftPressable>
         </View>
@@ -139,6 +161,35 @@ function UserBubble({ text, t, label }: { text: string; t: SweetTheme; label: st
       </View>
     </View>
   );
+}
+
+/** Yalnız yeni ileti FadeInItem ile girer; sanallaştırma eski balonu yeniden monte ederse canlanmaz. */
+function MessageReveal({ id, eligible, animatedIds, children }: { id: number; eligible: boolean; animatedIds: Set<number>; children: ReactNode }) {
+  const [fresh] = useState(() => eligible && !animatedIds.has(id));
+  useEffect(() => {
+    animatedIds.add(id);
+  }, [animatedIds, id]);
+  return fresh ? <FadeInItem index={0}>{children}</FadeInItem> : <View>{children}</View>;
+}
+
+function WaitingIndicator({ label }: { label: string }) {
+  const reduced = useReducedMotion();
+  const t = useSweetTheme();
+  return <View accessible accessibilityLabel={label} accessibilityLiveRegion="polite" style={{ flexDirection: 'row', alignItems: 'center', gap: space.sm, padding: space.lg }}>
+    <Text style={[type.meta, { color: t.textMuted }]}>{label}</Text>
+    {!reduced ? <View style={{ flexDirection: 'row', gap: space.xs }} accessible={false}>{[0, 1, 2].map((index) => <WaitingDot key={index} index={index} />)}</View> : null}
+  </View>;
+}
+
+function WaitingDot({ index }: { index: number }) {
+  const t = useSweetTheme();
+  const opacity = useSharedValue(0.3);
+  useEffect(() => {
+    opacity.set(withDelay(index * stagger.step, withRepeat(withSequence(withTiming(1, { duration: duration.sheetIn, easing: ease.inOut }), withTiming(0.3, { duration: duration.sheetIn, easing: ease.inOut })), -1)));
+    return () => cancelAnimation(opacity);
+  }, [index, opacity]);
+  const style = useAnimatedStyle(() => ({ opacity: opacity.get() }));
+  return <Animated.View style={[{ width: 6, height: 6, borderRadius: 3, backgroundColor: t.primaryText }, style]} />;
 }
 
 const bubble = StyleSheet.create({

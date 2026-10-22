@@ -89,7 +89,7 @@ Ekibin ve önceki oturumların çalışma biçimi. Bunlara uyulmazsa süreç boz
   - Eser türü renkleri tür tonundan (`design/sweet/tones.ts`, `toneForType`). Sabit renk kodu yazmayın.
 - **Tipografi:** `design/type.ts` (`type.*`, `space`, `radius`). Büyük harf için `upper(text, lang)` kullanın (Türkçe i/İ).
 - **UI parçaları:**
-  - `components/ui.tsx`: Button, Card, ListRow, Badge, Note, Chip, Segmented, ToggleRow, EmptyState, Field, SectionTitle, Eyebrow. `design/sweet/components.tsx`: SoftPressable, IconBubble, TypeTile, PhotoTile, FadeInItem, Skeleton, SweetSheet.
+  - `components/ui.tsx`: Button, Card, ListRow, Badge, Note, Chip, Segmented, ToggleRow, EmptyState, Field, SectionTitle, Eyebrow. `design/sweet/components.tsx`: SoftPressable, IconBubble, TypeTile, FadeInItem, Skeleton, SweetSheet. Eser kartı `components/photo-card.tsx` (PhotoCard), detay başlığı `components/floating-header.tsx`, rota/durak hattı `components/lynch-line.tsx`.
   - Yeni ekran bunlarla kurulur. Hareket token'ları `design/sweet/motion.ts`, ikonlar `design/icons.tsx` içinde.
 - **Harita:**
   - Ekranlar Mapbox'ı doğrudan kullanmaz: harita, rota, nokta ve konum çizimleri `components/map` (`SeziMap`, `RouteLine`, `PointsLayer`…) üzerinden yapılır; kütüphaneye ait kod yalnızca orada.

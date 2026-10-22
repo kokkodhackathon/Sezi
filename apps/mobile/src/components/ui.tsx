@@ -4,9 +4,11 @@
  * Yüzeyler düz: kart ve alanlar dolgu tonuyla ayrılır; yüksek kontrastta 2 dp çerçeve (`outline`).
  */
 import { createContext, useContext, useRef, useState, type ReactNode, type RefObject } from 'react';
+import * as Haptics from 'expo-haptics';
 import { Pressable, StyleSheet, Switch, Text, TextInput, useWindowDimensions, View, type StyleProp, type TextInputProps, type ViewStyle } from 'react-native';
 
 import { ChevronIcon, InfoIcon } from '@/design/icons';
+import { EmptyMotif } from '@/design/motif';
 import { outline, SoftPressable } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
@@ -185,7 +187,11 @@ export function Segmented<T extends string | number>({
         return (
           <SoftPressable
             key={String(o.value)}
-            onPress={() => onChange(o.value)}
+            onPress={() => {
+              if (on) return;
+              void Haptics.selectionAsync();
+              onChange(o.value);
+            }}
             accessibilityRole="radio"
             accessibilityLabel={o.label}
             accessibilityState={{ checked: on }}
@@ -204,7 +210,10 @@ export function Chip({ label, selected, onPress, icon }: { label: string; select
   const fg = selected ? t.primary.ink : t.text;
   return (
     <SoftPressable
-      onPress={onPress}
+      onPress={() => {
+        if (!selected) void Haptics.selectionAsync();
+        onPress();
+      }}
       accessibilityRole="button"
       accessibilityLabel={label}
       accessibilityState={{ selected }}
@@ -235,6 +244,7 @@ export function EmptyState({ title, body, icon, action }: { title: string; body?
   const t = useSweetTheme();
   return (
     <View style={styles.empty}>
+      <EmptyMotif color={t.primaryText} />
       {icon}
       <Text style={[type.heading, { color: t.text, textAlign: 'center' }]}>{title}</Text>
       {body ? <Text style={[type.body, { color: t.textMuted, textAlign: 'center' }]}>{body}</Text> : null}

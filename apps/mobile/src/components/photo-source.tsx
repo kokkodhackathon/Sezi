@@ -1,4 +1,4 @@
-import { isCommons, loc, type WorkPhoto } from '@sezi/shared';
+import { isAttributed, isCommons, loc, type WorkPhoto } from '@sezi/shared';
 import { useState } from 'react';
 import { Linking, Pressable, StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
@@ -10,13 +10,13 @@ import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
 
 /**
- * Commons fotoğrafı için standart atıf metni: "{author} · {license} · Wikimedia Commons".
- * Yazar bilgisi yoksa dildeki karşılığı yazılır ("Yazar belirtilmemiş" / "Author not stated").
+ * Fotoğraf atfı: Commons'ta kaynak adı eklenir, yüklemelerde yazar ve lisans gösterilir.
+ * Envanterin mevcut fotoğrafçı kredisi korunur.
  */
-export function formatCommonsCredit(photo: Pick<WorkPhoto, 'author' | 'license'>, lang: 'tr' | 'en'): string {
+export function formatPhotoCredit(photo: WorkPhoto, lang: 'tr' | 'en'): string | null {
+  if (!isAttributed(photo)) return photo.credit;
   const author = photo.author?.trim() || (lang === 'tr' ? 'Yazar belirtilmemiş' : 'Author not stated');
-  const license = photo.license?.trim();
-  return [author, license, 'Wikimedia Commons'].filter(Boolean).join(' · ');
+  return [author, photo.license?.trim(), isCommons(photo) ? 'Wikimedia Commons' : null].filter(Boolean).join(' · ');
 }
 
 export interface PhotoSourceTagProps {
@@ -26,15 +26,15 @@ export interface PhotoSourceTagProps {
 }
 
 /**
- * Büyük gösterilen Commons fotoğraflarının köşesinde yer alan kaynak etiketi (≥ 48 dp dokunma alanı).
- * Dokunulduğunda atıf ayrıntılarını (yazar, lisans, değişiklik, Commons sayfası) açar.
+ * Fotoğrafların köşesinde yer alan kaynak etiketi (≥ 48 dp dokunma alanı).
+ * Commons ve yönetici yüklemelerinin yazar, lisans ve kaynak ayrıntılarını açar.
  */
 export function PhotoSourceTag({ photo, style, position = 'bottom-right' }: PhotoSourceTagProps) {
   const [open, setOpen] = useState(false);
   const t = useSweetTheme();
   const { t: tr, lang } = useT();
 
-  if (!photo || !isCommons(photo)) return null;
+  if (!photo || !isAttributed(photo)) return null;
 
   const bg = t.outlined ? t.background : `${t.background}D9`;
   const authorText = photo.author?.trim() || tr('commons.authorMissing');
@@ -51,10 +51,10 @@ export function PhotoSourceTag({ photo, style, position = 'bottom-right' }: Phot
         accessibilityLabel={tr('commons.tagLabel')}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
         style={[styles.tag, posStyle[position], { backgroundColor: bg }, outline(t), style]}>
-        <Text style={[styles.tagText, { color: t.text }]}>{tr('commons.tag')}</Text>
+        <Text numberOfLines={1} style={[styles.tagText, { color: t.text }]}>{isCommons(photo) ? tr('commons.tag') : tr('commons.photoBy', { author: authorText })}</Text>
       </Pressable>
 
-      <SweetSheet visible={open} onClose={() => setOpen(false)} title={tr('commons.sheetTitle')}>
+      <SweetSheet visible={open} onClose={() => setOpen(false)} title={tr(isCommons(photo) ? 'commons.sheetTitle' : 'photo.sourceTitle')}>
         <View style={styles.sheetContent}>
           <Card padded={false}>
             <ListRow first title={tr('commons.photoBy', { author: authorText })} />
@@ -71,7 +71,7 @@ export function PhotoSourceTag({ photo, style, position = 'bottom-right' }: Phot
           {photo.source_url ? (
             <Button
               variant="outline"
-              label={tr('commons.openSource')}
+              label={tr(isCommons(photo) ? 'commons.openSource' : 'photo.openSource')}
               icon={(c) => <ExternalIcon color={c} size={18} />}
               onPress={() => void Linking.openURL(photo.source_url!).catch(() => {})}
             />
@@ -89,13 +89,13 @@ export function PhotoSourceThumbTag({ photo, style }: { photo: WorkPhoto | undef
   const t = useSweetTheme();
   const { t: tr } = useT();
 
-  if (!photo || !isCommons(photo)) return null;
+  if (!photo || !isAttributed(photo)) return null;
 
   const bg = t.outlined ? t.background : `${t.background}D9`;
 
   return (
     <View pointerEvents="none" accessible={false} style={[styles.thumbTag, { backgroundColor: bg }, outline(t), style]}>
-      <Text style={[styles.thumbTagText, { color: t.text }]}>{tr('commons.thumbTag')}</Text>
+      <Text numberOfLines={1} style={[styles.thumbTagText, { color: t.text }]}>{isCommons(photo) ? tr('commons.thumbTag') : tr('commons.photoBy', { author: photo.author?.trim() || tr('commons.authorMissing') })}</Text>
     </View>
   );
 }
@@ -110,6 +110,9 @@ const posStyle = {
 const styles = StyleSheet.create({
   tag: {
     position: 'absolute',
+    minWidth: 48,
+    minHeight: 48,
+    maxWidth: '60%',
     paddingHorizontal: space.sm,
     paddingVertical: 4,
     borderRadius: radius.sm,
@@ -125,6 +128,7 @@ const styles = StyleSheet.create({
   thumbTag: {
     position: 'absolute',
     bottom: space.xs,
+    maxWidth: '90%',
     right: space.xs,
     paddingHorizontal: 6,
     paddingVertical: 2,

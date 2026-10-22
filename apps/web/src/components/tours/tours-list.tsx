@@ -2,7 +2,7 @@
 
 import {
   coverOf,
-  isCommons,
+  isAttributed,
   loc,
   planTour,
   TOURS,
@@ -139,7 +139,7 @@ export function ToursList({
             const cover = covers[plan.id];
             const mins = Math.max(1, Math.ceil(plan.lengthM / walkingSpeed(activeProfile) / 60));
             const tourHref = href(lang, `/turlar/${plan.id}${profileQuery}`);
-            const isCommonsCover = cover?.photo && isCommons(cover.photo);
+            const hasAttribution = cover?.photo && isAttributed(cover.photo);
 
             return (
               <div
@@ -161,7 +161,7 @@ export function ToursList({
                     />
                   </div>
                   {/* Yazı fotoğrafın üstünde: alttan koyulaşan örtü okunurluğu sağlar (yüksek kontrastta düz zemin). */}
-                  <div className={cn("pointer-events-none relative grid gap-2 bg-gradient-to-t from-foreground/90 via-foreground/70 to-transparent p-5 pt-16 text-background contrast:bg-foreground contrast:bg-none", isCommonsCover && "pr-28 sm:pr-32")}>
+                  <div className={cn("pointer-events-none relative grid gap-2 bg-gradient-to-t from-foreground/90 via-foreground/70 to-transparent p-5 pt-16 text-background contrast:bg-foreground contrast:bg-none", hasAttribution && "pr-28 sm:pr-32")}>
                     <h2 className="font-heading text-xl font-extrabold leading-tight group-hover:underline">{title}</h2>
                     <p className="num flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
                       <span>{t("tours.stops", { n: plan.stops.length })}</span>
@@ -171,9 +171,9 @@ export function ToursList({
                     </p>
                   </div>
                 </Link>
-                {isCommonsCover ? (
+                {hasAttribution ? (
                   <div className="absolute bottom-3 right-3 z-10 sm:bottom-4 sm:right-4">
-                    <PhotoSource photo={cover.photo} align="end" side="top" />
+                    <PhotoSource photo={cover.photo} align="end" side="top" className="max-w-24 sm:max-w-28" />
                   </div>
                 ) : null}
               </div>

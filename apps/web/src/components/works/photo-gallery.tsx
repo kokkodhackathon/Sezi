@@ -1,6 +1,6 @@
 "use client";
 
-import { isCommons, loc, type WorkPhoto } from "@sezi/shared";
+import { isAttributed, loc, type WorkPhoto } from "@sezi/shared";
 import { ChevronLeftIcon, ChevronRightIcon, ExpandIcon } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
@@ -16,7 +16,7 @@ import {
 import { WorkThumb } from "@/components/work-thumb";
 import { Lens } from "@/components/works/lens";
 import {
-  CommonsBadge,
+  PhotoSourceBadge,
   PhotoSource,
   photoCreditLine,
 } from "@/components/works/photo-source";
@@ -62,8 +62,8 @@ export function PhotoGallery({
     ? loc(activePhoto.alt, lang) || workName
     : workName;
 
-  const currentCreditLine = photoCreditLine(currentPhoto, lang, t);
-  const activeCreditLine = activePhoto ? photoCreditLine(activePhoto, lang, t) : null;
+  const currentCreditLine = photoCreditLine(currentPhoto, t);
+  const activeCreditLine = activePhoto ? photoCreditLine(activePhoto, t) : null;
 
   return (
     <section aria-label={t("works.detail.photosTitle")} className="grid gap-2">
@@ -92,7 +92,7 @@ export function PhotoGallery({
                 <ExpandIcon className="size-4" />
               </span>
             </button>
-            {isCommons(currentPhoto) ? (
+            {isAttributed(currentPhoto) ? (
               <div className="absolute bottom-3 left-3 z-20">
                 <PhotoSource photo={currentPhoto} />
               </div>
@@ -131,7 +131,7 @@ export function PhotoGallery({
                   sizes="80px"
                   className="object-cover"
                 />
-                {isCommons(p) ? <CommonsBadge /> : null}
+                {isAttributed(p) ? <PhotoSourceBadge photo={p} /> : null}
               </button>
             );
           })}
@@ -163,7 +163,7 @@ export function PhotoGallery({
                   sizes="(min-width: 1024px) 896px, 100vw"
                   className="object-contain"
                 />
-                {isCommons(activePhoto) ? (
+                {isAttributed(activePhoto) ? (
                   <div className="absolute bottom-3 left-3 z-10">
                     <PhotoSource photo={activePhoto} />
                   </div>

@@ -1,5 +1,4 @@
-import { coverOf, hasLocation, loc, toneForType, type SweetTheme, type SweetTone, type WorkRow } from '@sezi/shared';
-import { Image } from 'expo-image';
+import { hasLocation, loc, type SweetTheme, type SweetTone, type WorkRow } from '@sezi/shared';
 import * as Haptics from 'expo-haptics';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
@@ -16,13 +15,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { scheduleOnRN } from 'react-native-worklets';
 
-import { CloseIcon, StarIcon } from '@/design/icons';
+import { CloseIcon } from '@/design/icons';
 import { radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT, type Lang, type Translate } from '@/lib/i18n';
-import { photoUrl } from '@/lib/works';
 
 import { duration, ease, pressScale, selectSpring, stagger } from './motion';
 
@@ -140,33 +138,6 @@ export function TypeTile({
   );
 }
 
-/** Eser kartı: yuvarlak köşeli fotoğraf (yoksa tür tonunda glif), altında ad; UNESCO ise yıldız rozeti. */
-export function PhotoTile({ work, width, imageHeight, onPress }: { work: WorkRow; width: number; imageHeight: number; onPress: () => void }) {
-  const t = useSweetTheme();
-  const { t: tr, lang } = useT();
-  const cover = coverOf(work);
-  const tone = t.tones[toneForType(work.type_slug)];
-  return (
-    <SoftPressable onPress={onPress} accessibilityRole="button" accessibilityLabel={a11yLabel(work, lang, tr)} style={{ width, gap: space.sm }}>
-      <View style={[s.photo, { height: imageHeight, backgroundColor: tone.fill }, outline(t)]}>
-        {cover ? (
-          <Image source={{ uri: photoUrl(cover, 'thumb') }} style={StyleSheet.absoluteFill} contentFit="cover" transition={150} accessible={false} />
-        ) : (
-          <WorkGlyphInline slug={work.type_slug} color={tone.ink} size={44} />
-        )}
-        {work.unesco ? (
-          <View style={[s.star, { backgroundColor: t.accent.fill }]}>
-            <StarIcon color={t.accent.ink} size={15} />
-          </View>
-        ) : null}
-      </View>
-      <Text style={[type.cardTitle, { color: t.text, paddingHorizontal: space.xs }]} numberOfLines={2}>
-        {loc(work.name, lang)}
-      </Text>
-    </SoftPressable>
-  );
-}
-
 /** Sıralı yumuşak giriş (8 dp yukarı + opacity). Reduce motion: yalnız opacity. */
 export function FadeInItem({ index, children, style }: { index: number; children: ReactNode; style?: StyleProp<ViewStyle> }) {
   const reduced = useReducedMotion();
@@ -258,8 +229,6 @@ const s = StyleSheet.create({
   iconBubble: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
   tile: { width: 72, alignItems: 'center', gap: space.sm },
   tileBox: { width: 64, height: 64, borderRadius: 20, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
-  photo: { borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden', alignItems: 'center', justifyContent: 'center' },
-  star: { position: 'absolute', top: space.sm, right: space.sm, width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   sheetRoot: { flex: 1, justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, borderCurve: 'continuous', paddingTop: space.sm, maxHeight: '85%' },
   grabber: { alignSelf: 'center', width: 36, height: 5, borderRadius: 3, marginBottom: space.md },

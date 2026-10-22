@@ -1,11 +1,11 @@
-import { isCommons, loc, type WorkPhoto } from '@sezi/shared';
+import { loc, type WorkPhoto } from '@sezi/shared';
 import { Image } from 'expo-image';
 import { useState } from 'react';
 import { FlatList, Modal, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CloseIcon } from '@/design/icons';
-import { formatCommonsCredit, PhotoSourceTag } from '@/components/photo-source';
+import { formatPhotoCredit, PhotoSourceTag } from '@/components/photo-source';
 import { space, type } from '@/design/type';
 import { useT } from '@/lib/i18n';
 import { photoUrl } from '@/lib/works';
@@ -21,7 +21,7 @@ export function PhotoViewer({ photos, start, onClose }: { photos: WorkPhoto[]; s
   const [index, setIndex] = useState(start ?? 0);
   const [captionH, setCaptionH] = useState(0);
   const current = photos[index];
-  const credit = current ? (isCommons(current) ? formatCommonsCredit(current, lang) : current.credit) : null;
+  const credit = current ? formatPhotoCredit(current, lang) : null;
 
   return (
     <Modal visible={start !== null} animationType="fade" onRequestClose={onClose} statusBarTranslucent>

@@ -1,5 +1,6 @@
 import type { LocalizedText } from '@sezi/shared';
 import { useQuery } from '@tanstack/react-query';
+import { z } from 'zod';
 
 import { MEDIA_BASE, supabase } from './supabase';
 
@@ -21,7 +22,7 @@ export interface WorkListRow {
   district: string | null;
   status: Status;
   location_precision: Precision;
-  photos: { id: string; thumb: string | null; path: string; origin?: 'inventory' | 'commons' }[];
+  photos: { id: string; thumb: string | null; path: string; origin?: 'inventory' | 'commons' | 'upload' }[];
   sources: { kind: string; volume: number | null; page: string | null }[];
 }
 
@@ -60,6 +61,7 @@ export function useWorkList(f: WorkFilters) {
       if (f.photo === 'without') q = q.eq('photos', '[]');
       if (f.origin === 'commons') q = q.filter('photos', 'cs', '[{"origin":"commons"}]');
       if (f.origin === 'inventory') q = q.filter('photos', 'cs', '[{"origin":"inventory"}]');
+      if (f.origin === 'upload') q = q.filter('photos', 'cs', '[{"origin":"upload"}]');
       if (f.review === '1') {
         // needs_review görünümde yok: önce tablodan kimlikler alınır.
         const { data: ids, error } = await supabase.from('works').select('id').eq('needs_review', true);
@@ -105,6 +107,15 @@ export interface WorkRecord {
   history: LocalizedText | null;
   architecture: LocalizedText | null;
   period: LocalizedText | null;
+  built_year: number | null;
+  founder: string | null;
+  visit_steps: number | null;
+  visit_ramp: boolean | null;
+  visit_hours: LocalizedText | null;
+  visit_minutes: number | null;
+  visit_note: LocalizedText | null;
+  visit_source: string | null;
+  visit_checked_on: string | null;
   district: string | null;
   address: LocalizedText | null;
   condition: Condition;
@@ -119,6 +130,44 @@ export interface WorkRecord {
   audio_en_id: string | null;
 }
 
+const LocalizedSchema = z.object({ tr: z.string(), en: z.string().optional() });
+const WorkRecordSchema = z.object({
+  id: z.string(), slug: z.string(), name: LocalizedSchema,
+  summary: LocalizedSchema.nullable(), history: LocalizedSchema.nullable(), architecture: LocalizedSchema.nullable(),
+  period: LocalizedSchema.nullable(), built_year: z.number().nullable(), founder: z.string().nullable(),
+  visit_steps: z.number().nullable(), visit_ramp: z.boolean().nullable(), visit_hours: LocalizedSchema.nullable(),
+  visit_minutes: z.number().nullable(), visit_note: LocalizedSchema.nullable(), visit_source: z.string().nullable(), visit_checked_on: z.string().nullable(),
+  district: z.string().nullable(), address: LocalizedSchema.nullable(),
+  condition: z.enum(['intact', 'restored', 'damaged', 'destroyed', 'unknown']), condition_note: LocalizedSchema.nullable(),
+  unesco: z.boolean(), location_precision: z.enum(['exact', 'approximate', 'unknown']),
+  status: z.enum(['draft', 'verified', 'archived']), needs_review: z.boolean(), work_type_id: z.string(), city_id: z.string(),
+  audio_tr_id: z.string().nullable(), audio_en_id: z.string().nullable(),
+});
+export interface VisitForm {
+  steps: string; ramp: string; minutes: string; hoursTr: string; hoursEn: string;
+  noteTr: string; noteEn: string; source: string; checkedOn: string;
+}
+export function toVisitForm(w: WorkRecord): VisitForm {
+  return { steps: w.visit_steps?.toString() ?? '', ramp: w.visit_ramp === null ? '' : w.visit_ramp ? 'yes' : 'no',
+    minutes: w.visit_minutes?.toString() ?? '', hoursTr: w.visit_hours?.tr ?? '', hoursEn: w.visit_hours?.en ?? '',
+    noteTr: w.visit_note?.tr ?? '', noteEn: w.visit_note?.en ?? '', source: w.visit_source ?? '', checkedOn: w.visit_checked_on ?? '' };
+}
+export function visitError(v: VisitForm) {
+  const hasVisitData = Object.values(v).some((value) => value.trim());
+  if (hasVisitData && (!v.source.trim() || !v.checkedOn)) return 'Ziyaret bilgisi için kaynak ve kontrol tarihi zorunludur.';
+  if (v.steps && (!Number.isInteger(Number(v.steps)) || Number(v.steps) < 0 || Number(v.steps) > 200)) return 'Basamak sayısı 0–200 arasında tam sayı olmalıdır.';
+  if (v.minutes && (!Number.isInteger(Number(v.minutes)) || Number(v.minutes) < 1 || Number(v.minutes) > 600)) return 'Gezme süresi 1–600 dakika arasında tam sayı olmalıdır.';
+  if ((v.hoursEn.trim() && !v.hoursTr.trim()) || (v.noteEn.trim() && !v.noteTr.trim())) return 'İngilizce ziyaret bilgisinin Türkçesini de girin.';
+  return '';
+}
+export function visitPatch(v: VisitForm) {
+  return { visit_steps: v.steps === '' ? null : Number(v.steps), visit_ramp: v.ramp === '' ? null : v.ramp === 'yes',
+    visit_minutes: v.minutes === '' ? null : Number(v.minutes),
+    visit_hours: v.hoursTr.trim() ? { tr: v.hoursTr.trim(), ...(v.hoursEn.trim() ? { en: v.hoursEn.trim() } : {}) } : null,
+    visit_note: v.noteTr.trim() ? { tr: v.noteTr.trim(), ...(v.noteEn.trim() ? { en: v.noteEn.trim() } : {}) } : null,
+    visit_source: v.source.trim() || null, visit_checked_on: v.checkedOn || null };
+}
+
 export interface MediaRow {
   id: string;
   storage_path: string;
@@ -131,7 +180,7 @@ export interface MediaRow {
   source_file: string | null;
   source_volume: number | null;
   source_page: number | null;
-  origin: 'inventory' | 'commons';
+  origin: 'inventory' | 'commons' | 'upload';
   author: string | null;
   license: string | null;
   license_url: string | null;
@@ -165,11 +214,11 @@ export function useWork(slug: string) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('works')
-        .select('id, slug, name, summary, history, architecture, period, district, address, condition, condition_note, unesco, location_precision, status, needs_review, work_type_id, city_id, audio_tr_id, audio_en_id')
+        .select('id, slug, name, summary, history, architecture, period, built_year, founder, visit_steps, visit_ramp, visit_hours, visit_minutes, visit_note, visit_source, visit_checked_on, district, address, condition, condition_note, unesco, location_precision, status, needs_review, work_type_id, city_id, audio_tr_id, audio_en_id')
         .eq('slug', slug)
         .single();
       if (error) throw error;
-      const work = data as WorkRecord;
+      const work = WorkRecordSchema.parse(data);
       const [view, media] = await Promise.all([
         supabase.from('works_view').select('lng, lat, sources, city_slug, audio_tr, audio_en').eq('id', work.id).single(),
         supabase.from('media').select('id, storage_path, thumb_path, alt_text, status, kind, sort_order, credit, source_file, source_volume, source_page, origin, author, license, license_url, source_url, modifications, wikidata_id').eq('work_id', work.id).order('sort_order'),
@@ -270,7 +319,7 @@ export interface InboxPhoto {
   folder: string | null;
   source_file: string | null;
   kind: 'photo' | 'aerial' | 'inscription';
-  origin: 'inventory' | 'commons';
+  origin: 'inventory' | 'commons' | 'upload';
   author: string | null;
   license: string | null;
   license_url: string | null;

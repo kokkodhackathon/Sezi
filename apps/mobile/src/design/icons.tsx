@@ -226,3 +226,19 @@ export function CameraIcon({ color, size = 20 }: IconProps) {
     </Svg>
   );
 }
+
+export function HearingIcon({ color, size = 22 }: IconProps) {
+  return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}><Path d="M7 9a5 5 0 0 1 10 0c0 4-4 4-4 7a3 3 0 0 1-6 0M10 9a2 2 0 0 1 4 0c0 2-3 2-3 4" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" /></Svg>;
+}
+
+export function MobilityIcon({ color, size = 22 }: IconProps) {
+  return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}><Circle cx="13" cy="4" r="2" fill={color} /><Path d="m9 10 3-3 3 4 4 1M12 8l-1 7-4 6m4-6 5 6M8 8l-3 5" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
+}
+
+export function SensesIcon({ color, size = 22 }: IconProps) {
+  return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}><Circle cx="12" cy="12" r="3" fill="none" stroke={color} strokeWidth={2} /><Path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2" stroke={color} strokeWidth={2} strokeLinecap="round" /></Svg>;
+}
+
+export function LanguageIcon({ color, size = 22 }: IconProps) {
+  return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}><Circle cx="12" cy="12" r="9" fill="none" stroke={color} strokeWidth={2} /><Path d="M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z" fill="none" stroke={color} strokeWidth={1.6} /></Svg>;
+}

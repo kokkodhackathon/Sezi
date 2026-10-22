@@ -1,13 +1,17 @@
 import { coverOf, loc, type SweetTheme } from '@sezi/shared';
-import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
-import { ActivityIndicator, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Linking, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import Animated from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExhibitionCard } from '@/components/exhibition-card';
+import { FloatingHeader, useFloatingHeaderScroll } from '@/components/floating-header';
 import { PhotoSourceTag } from '@/components/photo-source';
-import { Button, Card, ListRow, Note, SectionTitle } from '@/components/ui';
+import { Button, EmptyState, Note, SectionTitle } from '@/components/ui';
 import { ExternalIcon, InfoIcon } from '@/design/icons';
-import { outline } from '@/design/sweet/components';
+import { FadeInItem, outline, Skeleton, SoftPressable } from '@/design/sweet/components';
+import { WorkGlyphInline } from '@/design/work-glyph';
 import { radius, space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
@@ -26,11 +30,15 @@ export default function CityScreen() {
   const { data: books } = useInventoryBooks();
   const { data: exhibitions } = useExhibitions();
   const city = cities?.find((c) => c.slug === slug);
+  const header = useFloatingHeaderScroll();
+  const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
 
   if (isLoading || !city) {
     return (
-      <View style={s.center}>
-        <ActivityIndicator color={t.primaryText} />
+      <View style={[s.screen, { paddingTop: insets.top + 80, paddingHorizontal: space.xl, gap: space.xl }]} accessibilityLabel={tr('city.loading')} accessibilityState={{ busy: isLoading }}>
+        {isLoading ? <><Skeleton width={width - 48} height={240} /><Skeleton width={width - 96} height={34} /><Skeleton width={width - 48} height={96} /></> : <EmptyState title={tr('city.notFound')} />}
+        <FloatingHeader title={tr('city.eyebrow')} scrollY={header.scrollY} coverHeight={header.coverHeight} />
       </View>
     );
   }
@@ -45,30 +53,32 @@ export default function CityScreen() {
   for (const w of works ?? []) if (w.district) districts.set(w.district, (districts.get(w.district) ?? 0) + 1);
 
   return (
-    <ScrollView style={s.screen} contentContainerStyle={s.body}>
-      <Stack.Screen options={{ title: '' }} />
+    <View style={s.screen}>
+    <Animated.ScrollView scrollEventThrottle={16} onScroll={header.onScroll} contentContainerStyle={[s.body, { paddingTop: insets.top + 72, paddingBottom: insets.bottom + 56 }]}>
       {cover ? (
-        <View style={{ position: 'relative' }}>
-          <Image source={{ uri: photoUrl(cover, 'full') }} placeholder={{ uri: photoUrl(cover, 'thumb') }} style={[s.cover, outline(t)]} contentFit="cover" transition={150} accessible={false} />
+        <View style={{ position: 'relative' }} onLayout={(e) => header.coverHeight.set(e.nativeEvent.layout.y + e.nativeEvent.layout.height)}>
+          <Image source={{ uri: photoUrl(cover, 'full') }} placeholder={{ uri: photoUrl(cover, 'thumb') }} placeholderContentFit="cover" style={[s.cover, outline(t)]} contentFit="cover" transition={150} accessible={false} />
           <PhotoSourceTag photo={cover} />
         </View>
       ) : null}
-      <View style={s.hero}>
+      <View onLayout={(e) => { if (!cover) header.coverHeight.set(e.nativeEvent.layout.y + e.nativeEvent.layout.height); }}>
+      <FadeInItem index={0} style={s.hero}>
         <View style={{ flex: 1, gap: space.xs }}>
           <Text style={[type.editorial, { color: t.text }]} accessibilityRole="header">
             {loc(city.name, lang)}
           </Text>
           <Text style={[type.meta, { color: t.textMuted }]}>{tr(`inv.status.${city.inventory_status ?? 'planned'}`)}</Text>
         </View>
+      </FadeInItem>
       </View>
 
-      <View style={s.stats}>
+      <FadeInItem index={1} style={s.stats}>
         <Stat value={fmt(city.inventory_works)} label={tr('city.works')} t={t} />
         <Stat value={fmt(city.inventory_photos)} label={tr('city.photos')} t={t} />
         <Stat value={String(city.inventory_year ?? '—')} label={tr('city.year')} t={t} />
-      </View>
+      </FadeInItem>
 
-      {city.inventory_note ? <Note text={loc(city.inventory_note, lang)} icon={<InfoIcon color={t.textMuted} />} /> : null}
+      {city.inventory_note ? <FadeInItem index={2}><Note text={loc(city.inventory_note, lang)} icon={<InfoIcon color={t.textMuted} />} /></FadeInItem> : null}
 
       <Button
         label={tr('city.explore')}
@@ -81,35 +91,29 @@ export default function CityScreen() {
 
 
       {cityBooks.length ? (
-        <View style={{ gap: space.md }}>
+        <FadeInItem index={3} style={{ gap: space.md }}>
           <SectionTitle title={tr('city.books')} />
-          <Card padded={false}>
-            {cityBooks.map((b, i) => (
-              <ListRow
-                key={b.id}
-                first={i === 0}
-                title={b.title}
-                subtitle={[b.year ? String(b.year) : null, 'Vakıf Katılım'].filter(Boolean).join(' · ')}
-                hint={tr('inv.openBookHint')}
-                trailing={<ExternalIcon color={t.primaryText} />}
-                onPress={b.url ? () => Linking.openURL(b.url!) : undefined}
-              />
-            ))}
-          </Card>
-        </View>
+          <View style={{ gap: space.md }}>
+            {cityBooks.map((b) => {
+              const content = <><View style={[s.bookSpine, { backgroundColor: t.tones.saffron.fill }, outline(t)]}><WorkGlyphInline slug="kutuphane" color={t.tones.saffron.ink} size={28} />{b.volume ? <Text style={[type.bubble, { color: t.tones.saffron.ink }]}>{tr('city.volume', { v: b.volume })}</Text> : null}</View><View style={{ flex: 1, gap: space.sm }}><Text style={[type.itemTitle, { color: t.text }]}>{b.title}</Text><Text style={[type.meta, { color: t.textMuted }]}>{[b.year, 'Vakıf Katılım'].filter(Boolean).join(' · ')}</Text>{b.url ? <Text style={[type.meta, { color: t.primaryText }]}>{tr('inv.openBook')}</Text> : null}</View>{b.url ? <ExternalIcon color={t.primaryText} /> : null}</>;
+              const bookStyle = [s.book, { backgroundColor: t.surface }, outline(t)];
+              return b.url ? <SoftPressable key={b.id} style={bookStyle} onPress={() => { if (b.url) void Linking.openURL(b.url); }} accessibilityRole="link" accessibilityLabel={b.title} accessibilityHint={tr('inv.openBookHint')}>{content}</SoftPressable> : <View key={b.id} style={bookStyle}>{content}</View>;
+            })}
+          </View>
+        </FadeInItem>
       ) : null}
 
       {cityExh.length ? (
-        <View style={{ gap: space.md }}>
+        <FadeInItem index={4} style={{ gap: space.md }}>
           <SectionTitle title={tr('city.exhibitions')} />
           {cityExh.map((e) => (
             <ExhibitionCard key={e.id} exhibition={e} />
           ))}
-        </View>
+        </FadeInItem>
       ) : null}
 
       {districts.size ? (
-        <View style={{ gap: space.md }}>
+        <FadeInItem index={5} style={{ gap: space.md }}>
           <SectionTitle title={tr('city.districts')} />
           <View style={s.districts}>
             {[...districts]
@@ -121,9 +125,11 @@ export default function CityScreen() {
                 </View>
               ))}
           </View>
-        </View>
+        </FadeInItem>
       ) : null}
-    </ScrollView>
+    </Animated.ScrollView>
+    <FloatingHeader title={loc(city.name, lang)} scrollY={header.scrollY} coverHeight={header.coverHeight} />
+    </View>
   );
 }
 
@@ -149,6 +155,8 @@ const makeStyles = (t: SweetTheme) =>
     hero: { flexDirection: 'row', gap: space.lg, alignItems: 'center' },
     stats: { flexWrap: 'wrap', flexDirection: 'row', gap: space.sm },
     districts: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+    book: { flexDirection: 'row', gap: space.lg, padding: space.lg, borderRadius: radius.lg, borderCurve: 'continuous', alignItems: 'center', minHeight: 112 },
+    bookSpine: { width: 72, minHeight: 104, borderRadius: radius.sm, borderCurve: 'continuous', justifyContent: 'center', alignItems: 'center', gap: space.sm, padding: space.sm },
     district: {
       flexDirection: 'row',
       alignItems: 'baseline',

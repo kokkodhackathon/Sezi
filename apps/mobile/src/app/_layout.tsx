@@ -4,6 +4,7 @@ import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { fontAssets, font } from '@/design/type';
 import { useIsDark, useSweetTheme } from '@/hooks/use-sweet-theme';
@@ -33,6 +34,7 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) return null;
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
     <QueryClientProvider client={queryClient}>
       <ProfileProvider>
         <SettingsProvider>
@@ -42,6 +44,7 @@ export default function RootLayout() {
         </SettingsProvider>
       </ProfileProvider>
     </QueryClientProvider>
+    </GestureHandlerRootView>
   );
 }
 
@@ -73,12 +76,12 @@ function AppStack() {
         {/* Profil yoksa uygulama onboarding'e yönlenir. */}
         <Stack.Protected guard={profile !== null}>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="work/[slug]" options={{ title: '', headerBackTitle: tr('onb.back') }} />
+          <Stack.Screen name="work/[slug]" options={{ headerShown: false }} />
           <Stack.Screen name="navigate" options={{ headerShown: false, animation: reducedMotion ? 'none' : 'fade_from_bottom' }} />
           <Stack.Screen name="compare/[slug]" options={{ headerShown: false }} />
           <Stack.Screen name="complex/[slug]" options={{ title: '' }} />
-          <Stack.Screen name="tour/[id]" options={{ title: '' }} />
-          <Stack.Screen name="city/[slug]" options={{ title: '' }} />
+          <Stack.Screen name="tour/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="city/[slug]" options={{ headerShown: false }} />
           <Stack.Screen name="exhibitions" options={{ title: tr('exh.title') }} />
           <Stack.Screen name="search" options={{ title: tr('search.title'), animation: reducedMotion ? 'none' : 'fade_from_bottom' }} />
           <Stack.Screen name="report/new" options={{ title: tr('report.title'), presentation: 'modal' }} />

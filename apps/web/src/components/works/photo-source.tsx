@@ -1,6 +1,6 @@
 "use client";
 
-import { isCommons, loc, type WorkPhoto } from "@sezi/shared";
+import { isAttributed, isCommons, loc, type WorkPhoto } from "@sezi/shared";
 import { ExternalLinkIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -9,50 +9,41 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import type { Lang, MessageKey } from "@/lib/i18n";
+import type { MessageKey } from "@/lib/i18n";
 import { useT } from "@/lib/i18n-client";
 import { cn } from "@/lib/utils";
 
 /**
- * Commons fotoğrafı için tek satırlık atıf metni.
- * "{author} · {license} · Wikimedia Commons"
- */
-export function commonsCreditLine(photo: WorkPhoto, lang: Lang): string {
-  const author = photo.author?.trim() || (lang === "en" ? "Author not stated" : "Yazar belirtilmemiş");
-  if (photo.license?.trim()) {
-    return `${author} · ${photo.license.trim()} · Wikimedia Commons`;
-  }
-  return `${author} · Wikimedia Commons`;
-}
-
-/**
- * Fotoğraf atıf satırı: Commons ise yazar/lisans atfı, envanter ise fotoğrafçı kredisi.
+ * Fotoğraf atıf satırı: yüklemelerde yazar/lisans, Commons'ta ayrıca kaynak adı,
+ * envanterde mevcut fotoğrafçı kredisi korunur.
  */
 export function photoCreditLine(
   photo: WorkPhoto,
-  lang: Lang,
   t: (key: MessageKey, vars?: Record<string, string | number>) => string,
 ): string | null {
-  if (isCommons(photo)) {
-    return commonsCreditLine(photo, lang);
+  if (isAttributed(photo)) {
+    const author = photo.author?.trim() || t("works.commons.authorUnknown");
+    return [author, photo.license?.trim(), isCommons(photo) ? "Wikimedia Commons" : null].filter(Boolean).join(" · ");
   }
   return photo.credit ? t("works.detail.photoCredit", { credit: photo.credit }) : null;
 }
 
 /**
- * Küçük liste karolarında gösterilen etkileşimsiz mini Commons etiketi.
+ * Küçük liste karolarında gösterilen etkileşimsiz kaynak etiketi.
  */
-export function CommonsBadge({ className }: { className?: string }) {
+export function PhotoSourceBadge({ photo, className }: { photo: WorkPhoto; className?: string }) {
+  const { t } = useT();
+  if (!isAttributed(photo)) return null;
   return (
     <span
       aria-hidden
       className={cn(
-        "pointer-events-none absolute bottom-1 right-1 rounded bg-background/85 px-1 py-0.5 text-[9px] font-semibold leading-none text-foreground backdrop-blur-xs",
+        "pointer-events-none absolute bottom-1 right-1 max-w-[calc(100%-0.5rem)] truncate rounded bg-background/85 px-1 py-0.5 text-[9px] font-semibold leading-none text-foreground backdrop-blur-xs",
         "contrast:bg-background contrast:text-foreground contrast:outline-1 contrast:outline-foreground",
         className,
       )}
     >
-      Commons
+      {isCommons(photo) ? t("works.commons.tagShort") : t("works.commons.photo", { author: photo.author?.trim() || t("works.commons.authorUnknown") })}
     </span>
   );
 }
@@ -66,10 +57,8 @@ export interface PhotoSourceProps {
 }
 
 /**
- * Wikimedia Commons kaynak etiketi ve atıf popover bileşeni.
- * Envanter fotoğraflarında hiçbir şey çizmez.
- * Commons fotoğraflarında ≥48px dokunma alanına sahip bir "Wikimedia Commons" düğmesi
- * ve tıklandığında açılan telif/kaynak popover'ı sunar.
+ * Kaynak ve atıf etiketi: Commons ile yönetici yüklemelerinin ayrıntılarını açar.
+ * Envanter fotoğraflarında hiçbir şey çizmez; düğmenin dokunma alanı en az 48px'tir.
  */
 export function PhotoSource({
   photo,
@@ -80,7 +69,7 @@ export function PhotoSource({
 }: PhotoSourceProps) {
   const { t, lang } = useT();
 
-  if (!photo || !isCommons(photo)) {
+  if (!photo || !isAttributed(photo)) {
     return null;
   }
 
@@ -99,14 +88,14 @@ export function PhotoSource({
             e.stopPropagation();
           }}
           className={cn(
-            "h-6 rounded-md bg-background/85 px-2 text-xs font-semibold text-foreground backdrop-blur-xs shadow-xs",
+            "min-h-12 min-w-12 max-w-56 rounded-md bg-background/85 px-2 text-xs font-semibold text-foreground backdrop-blur-xs shadow-xs",
             "hover:bg-background hover:text-foreground",
             "focus-visible:ring-2 focus-visible:ring-ring outline-none",
             "contrast:bg-background contrast:text-foreground contrast:outline-2 contrast:outline-foreground",
             className,
           )}
         >
-          {t("works.commons.tag")}
+          <span className="truncate">{isCommons(photo) ? t("works.commons.tag") : t("works.commons.photo", { author: authorText })}</span>
         </Button>
       </PopoverTrigger>
       <PopoverContent
@@ -134,7 +123,7 @@ export function PhotoSource({
                   href={photo.license_url}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xs"
+                  className="inline-flex min-h-12 min-w-12 items-center gap-1 font-medium text-primary underline underline-offset-2 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xs"
                 >
                   <span>{t("works.commons.license", { license: photo.license })}</span>
                   <ExternalLinkIcon className="size-3 shrink-0" aria-hidden />
@@ -152,16 +141,16 @@ export function PhotoSource({
             </div>
           ) : null}
 
-          {/* 4. Commons'ta aç */}
+          {/* 4. Kaynak sayfası */}
           {photo.source_url ? (
             <div className="border-t border-border/50 pt-2">
               <a
                 href={photo.source_url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 font-medium text-primary underline underline-offset-2 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xs"
+                className="inline-flex min-h-12 min-w-12 items-center gap-1 font-medium text-primary underline underline-offset-2 hover:text-primary/80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xs"
               >
-                <span>{t("works.commons.openCommons")}</span>
+                <span>{t(isCommons(photo) ? "works.commons.openCommons" : "works.commons.openSource")}</span>
                 <ExternalLinkIcon className="size-3 shrink-0" aria-hidden />
               </a>
             </div>
