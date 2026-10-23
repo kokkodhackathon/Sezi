@@ -38,6 +38,8 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { LANGS, MAX_AUDIO_BYTES, removeAudio, uploadAudio, type Lang, type Uploaded } from '@/lib/audio';
 import {
   AMBIENT_LABEL,
+  CUE_LABEL,
+  SENSE_CUES,
   CITY_CENTER,
   localized,
   ROLE_HINT,
@@ -49,6 +51,7 @@ import {
   type Ambient,
   type PointRole,
   type PointRow,
+  type SenseCue,
   type Status,
 } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
@@ -70,6 +73,7 @@ interface Form {
   work: { id: string; name: string } | null;
   salience: number;
   ambient: Ambient | '';
+  cue: SenseCue | '';
   fieldChecked: boolean;
   sortOrder: number;
   /** Yeni seçilen ses dosyaları. */
@@ -92,6 +96,7 @@ const emptyForm = (): Form => ({
   work: null,
   salience: 2,
   ambient: '',
+  cue: '',
   fieldChecked: false,
   sortOrder: 0,
   files: {},
@@ -111,6 +116,7 @@ const toForm = (r: PointRow, workName?: string): Form => ({
   work: r.work_id ? { id: r.work_id, name: workName ?? r.work_slug ?? '' } : null,
   salience: r.salience ?? 2,
   ambient: r.ambient ?? '',
+  cue: r.cue ?? '',
   fieldChecked: r.field_checked,
   sortOrder: r.sort_order,
   files: {},
@@ -230,6 +236,7 @@ export function Points() {
           work_id: f.work?.id ?? null,
           salience: landmark ? f.salience : null,
           ambient: landmark && f.ambient ? f.ambient : null,
+          cue: landmark && f.cue ? f.cue : null,
           field_checked: f.fieldChecked,
           sort_order: f.roles.includes('start') ? Math.round(f.sortOrder) : 0,
           audio_tr_id: audioIds.tr,
@@ -653,6 +660,28 @@ export function Points() {
                           </SelectGroup>
                         </SelectContent>
                       </Select>
+                    </Field>
+                    <Field className="sm:col-span-2">
+                      <FieldLabel>Duyu ipucu</FieldLabel>
+                      <Select value={form.cue || 'none'} onValueChange={(v) => setForm({ ...form, cue: SENSE_CUES.find((c) => c === v) ?? '' })}>
+                        <SelectTrigger aria-label="Duyu ipucu" className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="none">Yok</SelectItem>
+                            {SENSE_CUES.map((c) => (
+                              <SelectItem key={c} value={c}>
+                                {CUE_LABEL[c]}
+                              </SelectItem>
+                            ))}
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                      <FieldDescription>
+                        Yer işareti anılınca uygulama bunu olasılık diliyle ekler; duymayan kullanıcıya ses ipucu söylenmez. Sahada
+                        denenmeden (çeşme akıyor mu, fırın açık mı, ezan buradan duyuluyor mu) yayınlamayın.
+                      </FieldDescription>
                     </Field>
                   </div>
                 ) : null}

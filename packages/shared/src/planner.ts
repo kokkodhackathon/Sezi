@@ -141,8 +141,13 @@ export function createPlanner(raw: PilotGraphData) {
       const n = nearestIn(baseNodes, p.location);
       if (distanceM(n.location, p.location) > LANDMARK_SNAP_M) continue;
       const cur = next.get(n.id)!;
-      // Eser düğümü eser adını korur; yer işareti yalnızca ortam sesini ekler.
-      next.set(n.id, { ...cur, lynchType: "landmark", name: cur.workSlug ? cur.name : p.title, pointId: p.id, sound: p.ambient ?? cur.sound });
+      // Eser düğümü eser adını korur; yer işareti yalnızca ortam sesini ekler. Duyu ipucu adıyla birlikte gider:
+      // eser düğümünde ancak nokta o esere bağlıysa geçer ("Geyve Hanı yakınında… su sesi" gibi yanlış atıf olmasın),
+      // adsız düğümde ad da ipucu da bu noktanındır.
+      const cue = cur.workSlug ? (p.workSlug === cur.workSlug ? (p.cue ?? cur.cue) : cur.cue) : p.cue;
+      // Düğümün konumu (rota grafiği) değişmez; anılan yerin konumu ayrı taşınır. Eser düğümü zaten eserin konumundadır.
+      const landmarkAt = cur.workSlug ? cur.landmarkAt : p.location;
+      next.set(n.id, { ...cur, lynchType: "landmark", name: cur.workSlug ? cur.name : p.title, pointId: p.id, sound: p.ambient ?? cur.sound, cue, landmarkAt });
       visible.push({ at: p.location, weight: 0.25 * (p.salience ?? 2) });
     }
     nodes = next;

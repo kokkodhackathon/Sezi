@@ -545,7 +545,8 @@ async function begin() {
     id: n.id,
     name: n.name?.[cfg!.profile.lang] ?? n.name?.tr ?? '',
     kind: n.sound ?? soundKindFor(n.workType),
-    location: n.location,
+    // Ses yer işaretinin kendi konumundan gelir (bağlandığı yol düğümünden değil): yolun hangi yanında olduğu kaybolmasın.
+    location: n.landmarkAt ?? n.location,
   }));
   walkerDone = false;
   const plan = state.plan;

@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { distanceM } from "./geo";
-import { LocalizedText, type LngLat } from "./schemas";
+import { LocalizedText, SenseCue, type LngLat } from "./schemas";
 import type { LocationFix } from "./tracking";
 
 /**
@@ -30,13 +30,15 @@ export interface NavPoint {
   /** Yer işaretinin uzaktan görünürlüğü (1–3). */
   salience?: number;
   ambient?: Ambient;
+  /** Duyu ipucu (yer işareti anılınca "olabilir" diye söylenir; kesin bilgi değil). */
+  cue?: SenseCue;
   /** Başlangıç listesindeki sıra (küçük önce). */
   sortOrder: number;
   /** `audio` bucket'ı içindeki storage_path. */
   audio: { tr?: string; en?: string };
 }
 
-export const NAV_POINT_COLUMNS = "id, city_slug, roles, title, body, lng, lat, radius_m, work_slug, salience, ambient, sort_order, audio_tr, audio_en";
+export const NAV_POINT_COLUMNS = "id, city_slug, roles, title, body, lng, lat, radius_m, work_slug, salience, ambient, sort_order, audio_tr, audio_en, cue";
 
 export const NavPointRow = z.object({
   id: z.string(),
@@ -53,6 +55,8 @@ export const NavPointRow = z.object({
   sort_order: z.number(),
   audio_tr: z.string().nullable(),
   audio_en: z.string().nullable(),
+  // Cihaz önbelleğindeki eski satırlarda sütun yok: eksikse ipucu yok sayılır.
+  cue: SenseCue.nullish(),
 });
 export type NavPointRow = z.infer<typeof NavPointRow>;
 
@@ -73,6 +77,7 @@ export function toNavPoints(rows: unknown[]): NavPoint[] {
         workSlug: d.work_slug ?? undefined,
         salience: d.salience ?? undefined,
         ambient: d.ambient ?? undefined,
+        cue: d.cue ?? undefined,
         sortOrder: d.sort_order,
         audio: { tr: d.audio_tr ?? undefined, en: d.audio_en ?? undefined },
       },

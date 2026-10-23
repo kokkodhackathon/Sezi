@@ -101,3 +101,58 @@ describe("createPlanner", () => {
     expect(calls).toBe(1);
   });
 });
+
+describe("duyu ipucu atfı", () => {
+  const cueAt = (points: NavPoint[], nodeId: string) => {
+    const p = createPlanner(raw);
+    p.setNavPoints(points);
+    return p.landmarkNodes().find((n) => n.id === nodeId)?.cue;
+  };
+  const landmark = (id: string, at: LngLat, extra: Partial<NavPoint>) => point(id, at, { roles: ["landmark"], body: undefined, ...extra });
+
+  it("eser düğümüne düşen ipucu yalnız nokta o esere bağlıysa geçer", () => {
+    // B Hanı'nın yanındaki çeşme B'ye bağlanır ama eser adıyla anılır: "B Hanı… su sesi" yanlış atıf olur.
+    expect(cueAt([landmark("cesme", pt(195, 5), { cue: "water" })], "B")).toBeUndefined();
+    expect(cueAt([landmark("ezan", pt(195, 5), { cue: "prayer", workSlug: "eser-b" })], "B")).toBe("prayer");
+  });
+
+  it("adsız düğümde ad da ipucu da son bağlanan noktanındır", () => {
+    const both = [landmark("firin", pt(100, 100), { cue: "bakery" }), landmark("tabela", pt(100, 100), {})];
+    expect(cueAt(both, "C")).toBeUndefined();
+    expect(cueAt([...both].reverse(), "C")).toBe("bakery");
+  });
+});
+
+describe("yer işaretinin yönü", () => {
+  // Doğuya düz yol (A → M → B eseri, 200 m'de bir düğüm). Fırın yolun 20 m kuzeyinde ya da güneyinde, M'den 40 m
+  // önce; M'ye bağlanır. Teyit (133 m) fırını görür: düğüm tam önde, fırın ise yolun kenarında.
+  const street: PilotGraphData = {
+    area: "test-street",
+    name: { tr: "Test" },
+    center: pt(200, 0),
+    nodes: [
+      { id: "A", lynchType: "node", location: pt(0, 0) },
+      { id: "M", lynchType: "node", location: pt(200, 0) },
+      { id: "B", lynchType: "landmark", location: pt(400, 0), workSlug: "eser-b", workType: "han", name: { tr: "B Hanı" } },
+    ],
+    segments: [
+      { id: "AM", from: "A", to: "M", lengthM: 200 },
+      { id: "MB", from: "M", to: "B", lengthM: 200 },
+    ],
+  };
+  const confirmAbout = (at: LngLat) => {
+    const p = createPlanner(street);
+    p.setNavPoints([point("firin", at, { roles: ["landmark"], body: undefined, title: { tr: "Fırın" }, cue: "bakery" })]);
+    const step = p.planRoute("eser-b", walker, pt(0, 0), { via: false })!.steps.find((s) => s.kind === "confirm" && s.text.includes("Fırın"))!;
+    return { text: step.text, location: step.landmark?.location };
+  };
+
+  it("yolun iki yanındaki kaynak, bağlandığı düğümden değil kendi konumundan anılır", () => {
+    const north = pt(160, 20);
+    const south = pt(160, -20);
+    expect(confirmAbout(north).text).toContain("Fırın solunuzda.");
+    expect(confirmAbout(south).text).toContain("Fırın sağınızda.");
+    // Ses ve ekran için verilen konum da kaynağın kendisi.
+    expect(confirmAbout(north).location).toEqual(north);
+  });
+});

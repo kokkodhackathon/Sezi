@@ -13,7 +13,7 @@ Yeni pilot alan eklemek: AREAS sözlüğüne merkez/yarıçap/şehir girip Overp
 
 Kaynak ve tahminler (saha ölçümüyle güncellenecek):
   - steps:  OSM highway=steps (step_count yoksa 1 = "basamak var")
-  - surface, width, incline: OSM etiketleri; etiket yoksa varsayılan (paving, genişlik bilinmiyor, eğim 0)
+  - surface, width, incline: OSM etiketleri; etiket yoksa zemin "unknown" (rehberlikte anılmaz), genişlik bilinmiyor, eğim 0
   - noise:  OSM yol sınıfından tahmin (ana cadde gürültülü, yaya yolu sessiz)
 
 Kullanım:  python -I data/build_nav_graph.py [alan]   (varsayılan: bursa-hanlar)
@@ -154,7 +154,8 @@ def build(area_slug):
                         "lengthM": round(length, 1),
                         "steps": steps,
                         "slopePct": 0,
-                        "surface": SURFACE.get(tags.get("surface", ""), "paving"),
+                        # Etiketsiz ya da tanınmayan zemin "unknown": ölçülmemiş doku rehberlikte anılmaz.
+                        "surface": SURFACE.get(tags.get("surface", ""), "unknown"),
                         "kerb": False,
                         "noise": NOISE.get(hw, 0.1),
                         "landmarkVisibility": 0,

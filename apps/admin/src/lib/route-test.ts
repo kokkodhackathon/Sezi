@@ -446,6 +446,7 @@ export function toNavPoint(r: PointRow): NavPoint {
     workSlug: r.work_slug ?? undefined,
     salience: r.salience ?? undefined,
     ambient: r.ambient ?? undefined,
+    cue: r.cue ?? undefined,
     sortOrder: r.sort_order,
     audio: { tr: r.audio_tr ?? undefined, en: r.audio_en ?? undefined },
   };

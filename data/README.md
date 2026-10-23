@@ -151,8 +151,17 @@ python -I data/build_buildings.py bursa-hanlar --refresh  # Overpass'tan yeniden
 
 Eşleme sırası: eserin `external_ids.osm` kimliği, eser konumunu içeren bina, 20 m içindeki en yakın bina. Bulunamayan eser listelenir, uydurulmaz (22 Ekim: 36 eserden 35'i; Abdal Mehmed Türbesi'nin OSM'de binası yok). Avlulu hanlar (multipolygon) iç avluyla birlikte gelir. Yükseklik yoksa türe göre görünüm tahmini kullanılır, yalnız çizim içindir (`e: 1`). Bölge, bu binaların 35 m genişletilmiş dışbükey zarfıdır.
 
+**5. Duyu ipucu adayları (su sesi, fırın kokusu, ezan sesi).** Alandaki `amenity=fountain`, `shop=bakery|pastry` ve adı olan `amenity=place_of_worship` + `religion=muslim` öğelerini (önbellek `data/raw/osm_<alan>_sense.json`) taslak `landmark` noktası olarak üretir. Uygun türdeki 35 m içindeki esere bağlanır (cami → cami/mescit, çeşme → çeşme/sebil), yol grafiğinden 60 m'den uzak olan elenir:
+
+```bash
+python -I data/build_sense_points.py bursa-hanlar            # → supabase/seed_sense_points.sql
+npx supabase@latest db query --linked --project-ref jejsvycpzulpleftkssj -f supabase/seed_sense_points.sql
+```
+
+Tekrar uygulanabilir: kaynak notunda aynı OSM kimliği varsa satır ikinci kez girmez. 23 Ekim: 60 aday (9 çeşme, 9 fırın/pastane, 42 cami; 21'i esere bağlı). Bunlar **olasılıktır**: çeşme kuru, fırın kapanmış, ezan o camiden duyulmuyor olabilir. Admin **Noktalar**'da sahada bakıp (`Sahada doğrulandı`) yayınlar; OSM adı bozuksa (ör. "Firini") düzeltir.
+
 **Değerlerin kaynağı**
-- Basamak, zemin ve genişlik OSM etiketlerinden gelir.
+- Basamak, zemin ve genişlik OSM etiketlerinden gelir. Zemin etiketi yoksa `unknown` yazılır (varsayılan parke sayılmaz); 23 Ekim'de 1221 segmentin 198'i.
 - Gürültü yol sınıfından tahmin edilir.
 - Landmark görünürlüğü: landmark'a 40 m'den yakın segmentler.
 

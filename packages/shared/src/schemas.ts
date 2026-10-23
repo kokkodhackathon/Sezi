@@ -56,6 +56,10 @@ export type Work = z.infer<typeof Work>;
 export const LynchType = z.enum(["landmark", "node", "district_gate"]);
 export type LynchType = z.infer<typeof LynchType>;
 
+/** Duyu ipucu: su sesi, fırın kokusu, ezan sesi. Olasılıktır; talimat yalnız buna dayanmaz. */
+export const SenseCue = z.enum(["water", "bakery", "prayer"]);
+export type SenseCue = z.infer<typeof SenseCue>;
+
 export const NavNode = z.object({
   id: z.string(),
   lynchType: LynchType,
@@ -65,10 +69,18 @@ export const NavNode = z.object({
   visibilityDeg: z.number().min(0).max(360).optional(),
   soundAssetId: z.string().optional(),
   workId: z.string().uuid().optional(),
+  /** Bu düğüme bağlanan yer işaretinin duyu ipucu (planlayıcı nav_points'ten ekler). */
+  cue: SenseCue.optional(),
+  /**
+   * Yer işaretinin (ya da duyu kaynağının) gerçek konumu: nokta en yakın yol düğümüne bağlanır ama
+   * "sağınızda / solunuzda" ve uzaklık bu konumdan hesaplanır (düğüm yolun ortasında, fırın yolun kenarında).
+   */
+  landmarkAt: LngLat.optional(),
 });
 export type NavNode = z.infer<typeof NavNode>;
 
-export const Surface = z.enum(["asphalt", "paving", "cobble", "gravel", "marble"]);
+/** `unknown`: OSM'de zemin etiketi yok ya da tanınmıyor; ölçülmemiş doku rehberlikte anılmaz, rota maliyetinde düz zemin sayılır. */
+export const Surface = z.enum(["asphalt", "paving", "cobble", "gravel", "marble", "unknown"]);
 export type Surface = z.infer<typeof Surface>;
 
 export const NavSegment = z.object({
@@ -79,7 +91,7 @@ export const NavSegment = z.object({
   steps: z.number().int().min(0).default(0),
   /** Mutlak eğim yüzdesi. */
   slopePct: z.number().min(0).default(0),
-  surface: Surface.default("paving"),
+  surface: Surface.default("unknown"),
   widthCm: z.number().positive().optional(),
   kerb: z.boolean().default(false),
   /** 0 (sessiz) – 1 (çok gürültülü). Görme engelli için ses ipuçlarını bastırır. */

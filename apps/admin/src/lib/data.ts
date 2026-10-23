@@ -1,4 +1,4 @@
-import { TourRow, type LocalizedText } from '@sezi/shared';
+import { SenseCue as SenseCueSchema, TourRow, type LocalizedText } from '@sezi/shared';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 
@@ -273,6 +273,14 @@ export const ROLE_HINT: Record<PointRole, string> = {
   arrival: 'Esere varınca açılan metin ve ses. Bir esere bağlanır.',
 };
 export const AMBIENT_LABEL: Record<Ambient, string> = { water: 'Su', market: 'Çarşı uğultusu', chime: 'Çan / saat' };
+export type SenseCue = z.infer<typeof SenseCueSchema>;
+export const SENSE_CUES: readonly SenseCue[] = SenseCueSchema.options;
+/** Uygulamanın söylediği olasılık cümlesi (shared/guidance.ts > CUE_TEXT ile aynı anlam). */
+export const CUE_LABEL: Record<SenseCue, string> = {
+  water: 'Su sesi ("su akıyorsa sesini duyabilirsiniz")',
+  bakery: 'Fırın kokusu ("açıkken fırın kokusu gelebilir")',
+  prayer: 'Ezan sesi ("ezan okunurken ses bu camiden geliyor olabilir")',
+};
 
 /** nav_points_view satırı (security_invoker; admin taslakları da görür). */
 export interface PointRow {
@@ -291,6 +299,7 @@ export interface PointRow {
   work_slug: string | null;
   salience: number | null;
   ambient: Ambient | null;
+  cue: SenseCue | null;
   field_checked: boolean;
   sort_order: number;
   audio_tr_id: string | null;
