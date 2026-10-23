@@ -1,4 +1,4 @@
-import { inTour, TOURS, type LocalizedText } from '@sezi/shared';
+import type { LocalizedText } from '@sezi/shared';
 import { useQuery } from '@tanstack/react-query';
 
 import { PILOT_AREAS } from './pilot';
@@ -37,6 +37,13 @@ interface DraftRaw {
 interface CandidateRaw {
   work_id: string;
   status: string;
+}
+interface TourRaw {
+  slug: string;
+  title: LocalizedText;
+  stops: string[];
+  status: 'draft' | 'verified' | 'archived';
+  sort_order: number;
 }
 
 /** PostgREST tek istekte en çok 1000 satır döndürür: sayfa sayfa okunur. */
@@ -81,7 +88,9 @@ export interface PilotWork {
 }
 
 export interface TourStats {
-  id: string;
+  slug: string;
+  title: string;
+  status: 'draft' | 'verified' | 'archived';
   stops: number;
   photo: number;
   text: number;
@@ -109,7 +118,7 @@ export function useDashboard() {
   return useQuery({
     queryKey: ['dashboard'],
     queryFn: async (): Promise<Dashboard> => {
-      const [cities, works, media, drafts, candidates, reportsPending, points] = await Promise.all([
+      const [cities, works, media, drafts, candidates, reportsPending, points, tourRows] = await Promise.all([
         fetchAll<CityRaw>('cities', 'id, slug, name, sort_order, is_active, inventory_works'),
         fetchAll<WorkRaw>('works', 'id, slug, name, city_id, status, location_precision, needs_review'),
         fetchAll<MediaRaw>('media', 'work_id, status'),
@@ -117,6 +126,7 @@ export function useDashboard() {
         fetchAll<CandidateRaw>('location_candidates', 'work_id, status'),
         countWhere('a11y_reports', 'status', 'pending'),
         countWhere('nav_points', 'status', 'verified'),
+        fetchAll<TourRaw>('tours', 'slug, title, stops, status, sort_order'),
       ]);
 
       const photoWorks = new Set(media.filter((m) => m.status === 'verified' && m.work_id).map((m) => m.work_id));
@@ -156,10 +166,21 @@ export function useDashboard() {
           exact: w?.location_precision === 'exact',
         };
       });
-      const tours: TourStats[] = TOURS.map((def) => {
-        const stops = pilotWorks.filter((p) => inTour(def, p.type));
-        return { id: def.id, stops: stops.length, photo: stops.filter((s) => s.photo).length, text: stops.filter((s) => s.text).length };
-      });
+      const pilotBySlug = new Map(pilotWorks.map((p) => [p.slug, p]));
+      const tours: TourStats[] = tourRows
+        .filter((t) => t.status !== 'archived')
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .map((t) => {
+          const stops = t.stops.flatMap((s) => pilotBySlug.get(s) ?? []);
+          return {
+            slug: t.slug,
+            title: t.title.tr,
+            status: t.status,
+            stops: stops.length,
+            photo: stops.filter((s) => s.photo).length,
+            text: stops.filter((s) => s.text).length,
+          };
+        });
 
       const pendingCand = candidates.filter((c) => c.status === 'pending');
       return {

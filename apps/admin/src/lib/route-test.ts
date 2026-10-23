@@ -451,15 +451,24 @@ export function toNavPoint(r: PointRow): NavPoint {
   };
 }
 
+/** Planlayıcıya her uygulamada artan sayaç (pilotPlanner modül düzeyinde paylaşılır). */
+let plannerVersion = 0;
+const plannerListeners = new Set<() => void>();
+/** Planlayıcıya en son uygulanan nokta listesi (hazır mı denetimi için). */
+let appliedPoints: readonly NavPoint[] | null = null;
+const subscribePlanner = (l: () => void) => {
+  plannerListeners.add(l);
+  return () => plannerListeners.delete(l);
+};
+
 /**
- * Planlayıcıya pilot ilin noktalarını ve onaylı bildirimleri uygular.
+ * Planlayıcıya pilot ilin noktalarını ve onaylı bildirimleri uygular (mobil uygulamayla aynı mesafeler için).
  * `includeDrafts`: taslak noktalar da rotaya girer (yayına almadan önce denemek için); arşivdekiler hiç girmez.
+ * `version` her uygulamada artar: planlayıcıdan hesaplanan değerler buna bağlanır.
  */
-export function useRouteTest(includeDrafts: boolean) {
-  const [test] = useState(() => new RouteTest(pilotPlanner));
-  const state = useSyncExternalStore(test.subscribe, test.getState);
+export function usePilotPlanner(includeDrafts: boolean) {
   const { data: rows, isLoading, error } = usePoints(PILOT_CITY);
-  const { data: overrides } = useQuery({
+  const { data: overrides, isLoading: overridesLoading } = useQuery({
     queryKey: ['segment_overrides', pilotPlanner.area],
     queryFn: async () => {
       const { data, error: e } = await supabase.from('segment_overrides').select('segment_key, type').eq('area', pilotPlanner.area);
@@ -473,13 +482,31 @@ export function useRouteTest(includeDrafts: boolean) {
     [rows, includeDrafts],
   );
 
+  const version = useSyncExternalStore(subscribePlanner, () => plannerVersion);
   useEffect(() => {
     pilotPlanner.setOverrides(overrides ?? []);
     pilotPlanner.setNavPoints(points);
+    appliedPoints = points;
+    plannerVersion += 1;
+    plannerListeners.forEach((l) => l());
+  }, [points, overrides]);
+
+  // Noktalar ve yol düzeltmeleri gelip planlayıcıya uygulanmadan hesaplanan mesafe yanlış başlangıçtan olur
+  // (varsayılan başlangıç noktası yerine grafiğin merkezi).
+  const ready = !!rows && !!overrides && appliedPoints === points;
+  return { points, overrides: overrides ?? [], version, ready, isLoading: isLoading || overridesLoading, error };
+}
+
+export function useRouteTest(includeDrafts: boolean) {
+  const [test] = useState(() => new RouteTest(pilotPlanner));
+  const state = useSyncExternalStore(test.subscribe, test.getState);
+  const { points, overrides, isLoading, error } = usePilotPlanner(includeDrafts);
+
+  useEffect(() => {
     test.setPoints(points);
-  }, [points, overrides, test]);
+  }, [points, test]);
 
   useEffect(() => () => test.dispose(), [test]);
 
-  return { test, state, points, overrides: overrides ?? [], isLoading, error };
+  return { test, state, points, overrides, isLoading, error };
 }

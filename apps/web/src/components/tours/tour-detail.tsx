@@ -8,6 +8,7 @@ import {
   planTour,
   walkingSpeed,
   type LngLat,
+  type Tour,
   type TourStop,
 } from "@sezi/shared";
 import { ArrowLeftIcon, MapPinIcon, NavigationIcon } from "lucide-react";
@@ -42,12 +43,12 @@ interface ComputedLeg {
 }
 
 export function TourDetail({
-  tourId,
+  tour,
   overlay,
   works,
   initialProfile,
 }: {
-  tourId: string;
+  tour: Tour;
   overlay: NavOverlay;
   works: WorkListItem[];
   initialProfile?: string;
@@ -88,9 +89,9 @@ export function TourDetail({
   }, [works]);
 
   const plan = useMemo(
-    () => planTour(planner, tourId, activeProfile, planner.defaultStart()),
+    () => planTour(planner, tour, activeProfile, planner.defaultStart()),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [tourId, activeProfile, version],
+    [tour, activeProfile, version],
   );
 
   const legs: ComputedLeg[] = useMemo(() => {

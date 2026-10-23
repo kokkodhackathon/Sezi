@@ -14,6 +14,7 @@ import { ProfileProvider, useProfile } from '@/lib/profile';
 import { SettingsProvider } from '@/lib/settings';
 import { usePointsSync } from '@/lib/points';
 import { useServerSync } from '@/lib/sync';
+import { useToursSync } from '@/lib/tours';
 
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 
@@ -51,6 +52,7 @@ export default function RootLayout() {
 function AppStack() {
   useServerSync();
   usePointsSync();
+  useToursSync();
   const reducedMotion = useReducedMotion();
   const dark = useIsDark();
   const t = useSweetTheme();

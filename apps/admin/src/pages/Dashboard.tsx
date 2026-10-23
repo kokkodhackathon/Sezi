@@ -19,14 +19,6 @@ import { NAV } from '@/lib/nav';
 const pct = (n: number, of: number) => (of > 0 ? Math.round((n / of) * 100) : 0);
 const fmt = (n: number) => n.toLocaleString('tr-TR');
 
-/** Mobil uygulamadaki tur adları (apps/mobile/src/lib/messages-app.ts › tours.<id>.title). */
-const TOUR_TITLE: Record<string, string> = {
-  tum: 'Ulu Cami ve Hanlar Bölgesi',
-  hanlar: 'Hanlar ve çarşı',
-  camiler: 'Cami ve türbeler',
-  su: 'Su ve hamam',
-};
-
 export function Dashboard() {
   const { data, isPending, error, refetch } = useDashboard();
   if (error) {
@@ -311,7 +303,7 @@ function Pilot({ d }: { d: Data }) {
       <CardHeader>
         <CardTitle>Pilot alan ve turlar</CardTitle>
         <CardDescription>
-          {d.pilot.name}: turlar bu {d.pilot.works.length} eserden türe göre seçilir; demoda en çok görülecek sayfalar.
+          {d.pilot.name}: turlar Turlar sayfasından düzenlenir; demoda en çok görülecek sayfalar.
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
@@ -326,12 +318,12 @@ function Pilot({ d }: { d: Data }) {
           </TableHeader>
           <TableBody>
             {d.pilot.tours.map((t) => (
-              <TableRow key={t.id}>
+              <TableRow key={t.slug}>
                 <TableCell className="font-semibold">
-                  {TOUR_TITLE[t.id] ?? t.id}
-                  {t.stops === 0 ? (
+                  {t.title}
+                  {t.status !== 'verified' ? (
                     <Badge variant="outline" className="ml-2">
-                      Uygulamada görünmüyor
+                      Taslak
                     </Badge>
                   ) : null}
                 </TableCell>

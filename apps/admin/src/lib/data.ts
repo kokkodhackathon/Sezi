@@ -1,4 +1,4 @@
-import type { LocalizedText } from '@sezi/shared';
+import { TourRow, type LocalizedText } from '@sezi/shared';
 import { useQuery } from '@tanstack/react-query';
 import { z } from 'zod';
 
@@ -449,4 +449,26 @@ export function slugify(text: string): string {
     .replace(/\p{M}/gu, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+// ---------- Turlar ----------
+
+/** tours_view satırı (security_invoker; admin taslakları da görür). */
+const TourAdminRowSchema = TourRow.extend({
+  id: z.string(),
+  city_id: z.string(),
+  status: z.enum(['draft', 'verified', 'archived']),
+  updated_at: z.string(),
+});
+export type TourAdminRow = z.infer<typeof TourAdminRowSchema>;
+
+export function useToursAdmin(citySlug: string) {
+  return useQuery({
+    queryKey: ['tours', citySlug],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('tours_view').select('*').eq('city_slug', citySlug).order('sort_order');
+      if (error) throw error;
+      return z.array(TourAdminRowSchema).parse(data ?? []);
+    },
+  });
 }

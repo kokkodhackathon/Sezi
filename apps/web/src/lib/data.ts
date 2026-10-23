@@ -4,10 +4,13 @@ import {
   CityRowSchema,
   ExhibitionRowSchema,
   NAV_POINT_COLUMNS,
+  TOUR_COLUMNS,
+  toTours,
   WorkRowSchema,
   type CityRow,
   type ExhibitionRow,
   type OverrideType,
+  type Tour,
   type WorkRow,
 } from "@sezi/shared";
 import { createClient } from "@supabase/supabase-js";
@@ -59,6 +62,13 @@ export const getWork = cache(async (slug: string): Promise<WorkRow | null> => {
   const { data, error } = await supabase.from("works_view").select("*").eq("status", "verified").eq("slug", slug).maybeSingle();
   if (error) throw error;
   return data ? WorkRowSchema.parse(data) : null;
+});
+
+/** Yayındaki hazır turlar (admin › Turlar); sıra istemcide rota grafiğiyle hesaplanır. */
+export const getTours = cache(async (): Promise<Tour[]> => {
+  const { data, error } = await supabase.from("tours_view").select(TOUR_COLUMNS).eq("status", "verified");
+  if (error) throw error;
+  return toTours(data ?? []);
 });
 
 /** Envanter illeri: aktif olanlar ve sıradaki iller (mobil `useCities`). */

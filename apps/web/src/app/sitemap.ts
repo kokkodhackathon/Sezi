@@ -1,7 +1,6 @@
-import { TOURS } from "@sezi/shared";
 import type { MetadataRoute } from "next";
 
-import { getCities, getWorkIndex } from "@/lib/data";
+import { getCities, getTours, getWorkIndex } from "@/lib/data";
 import { LANGS } from "@/lib/i18n";
 
 export const revalidate = 600;
@@ -13,12 +12,11 @@ const STATIC_PATHS = [
   "/sergiler",
   "/hakkinda",
   "/bildirim",
-  ...TOURS.map((tour) => `/turlar/${tour.id}`),
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://sezi.info").replace(/\/$/, "");
-  const [works, cities] = await Promise.all([getWorkIndex(), getCities()]);
+  const [works, cities, tours] = await Promise.all([getWorkIndex(), getCities(), getTours()]);
 
   const complexSlugs = new Set<string>();
   for (const w of works) {
@@ -27,6 +25,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const allPaths = [
     ...STATIC_PATHS,
+    ...tours.map((tour) => `/turlar/${tour.slug}`),
     ...cities.map((c) => `/il/${c.slug}`),
     ...[...complexSlugs].map((slug) => `/kulliye/${slug}`),
     ...works.map((w) => `/eser/${w.slug}`),

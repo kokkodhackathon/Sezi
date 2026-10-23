@@ -1,28 +1,49 @@
+import { z } from "zod";
+
 import { distanceM } from "./geo";
 import type { Planner } from "./planner";
-import type { LngLat, LocalizedText, UserProfile } from "./schemas";
+import { LocalizedText, type LngLat, type UserProfile } from "./schemas";
 
 /**
- * Tur tanımları: her tur pilot alanın doğrulanmış eserlerinden türe göre seçilir (yazılmış durak listesi yok).
- * Mobil uygulama sırayı gerçek yol grafiğiyle hesaplar; yönetim paneli kapsamı (fotoğraf, metin) bu tanımla sayar.
+ * Tur: admin panelinden girilen durak listesi (tours tablosu; kodda sabit tur yok).
+ * Sıra varsayılan olarak başlangıç noktasından en yakın komşuyla hesaplanır; admin isterse sırayı sabitler.
+ * Profile ulaşılamayan durak atlanır.
  */
-export interface TourDef {
-  /** i18n anahtar öneki: tours.<id>.title / .body */
-  id: string;
-  /** Eser türü slug'ları; null: pilot alandaki bütün eserler. */
-  types: string[] | null;
+export interface Tour {
+  slug: string;
+  citySlug: string;
+  title: LocalizedText;
+  body: LocalizedText | null;
+  /** Eser slug'ları; fixedOrder false iken yalnız durak kümesidir. */
+  stops: string[];
+  fixedOrder: boolean;
+  sortOrder: number;
 }
 
-export const TOURS: TourDef[] = [
-  { id: "tum", types: null },
-  { id: "hanlar", types: ["han", "bedesten", "carsi"] },
-  { id: "camiler", types: ["cami", "mescit", "turbe"] },
-  { id: "su", types: ["cesme", "sebil", "hamam"] },
-];
+export const TOUR_COLUMNS = "slug, city_slug, title, body, stops, fixed_order, sort_order";
 
-/** Eser bu tura girer mi (türüne göre). */
-export const inTour = (def: TourDef, workType: string | undefined): boolean =>
-  def.types === null || (workType !== undefined && def.types.includes(workType));
+export const TourRow = z.object({
+  slug: z.string(),
+  city_slug: z.string(),
+  title: LocalizedText,
+  body: LocalizedText.nullable(),
+  stops: z.array(z.string()).min(1),
+  fixed_order: z.boolean(),
+  sort_order: z.number(),
+});
+export type TourRow = z.infer<typeof TourRow>;
+
+/** Geçersiz satır atlanır; sıra: sort_order, sonra Türkçe başlık. */
+export function toTours(rows: unknown[]): Tour[] {
+  return rows
+    .flatMap((r) => {
+      const p = TourRow.safeParse(r);
+      if (!p.success) return [];
+      const d = p.data;
+      return [{ slug: d.slug, citySlug: d.city_slug, title: d.title, body: d.body, stops: d.stops, fixedOrder: d.fixed_order, sortOrder: d.sort_order }];
+    })
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.title.tr.localeCompare(b.title.tr, "tr"));
+}
 
 export interface TourStop {
   slug: string;
@@ -34,23 +55,25 @@ export interface TourStop {
 }
 
 export interface PlannedTour {
-  id: string;
+  slug: string;
   stops: TourStop[];
   lengthM: number;
   stairs: number;
 }
 
-export function planTour(planner: Planner, id: string, profile: UserProfile, from: LngLat = planner.defaultStart()): PlannedTour | null {
-  const def = TOURS.find((t) => t.id === id);
-  if (!def) return null;
-  const pool = planner.pilotWorks.filter((n) => inTour(def, n.workType));
+export function planTour(planner: Planner, tour: Tour, profile: UserProfile, from: LngLat = planner.defaultStart()): PlannedTour | null {
+  const bySlug = new Map(planner.pilotWorks.map((n) => [n.workSlug, n]));
+  const pool = tour.stops.flatMap((s) => {
+    const n = bySlug.get(s);
+    return n ? [n] : []; // grafikte olmayan eser atlanır
+  });
   if (pool.length === 0) return null;
 
   const stops: TourStop[] = [];
   let current = planner.nearestNode(from);
   const left = [...pool];
   while (left.length) {
-    left.sort((a, b) => distanceM(current.location, a.location) - distanceM(current.location, b.location));
+    if (!tour.fixedOrder) left.sort((a, b) => distanceM(current.location, a.location) - distanceM(current.location, b.location));
     const next = left.shift()!;
     const leg = planner.legBetween(current.id, next.id, profile);
     if (!leg) continue; // bu profil için ulaşılamayan durak atlanır
@@ -58,7 +81,7 @@ export function planTour(planner: Planner, id: string, profile: UserProfile, fro
     current = next;
   }
   return {
-    id,
+    slug: tour.slug,
     stops,
     lengthM: stops.reduce((s, x) => s + x.legM, 0),
     stairs: stops.reduce((s, x) => s + x.legStairs, 0),

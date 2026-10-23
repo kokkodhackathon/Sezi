@@ -12,6 +12,7 @@ import { WorkGlyphInline } from '@/design/work-glyph';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
 import { useSettings } from '@/lib/settings';
+import { useTours } from '@/lib/tours';
 import { useWorks } from '@/lib/works';
 
 export default function ComplexScreen() {
@@ -22,6 +23,8 @@ export default function ComplexScreen() {
   const { visited } = useSettings();
   const { data: works, isLoading } = useWorks();
   const parts = useMemo(() => (works ?? []).filter((w) => w.complex_slug === slug), [works, slug]);
+  // Külliyenin bir eserinden geçen ilk tur (yoksa düğme görünmez).
+  const tour = useTours().find((x) => parts.some((p) => x.stops.includes(p.slug)));
 
   if (isLoading) {
     return (
@@ -61,11 +64,13 @@ export default function ComplexScreen() {
         <PointsLayer points={mapped.map((w) => ({ id: w.slug, location: [w.lng, w.lat], kind: 'work', typeSlug: w.type_slug }))} />
       </SeziMap>
 
-      <Button
-        label={tr('complex.tour')}
-        onPress={() => router.push({ pathname: '/tour/[id]', params: { id: 'tum' } })}
-        icon={(c) => <TurnIcon turn="slight_right" color={c} size={22} />}
-      />
+      {tour ? (
+        <Button
+          label={tr('complex.tour')}
+          onPress={() => router.push({ pathname: '/tour/[id]', params: { id: tour.slug } })}
+          icon={(c) => <TurnIcon turn="slight_right" color={c} size={22} />}
+        />
+      ) : null}
 
       <SectionTitle title={tr('complex.parts')} />
       {[...groups.entries()].map(([typeSlug, list]) => {

@@ -11,19 +11,13 @@ import { SoundIcon } from '@/design/icons';
 import { FadeInItem, outline, SoftPressable } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
-import { useT, type MessageKey } from '@/lib/i18n';
+import { useT } from '@/lib/i18n';
 import { defaultStart, formatDistance, planner, useNavVersion, walkingSpeed } from '@/lib/nav';
 import { useNavPoints } from '@/lib/points';
 import { useProfile } from '@/lib/profile';
-import { planTour, TOURS } from '@sezi/shared';
+import { useTours } from '@/lib/tours';
+import { loc, planTour } from '@sezi/shared';
 import { useWorks } from '@/lib/works';
-
-const TOUR_LABELS: Record<string, { title: MessageKey; body: MessageKey }> = {
-  tum: { title: 'tours.tum.title', body: 'tours.tum.body' },
-  hanlar: { title: 'tours.hanlar.title', body: 'tours.hanlar.body' },
-  camiler: { title: 'tours.camiler.title', body: 'tours.camiler.body' },
-  su: { title: 'tours.su.title', body: 'tours.su.body' },
-};
 
 /** Turlar: her tur bir fotoğraf kartı; açıklama ekran okuyucu etiketinde, görünen metin tek satır. */
 export default function Tours() {
@@ -36,23 +30,30 @@ export default function Tours() {
   const { data: works } = useWorks('bursa');
   const navVersion = useNavVersion();
   const stories = useNavPoints().filter((p) => p.roles.includes('story')).length;
-  const plans = useMemo(
-    () => (profile ? TOURS.map((d) => planTour(planner, d.id, profile, defaultStart())) : []),
+  const tours = useTours();
+  const items = useMemo(
+    () =>
+      profile
+        ? tours.flatMap((tour) => {
+            const plan = planTour(planner, tour, profile, defaultStart());
+            return plan?.stops.length ? [{ tour, plan }] : [];
+          })
+        : [],
     // navVersion: başlangıç noktaları ve onaylı bildirimler değişince turlar yeniden hesaplanır.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [profile, navVersion],
+    [tours, profile, navVersion],
   );
   const bySlug = useMemo(() => new Map((works ?? []).map((w) => [w.slug, w])), [works]);
   // Her tur kapak olarak, önceki turlarda kullanılmamış ilk fotoğrafı alır (aynı kare tekrarlanmasın).
   const covers = useMemo(() => {
     const used = new Set<string>();
-    return plans.map((plan) => {
-      const photos = (plan?.stops ?? []).map((st) => bySlug.get(st.slug)).flatMap((w) => (w ? w.photos : []));
+    return items.map(({ plan }) => {
+      const photos = plan.stops.map((st) => bySlug.get(st.slug)).flatMap((w) => (w ? w.photos : []));
       const pick = photos.find((p) => !used.has(p.id));
       if (pick) used.add(pick.id);
       return pick;
     });
-  }, [plans, bySlug]);
+  }, [items, bySlug]);
   if (!profile) return null;
 
   return (
@@ -75,22 +76,20 @@ export default function Tours() {
             <Text style={[type.meta, { color: t.primaryText, fontFamily: type.button.fontFamily }]}>{tr('nav.storyCount', { n: stories })}</Text>
           </View>
         </SoftPressable>
-        {!plans.some((plan) => plan?.stops.length) ? <EmptyState title={tr('tours.none')} /> : null}
+        {items.length === 0 ? <EmptyState title={tr('tours.none')} /> : null}
         <ScrollView horizontal showsHorizontalScrollIndicator={false} snapToInterval={cardWidth + space.md} decelerationRate="fast"
           style={{ marginHorizontal: -space.xl }} contentContainerStyle={s.carousel}>
-          {plans.map((plan, i) => {
-            const id = TOURS[i]?.id;
-            const copy = id ? TOUR_LABELS[id] : undefined;
-            if (!plan?.stops.length || !id || !copy) return null;
-            const title = tr(copy.title);
+          {items.map(({ tour, plan }, i) => {
+            const title = loc(tour.title, lang);
+            const body = tour.body ? `${loc(tour.body, lang)} ` : '';
             const minutes = Math.max(1, Math.round(plan.lengthM / walkingSpeed(profile) / 60));
             const access = plan.stairs === 0 ? tr('tours.stepFree') : tr('tours.stairs', { n: plan.stairs });
             const meta = [tr('tours.stops', { n: plan.stops.length }), formatDistance(plan.lengthM, lang), tr('common.min', { n: minutes })].join(' · ');
             return (
-              <FadeInItem key={id} index={i}>
+              <FadeInItem key={tour.slug} index={i}>
                 <PhotoCard width={cardWidth} title={title} meta={meta} detail={access} photo={covers[i]} typeSlug={plan.stops[0]!.type}
-                  onPress={() => router.push({ pathname: '/tour/[id]', params: { id } })}
-                  accessibilityLabel={`${title}. ${tr(copy.body)} ${meta}. ${access}`} accessibilityHint={tr('design.tourOpen')} />
+                  onPress={() => router.push({ pathname: '/tour/[id]', params: { id: tour.slug } })}
+                  accessibilityLabel={`${title}. ${body}${meta}. ${access}`} accessibilityHint={tr('design.tourOpen')} />
               </FadeInItem>
             );
           })}

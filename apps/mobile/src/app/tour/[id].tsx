@@ -14,18 +14,12 @@ import { RouteIcon, TurnIcon } from '@/design/icons';
 import { FadeInItem, outline, Skeleton } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
-import { useT, type MessageKey } from '@/lib/i18n';
+import { useT } from '@/lib/i18n';
 import { defaultStart, planner, useNavVersion, walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
+import { useTours } from '@/lib/tours';
 import { photoUrl, useWorks } from '@/lib/works';
-
-const TOUR_COPY: Record<string, { title: MessageKey; body: MessageKey }> = {
-  tum: { title: 'tours.tum.title', body: 'tours.tum.body' },
-  hanlar: { title: 'tours.hanlar.title', body: 'tours.hanlar.body' },
-  camiler: { title: 'tours.camiler.title', body: 'tours.camiler.body' },
-  su: { title: 'tours.su.title', body: 'tours.su.body' },
-};
 
 export default function TourDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -38,10 +32,11 @@ export default function TourDetail() {
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const { data: works, isLoading } = useWorks('bursa');
+  const tour = useTours().find((x) => x.slug === id);
   const plan = useMemo(
-    () => (profile ? planTour(planner, id, profile, defaultStart()) : null),
+    () => (tour && profile ? planTour(planner, tour, profile, defaultStart()) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [id, profile, navVersion],
+    [tour, profile, navVersion],
   );
   const bySlug = useMemo(() => new Map((works ?? []).map((w) => [w.slug, w])), [works]);
   const stops = useMemo(() => {
@@ -68,8 +63,7 @@ export default function TourDetail() {
     return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan, profile, bySlug, visited, lang, tr, navVersion]);
-  const copy = TOUR_COPY[id];
-  const title = copy ? tr(copy.title) : tr('tours.title');
+  const title = tour ? loc(tour.title, lang) : tr('tours.title');
   const coverWork = plan?.stops.map((stop) => bySlug.get(stop.slug)).find((work) => work && coverOf(work));
   const cover = coverWork ? coverOf(coverWork) : null;
 
@@ -92,7 +86,7 @@ export default function TourDetail() {
           {cover ? <><Image source={{ uri: photoUrl(cover, 'full') }} style={StyleSheet.absoluteFill} contentFit="cover" accessible={false} /><PhotoSourceTag photo={cover} /></> : <RouteIcon color={t.primary.ink} size={72} />}
         </View>
         <View style={s.body}>
-          <FadeInItem index={0} style={{ gap: space.sm }}><Text style={[type.editorial, { color: t.text }]} accessibilityRole="header">{title}</Text>{copy ? <Text style={[type.body, { color: t.textMuted }]}>{tr(copy.body)}</Text> : null}</FadeInItem>
+          <FadeInItem index={0} style={{ gap: space.sm }}><Text style={[type.editorial, { color: t.text }]} accessibilityRole="header">{title}</Text>{tour?.body ? <Text style={[type.body, { color: t.textMuted }]}>{loc(tour.body, lang)}</Text> : null}</FadeInItem>
           <FadeInItem index={1} style={s.stats}>
             <Stat value={String(plan.stops.length)} label={tr('tours.stopsTitle')} t={t} />
             <Stat value={`${Math.round(plan.lengthM)} m`} label={tr('tours.statWalk', { n: minutes })} t={t} />

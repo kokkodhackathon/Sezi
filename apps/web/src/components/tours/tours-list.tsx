@@ -5,9 +5,9 @@ import {
   isAttributed,
   loc,
   planTour,
-  TOURS,
   walkingSpeed,
   type PlannedTour,
+  type Tour,
   type WorkPhoto,
 } from "@sezi/shared";
 import Link from "next/link";
@@ -25,24 +25,19 @@ import { Badge } from "@/components/ui/badge";
 import { WorkThumb } from "@/components/work-thumb";
 import { PhotoSource } from "@/components/works/photo-source";
 import type { NavOverlay, WorkListItem } from "@/lib/data";
-import { href, type MessageKey } from "@/lib/i18n";
+import { href } from "@/lib/i18n";
 import { useT } from "@/lib/i18n-client";
 import { planner, usePlannerOverlay } from "@/lib/pilot";
 import { useProfile } from "@/lib/profile";
 import { cn } from "@/lib/utils";
 
-export const TOUR_TEXT_KEYS: Record<string, { title: MessageKey; body: MessageKey }> = {
-  tum: { title: "tours.tum.title", body: "tours.tum.body" },
-  hanlar: { title: "tours.hanlar.title", body: "tours.hanlar.body" },
-  camiler: { title: "tours.camiler.title", body: "tours.camiler.body" },
-  su: { title: "tours.su.title", body: "tours.su.body" },
-};
-
 export function ToursList({
+  tours,
   overlay,
   works,
   initialProfile,
 }: {
+  tours: Tour[];
   overlay: NavOverlay;
   works: WorkListItem[];
   initialProfile?: string;
@@ -82,21 +77,19 @@ export function ToursList({
   }, [works]);
 
   const plans = useMemo(() => {
-    const list: PlannedTour[] = [];
-    for (const def of TOURS) {
-      const planned = planTour(planner, def.id, activeProfile, planner.defaultStart());
-      if (planned && planned.stops.length > 0) {
-        list.push(planned);
-      }
+    const list: { tour: Tour; plan: PlannedTour }[] = [];
+    for (const tour of tours) {
+      const plan = planTour(planner, tour, activeProfile, planner.defaultStart());
+      if (plan && plan.stops.length > 0) list.push({ tour, plan });
     }
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeProfile, version]);
+  }, [tours, activeProfile, version]);
 
   const covers = useMemo(() => {
     const used = new Set<string>();
     const out: Record<string, { photo?: WorkPhoto; typeSlug: string }> = {};
-    for (const p of plans) {
+    for (const { tour, plan: p } of plans) {
       let picked: WorkPhoto | undefined;
       let fallback: WorkPhoto | undefined;
       for (const stop of p.stops) {
@@ -110,7 +103,7 @@ export function ToursList({
           break;
         }
       }
-      out[p.id] = {
+      out[tour.slug] = {
         photo: picked ?? fallback,
         typeSlug: p.stops[0]?.type ?? "cami",
       };
@@ -133,17 +126,16 @@ export function ToursList({
         </div>
       ) : (
         <CardCarousel label={t("tours.title")} itemClassName="w-[17rem] sm:w-80">
-          {plans.map((plan) => {
-            const keys = TOUR_TEXT_KEYS[plan.id];
-            const title = keys ? t(keys.title) : plan.id;
-            const cover = covers[plan.id];
+          {plans.map(({ tour, plan }) => {
+            const title = loc(tour.title, lang);
+            const cover = covers[tour.slug];
             const mins = Math.max(1, Math.ceil(plan.lengthM / walkingSpeed(activeProfile) / 60));
-            const tourHref = href(lang, `/turlar/${plan.id}${profileQuery}`);
+            const tourHref = href(lang, `/turlar/${tour.slug}${profileQuery}`);
             const hasAttribution = cover?.photo && isAttributed(cover.photo);
 
             return (
               <div
-                key={plan.id}
+                key={tour.slug}
                 className="group relative flex aspect-[3/4] flex-col justify-end overflow-hidden rounded-xl bg-muted contrast:outline-2 contrast:outline-border"
               >
                 <Link

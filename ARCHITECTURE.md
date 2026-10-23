@@ -120,7 +120,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 4. **Rota** (`shared/planner.ts › createPlanner`; mobilde `nav.ts` gömülü grafikle kurar, adminde `lib/pilot.ts`)
    - `planRoute(eser, profil, başlangıç)`: `shared/via.ts › routeVia` rotayı yakındaki anlatım/varış noktalarına uğratır (açgözlü ekleme, en çok %25 ve +300 m). Haritada seçilen başlangıç ya da yeniden rotada `withLeadIn` kullanıcının tam konumundan bağlar.
    - `planStroll` (hedefsiz gezinti): en yakın açılmamış noktaya, oradan bir sonrakine; en çok 5 nokta, bacak ≤ 500 m, toplam ≤ 1,2 km.
-   - Turlar: tanımlar `shared/tours.ts › TOURS` (eser türüne göre havuz; mobil `lib/tours.ts` en yakın komşu sırasıyla planlar, admin panosu aynı tanımla tur kapsamını sayar); "Başla" durakları sırayla aynı navigasyon ekranında yürütür.
+   - Turlar: admin panelinden girilen `tours` satırları (eser slug'ları; `fixed_order` kapalıyken sıra başlangıçtan en yakın komşuyla, açıkken kayıtlı sırayla hesaplanır; profile ulaşılamayan durak atlanır: `shared/tours.ts › planTour`). Mobil `lib/tours.ts` yayındaki turları cihazda önbellekler; web `getTours`, admin panosu aynı tablodan sayar. "Başla" durakları sırayla aynı navigasyon ekranında yürütür.
 5. **Yönlendirme** (`shared/guidance.ts › buildGuidance`)
    - Dönüş açısı ve en yakın yer işaretinden Lynch tarzı talimat; merdiven, zemin, cadde uyarısı; uzun düzlükte teyit.
    - İpucu türü profile göre seçilir (`cuePreference`): duymayan kullanıcıya sesli ipucu verilmez.
@@ -143,7 +143,7 @@ data/ (Python) ─ PDF/Wikidata/Nominatim/OSM ─► supabase/seed_*.sql, assets
 |---|---|---|
 | `onboarding` | Algısal profil: görme, hareket, işitme, duyular, dil | cihaz |
 | `(tabs)/index` Keşfet | İl seçici, kümelenmiş harita, tür ve ilçe filtresi, liste | `works_view` |
-| `(tabs)/tours`, `tour/[id]` | Pilot alan turları; durak sırası grafikten hesaplanır | gömülü grafik |
+| `(tabs)/tours`, `tour/[id]` | Pilot alan turları (admin › Turlar); durak sırası grafikten hesaplanır | `tours_view` (önbellekli) + gömülü grafik |
 | `(tabs)/ask` | Sezi'ye Sor: **yerel anahtar kelime eşleştirme** (LLM yok) | `works_view` |
 | `(tabs)/profile` | Profil, ayarlar, bildirimler, sergiler, hakkında | cihaz |
 | `work/[slug]` | Eser: bölümlere hızlı geçiş (çip; ekran okuyucu odağı başlığa geçer), kısaca (sade özet), kaynak numaralı bilgi kartı, gitmeden önce (giriş, saat, süre, pilotta yürüme), tarihçe/mimari (her bölüm ayrı dinlenir, okunan cümle vurgulanır: `lib/voice/read-along.ts` + `shared/sentences.ts`; konuşma kuyruğu `shared/speech-queue.ts`, `onDone` içinden başlayan sonraki cümle araya giren talimatla kesilmez), konum, kaynaklar | `works_view` |

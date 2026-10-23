@@ -16,6 +16,7 @@ import { Reports } from './pages/Reports';
 import { Points } from './pages/Points';
 import { RouteTest } from './pages/RouteTest';
 import { Texts } from './pages/Texts';
+import { Tours } from './pages/Tours';
 import { WorkEdit } from './pages/WorkEdit';
 import { Works } from './pages/Works';
 
@@ -45,6 +46,7 @@ const router = createBrowserRouter([
       { path: 'fotograflar', element: <Inbox /> },
       { path: 'bildirimler', element: <Reports /> },
       { path: 'noktalar', element: <Points /> },
+      { path: 'turlar', element: <Tours /> },
       { path: 'rota-testi', element: <RouteTest /> },
       { path: 'iller', element: <Cities /> },
     ],

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createPlanner, planTour, profileFor, type LngLat, type PilotGraphData } from "./index";
+import { createPlanner, planTour, profileFor, type LngLat, type PilotGraphData, type Tour } from "./index";
 
 const pt = (x: number, y: number): LngLat => [29 + x / 85_277, 40 + y / 110_540];
 
@@ -20,15 +20,48 @@ const raw: PilotGraphData = {
   ],
 };
 
+const tour = (slug: string, stops: string[], fixedOrder = false): Tour => ({
+  slug,
+  citySlug: "test",
+  title: { tr: slug },
+  body: null,
+  stops,
+  fixedOrder,
+  sortOrder: 0,
+});
+
 describe("planTour", () => {
   it("merdivenli tek yolla ulaşılan durak tekerlekli sandalye profilinde atlanır, yürüyende atlanmaz", () => {
     const planner = createPlanner(raw);
-    const walkerTour = planTour(planner, "hanlar", profileFor("walker", "tr"), pt(0, 0));
+    const hanlar = tour("hanlar", ["han-duz", "han-merdivenli"]);
+    const walkerTour = planTour(planner, hanlar, profileFor("walker", "tr"), pt(0, 0));
     expect(walkerTour?.stops.map((s) => s.slug)).toEqual(["han-duz", "han-merdivenli"]);
     expect(walkerTour?.stairs).toBe(1);
 
-    const wheelchairTour = planTour(planner, "hanlar", profileFor("wheelchair", "tr"), pt(0, 0));
+    const wheelchairTour = planTour(planner, hanlar, profileFor("wheelchair", "tr"), pt(0, 0));
     expect(wheelchairTour?.stops.map((s) => s.slug)).toEqual(["han-duz"]);
     expect(wheelchairTour?.stairs).toBe(0);
+  });
+
+  it("sabit sırada kayıtlı sıra korunur, otomatikte en yakın durak önce gelir", () => {
+    const planner = createPlanner(raw);
+    const walker = profileFor("walker", "tr");
+    const stops = ["han-merdivenli", "han-duz"];
+    expect(planTour(planner, tour("t", stops, true), walker, pt(0, 0))?.stops.map((s) => s.slug)).toEqual(stops);
+    expect(planTour(planner, tour("t", stops), walker, pt(0, 0))?.stops.map((s) => s.slug)).toEqual(["han-duz", "han-merdivenli"]);
+  });
+
+  it("sabit sırada ulaşılamayan durak atlanır, sonraki durak son ulaşılan yerden hesaplanır", () => {
+    const planner = createPlanner(raw);
+    const plan = planTour(planner, tour("t", ["han-merdivenli", "han-duz"], true), profileFor("wheelchair", "tr"), pt(0, 0));
+    expect(plan?.stops.map((s) => s.slug)).toEqual(["han-duz"]);
+    expect(plan?.lengthM).toBe(100);
+  });
+
+  it("grafikte olmayan eser atlanır; hiçbiri yoksa tur planlanmaz", () => {
+    const planner = createPlanner(raw);
+    const walker = profileFor("walker", "tr");
+    expect(planTour(planner, tour("t", ["yok", "han-duz"]), walker, pt(0, 0))?.stops.map((s) => s.slug)).toEqual(["han-duz"]);
+    expect(planTour(planner, tour("t", ["yok", "yok-2"]), walker, pt(0, 0))).toBeNull();
   });
 });

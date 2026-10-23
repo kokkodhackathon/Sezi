@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 
 import { PageContainer } from "@/components/page";
 import { ToursList } from "@/components/tours/tours-list";
-import { getNavOverlay, getWorkIndex } from "@/lib/data";
+import { getNavOverlay, getTours, getWorkIndex } from "@/lib/data";
 import { href, isLang, t } from "@/lib/i18n";
 
 export const revalidate = 600;
@@ -37,11 +37,12 @@ export default async function ToursPage({
   params: Promise<{ lang: string }>;
   searchParams: Promise<SearchParams>;
 }) {
-  const [{ lang }, sp, overlay, works] = await Promise.all([
+  const [{ lang }, sp, overlay, works, tours] = await Promise.all([
     params,
     searchParams,
     getNavOverlay(),
     getWorkIndex(),
+    getTours(),
   ]);
   if (!isLang(lang)) notFound();
 
@@ -53,7 +54,7 @@ export default async function ToursPage({
       <header>
         <h1 className="text-2xl font-extrabold tracking-tight sm:text-3xl">{t(lang, "tours.title")}</h1>
       </header>
-      <ToursList overlay={overlay} works={works} initialProfile={initialProfile} />
+      <ToursList tours={tours} overlay={overlay} works={works} initialProfile={initialProfile} />
     </PageContainer>
   );
 }
