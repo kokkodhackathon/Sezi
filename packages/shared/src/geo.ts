@@ -55,3 +55,24 @@ export function polylineLength(line: LngLat[]): number {
   for (let i = 0; i < line.length - 1; i++) total += distanceM(line[i]!, line[i + 1]!);
   return total;
 }
+
+/**
+ * Noktanın polyline'a en kısa mesafesi (metre): her segmente dik izdüşümle, segment dışına düşerse en yakın uca.
+ * Kısa mesafeler için noktanın enleminde yerel düzlem yaklaşımı (yürüme ölçeğinde hata ihmal edilir).
+ */
+export function distanceToLineM(p: LngLat, line: readonly LngLat[]): number {
+  if (line.length === 0) return Infinity;
+  if (line.length === 1) return distanceM(p, line[0]!);
+  const kx = R * rad(1) * Math.cos(rad(p[1]));
+  const ky = R * rad(1);
+  let best = Infinity;
+  for (let i = 0; i < line.length - 1; i++) {
+    const ax = (line[i]![0] - p[0]) * kx, ay = (line[i]![1] - p[1]) * ky;
+    const bx = (line[i + 1]![0] - p[0]) * kx, by = (line[i + 1]![1] - p[1]) * ky;
+    const dx = bx - ax, dy = by - ay;
+    const len2 = dx * dx + dy * dy;
+    const t = len2 === 0 ? 0 : Math.min(1, Math.max(0, -(ax * dx + ay * dy) / len2));
+    best = Math.min(best, Math.hypot(ax + t * dx, ay + t * dy));
+  }
+  return best;
+}

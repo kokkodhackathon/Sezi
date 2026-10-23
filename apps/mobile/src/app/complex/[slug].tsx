@@ -58,7 +58,7 @@ export default function ComplexScreen() {
       <Text style={[type.lead, { color: t.text }]}>{tr('complex.lead')}</Text>
 
       <SeziMap style={[s.map, outline(t)]} initial={mapped.map((w) => [w.lng, w.lat])} accessibilityLabel={tr('explore.mapLabel', { n: parts.length })}>
-        <PointsLayer points={mapped.map((w) => ({ id: w.slug, location: [w.lng, w.lat], kind: 'work', color: t.tones[toneForType(w.type_slug)].ink }))} />
+        <PointsLayer points={mapped.map((w) => ({ id: w.slug, location: [w.lng, w.lat], kind: 'work', typeSlug: w.type_slug }))} />
       </SeziMap>
 
       <Button

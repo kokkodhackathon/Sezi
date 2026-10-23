@@ -20,3 +20,5 @@ export * from "./compare";
 export * from "./sentences";
 export * from "./speech-queue";
 export * from "./text-suggest";
+export * from "./glyphs";
+export * from "./pilot-buildings";

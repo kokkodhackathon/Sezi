@@ -142,6 +142,15 @@ python -I data/build_nav_graph.py bursa-hanlar   # → apps/mobile/assets/pilot/
 
 **3. Doğrulayın:** `pnpm test` (`pilot-graph.test.ts`) her landmark çifti arasında rota olduğunu ve tekerlekli sandalye rotasının basamaksız olduğunu kontrol eder.
 
+**4. Harita binaları (3B yer işaretleri ve bölge).** Alanın OSM bina tabanlarını (Overpass, önbellek `data/raw/osm_<alan>_buildings.json`) kesin konumlu eserlerle eşler, yüksekliği Mapbox Streets'ten alır (`EXPO_PUBLIC_MAPBOX_TOKEN`):
+
+```bash
+python -I data/build_buildings.py bursa-hanlar            # → apps/mobile/assets/pilot/bursa-hanlar-buildings.json
+python -I data/build_buildings.py bursa-hanlar --refresh  # Overpass'tan yeniden indirir (ana sunucu yavaş; aynalar sırayla denenir)
+```
+
+Eşleme sırası: eserin `external_ids.osm` kimliği, eser konumunu içeren bina, 20 m içindeki en yakın bina. Bulunamayan eser listelenir, uydurulmaz (22 Ekim: 36 eserden 35'i; Abdal Mehmed Türbesi'nin OSM'de binası yok). Avlulu hanlar (multipolygon) iç avluyla birlikte gelir. Yükseklik yoksa türe göre görünüm tahmini kullanılır, yalnız çizim içindir (`e: 1`). Bölge, bu binaların 35 m genişletilmiş dışbükey zarfıdır.
+
 **Değerlerin kaynağı**
 - Basamak, zemin ve genişlik OSM etiketlerinden gelir.
 - Gürültü yol sınıfından tahmin edilir.

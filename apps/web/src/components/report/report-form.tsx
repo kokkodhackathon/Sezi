@@ -1,6 +1,6 @@
 "use client";
 
-import { A11yReportType, boundsOf, loc, toneForType, type LngLat } from "@sezi/shared";
+import { A11yReportType, boundsOf, loc, type LngLat } from "@sezi/shared";
 import { AlertCircle, CheckCircle2, LandmarkIcon, MapPin } from "lucide-react";
 import { useMemo, useState, type FormEvent } from "react";
 import { z } from "zod";
@@ -147,7 +147,7 @@ export function ReportForm({
       id: w.slug,
       location: w.location,
       label: w.name,
-      tone: toneForType(w.typeSlug),
+      typeSlug: w.typeSlug,
       selected: w.slug === workSlug,
       emphasis: w.slug === workSlug ? "dest" : undefined,
     }));

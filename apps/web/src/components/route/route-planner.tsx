@@ -7,7 +7,6 @@ import {
   PROFILE_KEYS,
   profileFor,
   toNavPoints,
-  toneForType,
   walkingSpeed,
   type LngLat,
   type NavPoint,
@@ -229,7 +228,7 @@ export function RoutePlanner({ overlay, initial }: { overlay: NavOverlay; initia
   const markers: MapMarker[] = useMemo(() => {
     const list: MapMarker[] = works
       .filter((w) => w.workSlug !== destSlug)
-      .map((w) => ({ id: `work:${w.workSlug}`, location: w.location, label: loc(w.name, lang), tone: toneForType(w.workType ?? "") }));
+      .map((w) => ({ id: `work:${w.workSlug}`, location: w.location, label: loc(w.name, lang), typeSlug: w.workType ?? "" }));
     list.push({ id: "start", location: usePicked && picked ? picked : (current?.plan.start.location ?? from), label: t("route.markerStart"), emphasis: usePicked ? "picked" : "start" });
     const dest = current?.plan.end ?? (destSlug ? planner.landmarkNodeForWork(destSlug) : undefined);
     if (dest && (destSlug || current)) list.push({ id: "dest", location: dest.location, label: loc(dest.name, lang) || t("route.markerDest"), emphasis: "dest" });

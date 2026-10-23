@@ -2,23 +2,37 @@
 
 import "mapbox-gl/dist/mapbox-gl.css";
 
-import { sweetThemes, type LngLat, type SweetToneName } from "@sezi/shared";
+import {
+  GLYPH_TYPES,
+  glyphSvgBody,
+  glyphType,
+  LANDMARK_FULL_ZOOM,
+  LANDMARK_MIN_ZOOM,
+  LANDMARK_OPACITY,
+  PilotBuildingsSchema,
+  sweetThemes,
+  toneForType,
+  type LngLat,
+  type SweetTheme,
+} from "@sezi/shared";
 import type { Feature, FeatureCollection, GeoJsonProperties } from "geojson";
-import type { Map as MapboxMap } from "mapbox-gl";
-import { useEffect, useRef } from "react";
+import type { ExpressionSpecification, Map as MapboxMap } from "mapbox-gl";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import { useAppearance } from "@/lib/appearance";
 import { useT } from "@/lib/i18n-client";
+import { useProfile } from "@/lib/profile";
 
-import { createMap, MAP_FONT, MAPBOX_TOKEN } from "./mapbox";
+import pilotBuildings from "../../../../mobile/assets/pilot/bursa-hanlar-buildings.json";
+import { createMap, MAP_FONT, MAPBOX_TOKEN, mapPitch, type MapLook } from "./mapbox";
 
 /** Haritadaki işaret. Haritadaki her bilgi sayfadaki listede de yazılıdır; harita destekleyicidir. */
 export interface MapMarker {
   id: string;
   location: LngLat;
   label?: string;
-  /** Eser türü tonu (dekoratif; tür adı listede yazılı). */
-  tone?: SweetToneName;
+  /** Eser türü (work_types.slug): verilirse işaret türün simgesiyle çizilir (siluet türü anlatır, renk tek başına değil). */
+  typeSlug?: string;
   /** Konumu kesin değil: yarı saydam çizilir. */
   approximate?: boolean;
   /** Numaralı durak (tur, uğranan nokta). */
@@ -67,9 +81,96 @@ function setData(m: MapboxMap, id: string, data: FeatureCollection) {
   if (src && src.type === "geojson") src.setData(data);
 }
 
+/** Veri hattının ürettiği pilot alan binaları (`data/build_buildings.py`; mobil uygulamayla aynı dosya). */
+const PILOT = PilotBuildingsSchema.parse(pilotBuildings);
+
+const ICON_SIZE = 30;
+const ICON_RATIO = 2;
+const ICON_SCALE = 0.95;
+const ICON_SCALE_SELECTED = 1.2;
+const iconName = (slug: string) => `type-${glyphType(slug)}`;
+
+/**
+ * Eser türü simgeleri (mobil haritayla aynı): yüzey renginde yuvarlak, kenarı ve glifi tür mürekkebinde.
+ * SVG tarayıcıda resme çevrilip haritaya eklenir.
+ */
+async function addTypeIcons(m: MapboxMap, th: SweetTheme) {
+  const px = ICON_SIZE * ICON_RATIO;
+  await Promise.all(
+    GLYPH_TYPES.map(async (slug) => {
+      const ink = th.tones[toneForType(slug)].ink;
+      const g = ICON_SIZE * 0.62;
+      const svg =
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${px}" height="${px}" viewBox="0 0 ${ICON_SIZE} ${ICON_SIZE}">` +
+        `<circle cx="15" cy="15" r="13.75" fill="${th.surface}" stroke="${ink}" stroke-width="2.5"/>` +
+        `<svg x="${(ICON_SIZE - g) / 2}" y="${(ICON_SIZE - g) / 2}" width="${g}" height="${g}" viewBox="0 0 24 24">${glyphSvgBody(slug, ink)}</svg></svg>`;
+      const img = new Image(px, px);
+      img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+      await img.decode();
+      if (!m.hasImage(iconName(slug))) m.addImage(iconName(slug), img, { pixelRatio: ICON_RATIO });
+    }),
+  );
+}
+
+/**
+ * Lynch dili (mobil haritayla aynı): pilot alan "bölgesi" yolların altında hafif dolgu ve kesikli kenar;
+ * "yer işareti" binaları tür tonunda yarı saydam 3B blok. Sade haritada aynı yerde düz dolgu ve kalın kenar.
+ */
+function addPilotLayers(m: MapboxMap, th: SweetTheme, look: MapLook) {
+  if (PILOT.district) {
+    m.addSource("district", { type: "geojson", data: { type: "Feature", properties: {}, geometry: { type: "Polygon", coordinates: PILOT.district.polygon } } });
+    m.addLayer({ id: "district-fill", type: "fill", slot: "bottom", source: "district", paint: { "fill-color": th.primaryText, "fill-opacity": th.outlined ? 0 : 0.06 } });
+    m.addLayer({
+      id: "district-edge",
+      type: "line",
+      slot: "bottom",
+      source: "district",
+      paint: { "line-color": th.primaryText, "line-width": th.outlined ? 2.5 : 1.5, "line-opacity": th.outlined ? 1 : 0.45, "line-dasharray": [2, 1.5] },
+    });
+  }
+  const byType = (pick: (tone: { fill: string; ink: string }) => string): ExpressionSpecification => [
+    "match",
+    ["get", "t"],
+    ...GLYPH_TYPES.flatMap((slug) => [slug, pick(th.tones[toneForType(slug)])]),
+    pick(th.tones[toneForType("diger")]),
+  ];
+  m.addSource("landmarks", { type: "geojson", data: PILOT.landmarks });
+  if (look.plain) {
+    m.addLayer({ id: "landmarks-fill", type: "fill", slot: "middle", source: "landmarks", paint: { "fill-color": th.outlined ? th.surface : byType((tone) => tone.fill) } });
+    m.addLayer({ id: "landmarks-edge", type: "line", slot: "middle", source: "landmarks", paint: { "line-color": th.outlined ? th.text : byType((tone) => tone.ink), "line-width": 2.5 } });
+    return;
+  }
+  m.addLayer({
+    id: "landmarks-3d",
+    type: "fill-extrusion",
+    slot: "middle",
+    source: "landmarks",
+    minzoom: LANDMARK_MIN_ZOOM,
+    paint: {
+      "fill-extrusion-color": byType((tone) => tone.fill),
+      "fill-extrusion-height": ["interpolate", ["linear"], ["zoom"], LANDMARK_MIN_ZOOM, 0, LANDMARK_FULL_ZOOM, ["get", "h"]],
+      "fill-extrusion-base": ["get", "b"],
+      "fill-extrusion-opacity": LANDMARK_OPACITY,
+      "fill-extrusion-vertical-gradient": true,
+      "fill-extrusion-ambient-occlusion-intensity": 0.25,
+    },
+  });
+}
+
+const REDUCE_QUERY = "(prefers-reduced-motion: reduce)";
+const subscribeReducedMotion = (onChange: () => void) => {
+  const q = window.matchMedia(REDUCE_QUERY);
+  q.addEventListener("change", onChange);
+  return () => q.removeEventListener("change", onChange);
+};
+/** Sistemin hareket azaltma tercihi; harita yalnız tarayıcıda çizildiği için sunucu değeri yalnız tip içindir. */
+const useReducedMotion = () =>
+  useSyncExternalStore(subscribeReducedMotion, () => window.matchMedia(REDUCE_QUERY).matches, () => false);
+
 export default function SeziMap(props: SeziMapProps) {
   const { t } = useT();
   const { contrast } = useAppearance();
+  const profile = useProfile();
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<MapboxMap | null>(null);
   const ready = useRef(false);
@@ -79,6 +180,13 @@ export default function SeziMap(props: SeziMapProps) {
   const theme = contrast ? sweetThemes.highContrast : sweetThemes.light;
   const themeRef = useRef(theme);
   themeRef.current = theme;
+  // Sade harita: yüksek kontrast ya da az gören profili (mobil haritayla aynı kural).
+  const plain = contrast || profile?.vision === "low";
+  // Hareket azaltma canlı izlenir: tercih harita açıkken değişirse harita eğimsiz (ya da eğik) yeniden kurulur.
+  const reducedMotion = useReducedMotion();
+  const pitched = !plain && !reducedMotion;
+  const lookRef = useRef<MapLook>({ plain, pitched, theme });
+  lookRef.current = { plain, pitched, theme };
 
   const sync = () => {
     const m = map.current;
@@ -108,7 +216,10 @@ export default function SeziMap(props: SeziMapProps) {
             id: k.id,
             label: k.label ?? "",
             number: k.number !== undefined ? String(k.number) : "",
-            color: k.emphasis === "dest" ? th.accentText : k.emphasis ? th.primaryText : k.tone ? th.tones[k.tone].ink : th.text,
+            // Türü olan eser işareti simgeyle çizilir; numaralı durak ve başlangıç daire kalır.
+            icon: k.typeSlug && k.number === undefined && k.emphasis !== "start" ? iconName(k.typeSlug) : "",
+            scale: k.selected || k.emphasis ? ICON_SCALE_SELECTED : ICON_SCALE,
+            color: k.emphasis === "dest" ? th.accentText : k.emphasis ? th.primaryText : th.text,
             radius: k.emphasis || k.number !== undefined ? 11 : k.selected ? 9 : 6,
             opacity: k.approximate ? 0.45 : 1,
           },
@@ -125,7 +236,7 @@ export default function SeziMap(props: SeziMapProps) {
           [w, s],
           [e, n],
         ],
-        { padding: p.fitPadding ?? 48, duration: 0, maxZoom: 17.5 },
+        { padding: p.fitPadding ?? 48, duration: 0, maxZoom: 17.5, pitch: mapPitch(lookRef.current) },
       );
     }
   };
@@ -133,9 +244,13 @@ export default function SeziMap(props: SeziMapProps) {
   useEffect(() => {
     if (!box.current || !MAPBOX_TOKEN) return;
     const th = themeRef.current;
-    const m = createMap(box.current, latest.current.center, latest.current.zoom ?? 15, contrast);
+    const look = lookRef.current;
+    const m = createMap(box.current, latest.current.center, latest.current.zoom ?? 15, look);
     map.current = m;
-    m.on("load", () => {
+    m.on("load", async () => {
+      await addTypeIcons(m, th);
+      if (map.current !== m) return; // simgeler yüklenirken harita kaldırıldı
+      addPilotLayers(m, th, look);
       for (let i = 0; i < MAX_LINES; i++) {
         m.addSource(`line-${i}`, { type: "geojson", data: fc([]) });
         m.addLayer({
@@ -165,6 +280,7 @@ export default function SeziMap(props: SeziMapProps) {
         type: "circle",
         slot: "top",
         source: "markers",
+        filter: ["==", ["get", "icon"], ""],
         paint: {
           "circle-color": ["get", "color"],
           "circle-radius": ["get", "radius"],
@@ -173,6 +289,16 @@ export default function SeziMap(props: SeziMapProps) {
           "circle-stroke-width": 2,
         },
       });
+      // Simgeler 3B binaların arkasında soluklaşmaz (occlusion opacity 1); numaralı durak daima üstte.
+      m.addLayer({
+        id: "markers-icon",
+        type: "symbol",
+        slot: "top",
+        source: "markers",
+        filter: ["!=", ["get", "icon"], ""],
+        layout: { "icon-image": ["get", "icon"], "icon-size": ["get", "scale"], "icon-allow-overlap": true, "icon-ignore-placement": true },
+        paint: { "icon-opacity": ["get", "opacity"], "icon-occlusion-opacity": 1 },
+      });
       m.addLayer({
         id: "markers-number",
         type: "symbol",
@@ -180,7 +306,7 @@ export default function SeziMap(props: SeziMapProps) {
         source: "markers",
         filter: ["!=", ["get", "number"], ""],
         layout: { "text-field": ["get", "number"], "text-font": MAP_FONT, "text-size": 12, "text-allow-overlap": true },
-        paint: { "text-color": th.surface },
+        paint: { "text-color": th.surface, "text-occlusion-opacity": 1 },
       });
       m.addLayer({
         id: "markers-label",
@@ -191,18 +317,21 @@ export default function SeziMap(props: SeziMapProps) {
         layout: { "text-field": ["get", "label"], "text-font": MAP_FONT, "text-size": 12, "text-offset": [0, 1.3], "text-anchor": "top", "text-optional": true },
         paint: { "text-color": th.text, "text-halo-color": th.surface, "text-halo-width": 1.5 },
       });
-      m.on("click", "markers", (e) => {
-        const id = e.features?.[0]?.properties?.id;
-        if (typeof id === "string") latest.current.onMarkerClick?.(id);
-      });
-      m.on("mouseenter", "markers", () => {
-        if (latest.current.onMarkerClick) m.getCanvas().style.cursor = "pointer";
-      });
-      m.on("mouseleave", "markers", () => {
-        m.getCanvas().style.cursor = latest.current.onMapClick ? "crosshair" : "";
-      });
+      const clickable = ["markers", "markers-icon"];
+      for (const layer of clickable) {
+        m.on("click", layer, (e) => {
+          const id = e.features?.[0]?.properties?.id;
+          if (typeof id === "string") latest.current.onMarkerClick?.(id);
+        });
+        m.on("mouseenter", layer, () => {
+          if (latest.current.onMarkerClick) m.getCanvas().style.cursor = "pointer";
+        });
+        m.on("mouseleave", layer, () => {
+          m.getCanvas().style.cursor = latest.current.onMapClick ? "crosshair" : "";
+        });
+      }
       m.on("click", (e) => {
-        const hit = m.queryRenderedFeatures(e.point, { layers: ["markers"] });
+        const hit = m.queryRenderedFeatures(e.point, { layers: clickable });
         if (hit.length && latest.current.onMarkerClick) return;
         latest.current.onMapClick?.([Number(e.lngLat.lng.toFixed(7)), Number(e.lngLat.lat.toFixed(7))]);
       });
@@ -216,9 +345,9 @@ export default function SeziMap(props: SeziMapProps) {
       map.current = null;
       m.remove();
     };
-    // Tema değişince harita yeniden kurulur (taban harita teması ve katman renkleri).
+    // Tema, sade harita ya da eğik bakış değişince harita yeniden kurulur (taban harita ayarları ve katman renkleri).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contrast]);
+  }, [contrast, plain, pitched]);
 
   useEffect(sync);
 

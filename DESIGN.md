@@ -74,7 +74,11 @@ Kaynak `packages/shared/src/sweet-theme.ts` (`sweetThemes`: `light`, `dark`, `hi
 
 **Yüksek kontrast** (az gören profili, `outlined: true`): dolgu ve gölge yok; beyaz zemin, siyah metin; yüzeyler 2 dp siyah çerçeveyle ayrılır (`outline(t)`); ana eylem koyu firuze üstünde beyaz; sekme çubuğunda seçili simge siyah gösterge içinde beyaz.
 
-Harita (Mapbox Standard) kara zemini `t.background`; yol, park ve su için `components/map` içinde açıklamalı üç doğal harita sabiti var. Harita noktaları tür tonunun mürekkep rengini kullanır.
+Harita (Mapbox Standard) kara zemini `t.background`; yol, park ve su için `components/map` içinde açıklamalı üç doğal harita sabiti var. Kendi stil dosyamız yok: Standard'ın ayarları (`basemap` import'u) ve üstüne slotlu katmanlar (rota `middle`, noktalar `top`).
+- **3B:** Standard binaları açık, etkileşimli haritada 45° eğik bakış. Az gören profili, yüksek kontrast ve hareket azaltmada düz (tepeden) bakış; az görende ve yüksek kontrastta harita tek renkli, 3B bina yok.
+- **Lynch dili:** pilot alan **bölgesi** (Ulu Cami ve Hanlar) hafif firuze dolgu ve kesikli kenarla (`bottom` slotu); **yer işareti** binaları tür tonunda, yarı saydam 3B blok (Mapbox'ın binasından 1 m yüksek). 3B kapalıyken aynı yerde düz dolgu ve kalın kenar. Veri `data/build_buildings.py` ile üretilir, uygulamaya gömülüdür.
+- **İşaretler:** eser ve yer işareti noktaları tür simgesidir (`WorkGlyph` silueti, yüzey renginde yuvarlak, kenar ve glif tür mürekkebinde); seçili simge ~1,25 kat büyür, kümede seçili eserin altında vurgu halkası. Renk tek başına anlam taşımaz: türü siluet anlatır. Numaralı anlatım durakları her zaman en üstte. Nokta tabanları da resimdir (daire katmanı değil): 3B binanın arkasında soluklaşmaz.
+- **Web (`apps/web/src/components/map`):** aynı kurallar. Glif çizimi `shared/glyphs.ts`, bina verisi ve 3B sabitleri `shared/pilot-buildings.ts` (mobil gömülü dosyayı okur). Sade harita yüksek kontrastta ve kayıtlı profil az görense; eğik bakış `prefers-reduced-motion`'da kapalı. Web'de rota çizgileri `top` slotunda (binaların üstünde); numaralı durak ve başlangıç daire kalır.
 
 ## Tipografi
 

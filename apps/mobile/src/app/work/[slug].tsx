@@ -361,7 +361,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
                 initial={[[work.lng, work.lat]]}
                 initialZoom={work.location_precision === 'exact' ? 16.5 : 15}
                 accessibilityLabel={address ?? loc(work.name, 'tr')}>
-                <WorkPin location={[work.lng, work.lat]} approximate={work.location_precision !== 'exact'} />
+                <WorkPin location={[work.lng, work.lat]} approximate={work.location_precision !== 'exact'} typeSlug={work.type_slug} />
               </SeziMap>
             ) : (
               <Text style={[type.body, { color: t.textMuted }]}>{tr('inv.unlocated')}</Text>

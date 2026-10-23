@@ -1,4 +1,4 @@
-import { coverOf, loc, sliceLine, type LngLat, type NavPoint, type SweetTheme } from '@sezi/shared';
+import { coverOf, distanceToLineM, loc, sliceLine, type LngLat, type NavPoint, type SweetTheme } from '@sezi/shared';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -556,25 +556,43 @@ function RoundButton({ label, onPress, children, t, active }: { label: string; o
   );
 }
 
-/** Haritadaki noktalar: uğranacak (numaralı) anlatım noktaları, diğer noktalar, plan aşamasında başlangıçlar ve eserler. */
+/** Yer işareti bu kadar yakından geçen rotada gösterilir (talimatlarda anılan menzil). */
+const LANDMARK_NEAR_ROUTE_M = 40;
+
+/**
+ * Haritadaki noktalar, rotanın hikâyesine göre süzülür: harita kalabalıklaşmasın, her bilgi panelde zaten yazılı.
+ * - Anlatım/varış: rota varken yalnız rotadaki numaralı duraklar; rota yoksa hepsi.
+ * - Yer işareti: yalnız rotaya yakın olanlar; bağlı eser zaten simgesiyle görünüyorsa çizilmez.
+ * - Plan aşaması: yalnız seçili başlangıç (diğerleri panelde çip); hedef seçilebilsin diye eserler simgesiyle,
+ *   ama numaralı durak olan eser tekrar çizilmez.
+ */
 function buildMapPoints(points: NavPoint[], starts: ReturnType<typeof useStartPoints>, state: NavState, order: Map<string, number>, lang: 'tr' | 'en'): MapPoint[] {
   const out: MapPoint[] = [];
   const fired = new Set(state.fired);
   const name = (p: NavPoint) => p.title[lang] ?? p.title.tr;
+  const line = state.plan?.geometry.line;
+  const nearRoute = (at: LngLat) => !line || distanceToLineM(at, line) <= LANDMARK_NEAR_ROUTE_M;
+  // Numaralı durak olan eserler: simgeleri ve yer işareti noktaları tekrar çizilmez.
+  const stopWorks = new Set(points.flatMap((p) => (order.has(p.id) && p.workSlug ? [p.workSlug] : [])));
+  const showWorks = state.phase === 'plan';
   for (const p of points) {
     const opens = !!p.body && (p.roles.includes('story') || p.roles.includes('arrival'));
-    if (opens && p.id !== state.plan?.arrival?.id) out.push({ id: p.id, location: p.location, kind: 'story', order: order.get(p.id), label: order.has(p.id) ? name(p) : undefined, done: fired.has(p.id) });
-    else if (p.roles.includes('landmark') && !p.roles.includes('start')) out.push({ id: p.id, location: p.location, kind: 'landmark', label: name(p) });
+    if (opens) {
+      if (p.id === state.plan?.arrival?.id || (line && !order.has(p.id))) continue;
+      out.push({ id: p.id, location: p.location, kind: 'story', order: order.get(p.id), label: order.has(p.id) ? name(p) : undefined, done: fired.has(p.id) });
+    } else if (p.roles.includes('landmark') && !p.roles.includes('start')) {
+      if (!nearRoute(p.location) || (p.workSlug && (stopWorks.has(p.workSlug) || (showWorks && p.workSlug !== state.dest)))) continue;
+      out.push({ id: p.id, location: p.location, kind: 'landmark', label: name(p) });
+    }
   }
-  if (state.phase === 'plan') {
-    // Seçili başlangıç adıyla, diğerleri yalnızca nokta: harita kalabalıklaşmasın; dokununca seçilir.
+  if (showWorks) {
     for (const p of starts) {
-      const selected = state.start.kind === 'point' && state.start.id === p.id;
-      out.push({ id: p.id, location: p.location, kind: 'start', label: selected ? (p.name[lang] ?? p.name.tr) : undefined, selected });
+      if (state.start.kind !== 'point' || state.start.id !== p.id) continue;
+      out.push({ id: p.id, location: p.location, kind: 'start', label: p.name[lang] ?? p.name.tr, selected: true });
     }
     for (const n of DESTINATIONS) {
-      if (n.workSlug === state.dest) continue;
-      out.push({ id: `work:${n.workSlug}`, location: n.location, kind: 'work' });
+      if (!n.workSlug || n.workSlug === state.dest || stopWorks.has(n.workSlug)) continue;
+      out.push({ id: `work:${n.workSlug}`, location: n.location, kind: 'work', typeSlug: n.workType });
     }
   }
   return out;

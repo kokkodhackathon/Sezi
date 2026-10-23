@@ -93,7 +93,7 @@ export default function Search() {
                   initial={mapWorks.map((w) => [w.lng, w.lat])}
                   initialZoom={15}
                   accessibilityLabel={tr('design.mapHelp', { n: mapWorks.length })}>
-                  <WorkClusters works={mapWorks.map((w) => ({ slug: w.slug, location: [w.lng, w.lat], color: t.tones[toneForType(w.type_slug)].ink }))} selected={pin} onPress={setPin} />
+                  <WorkClusters works={mapWorks.map((w) => ({ slug: w.slug, location: [w.lng, w.lat], typeSlug: w.type_slug }))} selected={pin} onPress={setPin} />
                 </SeziMap>
                 <Text style={[type.meta, { color: t.textMuted }]} accessibilityLiveRegion="polite">
                   {tr('design.mapHelp', { n: mapWorks.length })}

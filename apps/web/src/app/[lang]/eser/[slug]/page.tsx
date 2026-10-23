@@ -4,7 +4,6 @@ import {
   hasLocation,
   inventorySource,
   loc,
-  toneForType,
   type WorkCondition,
   type WorkSource,
 } from "@sezi/shared";
@@ -347,7 +346,7 @@ export default async function WorkDetailPage({
                 id: work.slug,
                 location: [work.lng, work.lat],
                 label: name,
-                tone: toneForType(work.type_slug),
+                typeSlug: work.type_slug,
                 approximate: work.location_precision !== "exact",
                 emphasis: "dest",
               },

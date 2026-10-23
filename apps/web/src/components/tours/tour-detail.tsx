@@ -6,7 +6,6 @@ import {
   formatDistance,
   loc,
   planTour,
-  toneForType,
   walkingSpeed,
   type LngLat,
   type TourStop,
@@ -146,7 +145,7 @@ export function TourDetail({
         location: leg.nodeLocation,
         label: name,
         number: leg.index,
-        tone: toneForType(w?.type_slug ?? leg.stop.type),
+        typeSlug: w?.type_slug ?? leg.stop.type,
       });
     }
     return list;

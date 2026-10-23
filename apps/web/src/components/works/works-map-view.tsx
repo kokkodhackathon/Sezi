@@ -1,6 +1,6 @@
 "use client";
 
-import { boundsOf, hasLocation, loc, toneForType, type LngLat } from "@sezi/shared";
+import { boundsOf, hasLocation, loc, type LngLat } from "@sezi/shared";
 import { useMemo, useState } from "react";
 
 import { SeziMap, type MapMarker } from "@/components/map";
@@ -44,7 +44,7 @@ export function WorksMapView({
         id: w.slug,
         location: [w.lng, w.lat],
         label: loc(w.name, lang),
-        tone: toneForType(w.type_slug),
+        typeSlug: w.type_slug,
         approximate: w.location_precision !== "exact",
         selected: w.slug === activeWork?.slug,
         emphasis: w.slug === activeWork?.slug ? "picked" : undefined,
