@@ -1,19 +1,19 @@
 # Sezi nasıl çalışır?
 
-Bu belge Sezi'nin parçalarını şemalarla anlatır: veri nereden gelir, rota nasıl bulunur, telefon yürürken ne yapar, ses nereden çalar. Kod ayrıntısı için [ARCHITECTURE.md](ARCHITECTURE.md).
+Bu belge Sezi'nin parçalarını şemalarla anlatır: veri nereden gelir, rota nasıl bulunur, telefon yürürken ne yapar, ses nereden çalar. Kod ayrıntısı için [ARCHITECTURE.md](ARCHITECTURE.md). Son güncelleme: 24 Ekim 2026.
 
 ---
 
 ## 1. Büyük resim
 
-Sistem dört parçadan oluşur: **veri hattı**, **sunucu**, **admin paneli** ve **mobil uygulama**. Rota motoru ortak pakette (`packages/shared`) durur; hem telefon hem admin paneli aynı motoru kullanır.
+Sistem beş parçadan oluşur: **veri hattı**, **sunucu**, **admin paneli**, **mobil uygulama** ve **web sitesi** (`sezi.info`). Rota motoru ortak pakette (`packages/shared`) durur; telefon, web ve admin paneli aynı motoru kullanır.
 
 ```mermaid
 flowchart LR
   subgraph KAYNAK["📚 Ham kaynaklar"]
     PDF["Envanter kitapları<br/>PDF"]
-    FOTO["Fotoğraf arşivi"]
-    OSM["OpenStreetMap<br/>yaya yolları"]
+    FOTO["Fotoğraf arşivi<br/>+ Wikimedia Commons"]
+    OSM["OpenStreetMap<br/>yollar · binalar · çeşme, fırın, cami"]
   end
 
   subgraph HAT["🐍 Veri hattı · data/"]
@@ -29,37 +29,42 @@ flowchart LR
   ADMIN["🖥️ Admin paneli"]
   MOTOR["⚙️ Ortak motor<br/>packages/shared"]
   APP["📱 Mobil uygulama"]
-  GRAF["🗺️ Pilot grafiği<br/>uygulamaya gömülü"]
+  WEB["🌐 Web sitesi"]
+  GRAF["🗺️ Pilot grafiği + binalar<br/>uygulamaya gömülü"]
 
   PDF --> PY
   FOTO --> PY
   OSM --> PY
-  PY -->|"eserler, fotoğraflar"| DB
-  PY -->|"yol ağı"| GRAF
-  ADMIN -->|"yazar"| DB
+  PY -->|"eserler, fotoğraflar,<br/>metin ve konum taslakları,<br/>duyu ipucu adayları"| DB
+  PY -->|"yol ağı, binalar"| GRAF
+  ADMIN -->|"onaylar, yazar"| DB
   ADMIN -->|"yükler"| ST
   DB -->|"okur"| APP
+  DB -->|"okur"| WEB
   ST -->|"indirir"| APP
   TTS --> ST
   APP -->|"Türkçe metin"| TTS
   GRAF --> APP
+  GRAF --> WEB
   MOTOR --> APP
+  MOTOR --> WEB
   MOTOR --> ADMIN
 ```
 
 | Parça | Görevi | Bir cümleyle |
 |---|---|---|
-| Veri hattı | Kitaplardan ve haritadan veri çıkarır | "Ham bilgiyi düzenli tabloya çevirir" |
+| Veri hattı | Kitaplardan ve haritadan veri ve taslak çıkarır | "Ham bilgiyi düzenli tabloya çevirir" |
 | Supabase | Veriyi, dosyaları ve izinleri tutar | "Ortak hafıza" |
-| Admin paneli | İçerik girer, onaylar, rotayı dener | "Mutfak" |
+| Admin paneli | Taslakları onaylar, içerik ve tur girer, rotayı dener | "Mutfak" |
 | Ortak motor | Rota bulur, talimat kurar, yürüyüşü izler | "Beyin" |
 | Mobil uygulama | Kullanıcıyı gezdirir | "Vitrin ve rehber" |
+| Web sitesi | Eserleri arama motorlarına ve masaüstüne açar, rota ve tur önizler | "Vitrin" |
 
 ---
 
 ## 2. Veri hattı: kitaptan haritaya
 
-Üç ayrı hat var. Hepsi `python -I data/<script>.py` ile çalışır, çıktısı ya veritabanına ya uygulamaya gider.
+Hepsi `python -I data/<script>.py` ile çalışır. Hiçbir hat kendi başına yayın yapmaz: emin olunamayan her şey **taslak** olarak girer ve admin onaylar.
 
 ### 2a. Eser envanteri
 
@@ -74,7 +79,11 @@ flowchart LR
   D2 --> E
   E --> F["inventory_import<br/>Tür ve kesinlik"]
   F --> G[("works tablosu")]
+  D --> LC[("location_candidates<br/>konum adayları")]
+  LC -->|"admin kabul eder"| G
 ```
+
+Konum için hat birden çok aday üretir (Wikidata, OSM, Nominatim, elle düzeltme) ve her adaya gerekçeli bir puan verir: ad benzerliği, tür, ilçe. Tür ya da ilçe çelişen aday elenir. Admin **Konum eşleştirme** sayfasında birini kabul edince eserin konumu yazılır; bir eserin tek kabul edilmiş adayı olur.
 
 Konum ne kadar güvenilir? Uygulama bunu kullanıcıya açıkça gösterir:
 
@@ -84,7 +93,7 @@ Konum ne kadar güvenilir? Uygulama bunu kullanıcıya açıkça gösterir:
 | 〰️ `approximate` | Zayıf eşleşme | "Yaklaşık" etiketi |
 | ❔ `unknown` | Eşleşme yok | Haritada yok, listede var |
 
-> **Telif kuralı:** Kitaptan yalnızca olgu alınır (ad, il, tür, cilt/sayfa). Metin ve fotoğraf kopyalanmaz.
+> **Telif kuralı:** Kitaptan olgular doğrudan girer (ad, il, tür, cilt/sayfa). Kitap metinleri (adres, tarihçe) yalnız taslak olarak girer, admin kitap sayfasıyla karşılaştırıp yayınlar (§2c).
 
 ### 2b. Fotoğraf eşleştirme
 
@@ -102,7 +111,24 @@ flowchart LR
   M -->|"benzemiyor"| X["📦 Fotoğraf kutusu"]
 ```
 
-### 2c. Pilot yol grafiği
+Kitapta fotoğrafı olmayan esere Wikidata'daki **Commons** görseli (P18) eklenir; kartta yazarı ve lisansı görünür. Admin de **Fotoğraf kutusu → Yükle** ile fotoğraf ekleyebilir; fotoğrafçı ve kullanım izni zorunludur.
+
+### 2c. Kitaptan metin taslakları
+
+```mermaid
+flowchart LR
+  P["📖 Kitap PDF"] --> T["inventory_texts<br/>yazı tipine göre ayıklar"]
+  T --> D[("text_drafts<br/>adres · tarihçe TR/EN")]
+  D --> A{"🖥️ Eser metinleri<br/>kitap sayfası yanında"}
+  A -->|"düzelt + yayınla"| W[("works")]
+```
+
+- Eserin sınırı kitaptaki başlıktan bulunur; kitabe alıntıları ve çevirileri çıkarılır.
+- Admin metni kitap sayfasıyla yan yana görür. Mimari bölüm ve yapım yılı için **öneri** çıkar, kanıt cümlesiyle; admin seçmeden hiçbiri yayına girmez.
+- Admin'in düzenlediği taslağa veri hattı bir daha dokunmaz.
+- **Sade özet:** Admin **Özet oluştur** deyince o tek eserin metni Gemini'ye gider ve 2–3 cümlelik TR/EN bir öneri döner. Öneri taslakta saklanır, yayına girmez. Özette kitap metninde geçmeyen bir yıl ya da ad varsa kartta uyarı çıkar. Admin **Özete taşı** der, kitapla karşılaştırır ve yayınlar. Toplu iş yoktur.
+
+### 2d. Pilot yol grafiği
 
 Bursa Hanlar Bölgesi'nin yaya yolları OpenStreetMap'ten indirilir, eserlerle birleştirilir ve **uygulamanın içine gömülür**. Bu sayede rota internetsiz hesaplanır.
 
@@ -110,10 +136,13 @@ Bursa Hanlar Bölgesi'nin yaya yolları OpenStreetMap'ten indirilir, eserlerle b
 flowchart LR
   O["🌍 OSM<br/>650 m çevre"] --> B["build_nav_graph.py"]
   W[("Kesin konumlu<br/>eserler")] --> B
-  B --> J["📄 bursa-hanlar-nav.json<br/>892 düğüm · 1215 yol parçası · 20 eser"]
+  B --> J["📄 bursa-hanlar-nav.json<br/>898 düğüm · 1221 yol parçası · 36 eser"]
   J --> APP["📱 Uygulama"]
+  J --> WEB["🌐 Web"]
   J --> ADM["🖥️ Admin rota testi"]
 ```
+
+> Grafik yeniden üretilince o an yayında olan kesin konumlu eserler girer. 23 Ekim'deki üretimde 20 eserden 36'ya çıktı.
 
 Her yol parçası (segment) şu bilgileri taşır:
 
@@ -122,9 +151,29 @@ Her yol parçası (segment) şu bilgileri taşır:
 | Uzunluk | 42 m | Geometri |
 | Basamak | 3 | OSM `steps` |
 | Eğim | %5 | OSM |
-| Zemin | arnavut kaldırımı | OSM `surface` |
+| Zemin | asfalt · parke · arnavut kaldırımı · **bilinmiyor** | OSM `surface` |
 | Gürültü | 0–1 | Yol sınıfından tahmin |
 | Yer işareti görünürlüğü | 0–1 | Yakındaki yer işaretleri |
+
+**Zemin bilinmiyorsa** (OSM'de etiket yok): 1221 parçanın 198'i böyle. Rota hesabı bu yolu düz zemin sayar, ama rehberlik ondan bir doku cümlesi kurmaz. Bilinmeyen zeminden arnavut kaldırımına geçişte "zemin değişiyor" denmez, çünkü önceki zeminin ne olduğu bilinmiyor.
+
+### 2e. Harita binaları
+
+`build_buildings.py` pilot alandaki eserlerin OSM bina tabanlarını bulur: önce eserin OSM kimliğiyle, sonra eserin konumunu içeren binayla, en son 20 m içindeki binayla. Yüksekliği Mapbox'tan alır. Bu binalar haritada tür renginde 3B blok olarak öne çıkar. Ulu Cami ve Hanlar bölgesinin çizgisi de bu binalardan çizilir; resmî bir sınır değildir.
+
+### 2f. Duyu ipucu adayları
+
+`build_sense_points.py` OSM'den yön bulmaya yardım edebilecek üç tür yer çıkarır:
+
+| Tür | OSM'de | Ne söylenebilir |
+|---|---|---|
+| 💧 Su sesi | çeşme | "Su akıyorsa sesini duyabilirsiniz." |
+| 🥖 Koku | fırın, pastane | "Açıkken fırın kokusu gelebilir." |
+| 🕌 Ezan sesi | adı olan cami | "Ezan okunurken ses bu camiden geliyor olabilir." |
+
+- Hepsi **taslak yer işareti** olarak girer. Çeşme kuru olabilir, fırın kapalı olabilir, ezan o camiden duyulmayabilir; sahada bakılmadan yayınlanmaz.
+- Cami ya da çeşme 35 m içindeki aynı türden bir esere bağlanır.
+- Script tekrar çalıştırılabilir; aynı OSM kaydı ikinci kez girmez.
 
 ---
 
@@ -155,9 +204,12 @@ Uygulamanın okuduğu ana pencereler:
 
 | Görünüm | İçinde ne var |
 |---|---|
-| `works_view` | Eser + il + tür + konum + kaynak + fotoğraflar + ses kaydı, tek satırda |
-| `nav_points_view` | Başlangıç, yer işareti, anlatım ve varış noktaları |
+| `works_view` | Eser + il + tür + konum + kaynak + fotoğraflar + ses kaydı + bilgi kartı kaynağı + ziyaret bilgisi, tek satırda |
+| `nav_points_view` | Başlangıç, yer işareti (duyu ipucuyla), anlatım ve varış noktaları |
+| `tours_view` | Hazır turlar: başlık, açıklama, durak listesi |
 | `segment_overrides` | Onaylanmış "bu yol kapalı / merdivenli" bildirimleri |
+
+Uygulamanın hiç göremediği tablolar: veri hattının önerileri (`location_candidates`, `text_drafts`) yalnız admin içindir. İsteğe bağlı hesabın tercihlerini (`accounts`) yalnız sahibi okur.
 
 ---
 
@@ -191,6 +243,14 @@ Bir yer birden çok rol taşıyabilir.
 | `landmark` | 🗿 | Yer işareti: talimatta anılır ("Heykel hizasında sağa"), çevresindeki yolları "daha kolay bulunur" yapar |
 | `story` | 💬 | Anlatım: yaklaşınca metin + ses açılır, rota buraya uğrar |
 | `arrival` | 🏛️ | Esere varınca açılan bilgi |
+
+Yer işaretinin iki ses alanı birbirinden ayrıdır:
+- **Ortam sesi** (`ambient`): Yürürken ses manzarasında çalan sentez ses (§9).
+- **Duyu ipucu** (`cue`): Talimat cümlesine eklenen "olabilir" cümlesi (§6).
+
+### Turlar
+
+Turlar da veridir. Admin **Turlar** sayfasında şunları girer: başlık, açıklama ve pilot alandaki 2–12 eserden durak listesi. İsterse sırayı kendisi sabitler. Kaydederken veritabanı iki şeyi reddeder: başka ilden ya da var olmayan bir eser, ve aynı eserin iki kez girilmesi. Düzenleme penceresinde yürüyen ve tekerlekli sandalye için mesafe canlı görünür. Yayındaki turu uygulama cihazda saklar; web de aynı tablodan okur.
 
 ### Erişilebilirlik bildirimi döngüsü
 
@@ -232,6 +292,7 @@ Başlangıç fiyatı **yolun metre cinsinden uzunluğudur**. Profil bu fiyatı a
 | Eğim > %8 | — | pahalılaşır | ⛔ yol kapalı | — |
 | Dar yol < 90 cm | — | — | ⛔ yol kapalı | — |
 | Arnavut kaldırımı | — | × 1,4 | × 1,8 | — |
+| Zemin bilinmiyor | — | düz sayılır | düz sayılır | — |
 | Gürültülü cadde | — | — | — | × 2'ye kadar |
 | Kaldırım kenarı | — | — | ⛔ yol kapalı | × 1,3 |
 | Yer işareti görünür | %30'a kadar ucuz | %30'a kadar ucuz | %30'a kadar ucuz | (görmediği için yok) |
@@ -257,7 +318,7 @@ flowchart LR
 |---|---|---|
 | Esere git | Seçilen eser | Uğrama en çok %25 ya da +300 m uzatır |
 | Gezinti | Hedef yok, anlatım noktaları | 5 nokta, bacak ≤ 500 m, toplam ≤ 1,2 km |
-| Tur | Aynı türden eserler sırayla | Her durak ayrı "esere git" |
+| Tur | Admin'in girdiği eserler | Sıra: varsayılan başlangıçtan en yakın komşu, ya da admin'in sabitlediği sıra. Profile ulaşılamayan durak atlanır. Her durak ayrı "esere git" |
 
 ---
 
@@ -279,13 +340,24 @@ flowchart TB
   Y -->|"hayır"| C3["'Sağa dönün.'"]
   C1 & C2 & C3 --> U{"Önde tehlike?"}
   U -->|"merdiven"| U1["+ 'Ardından merdiven var.'"]
-  U -->|"taş zemin"| U2["+ 'Zemin arnavut kaldırımına dönüyor.'"]
+  U -->|"taş zemine geçiş<br/>önceki zemin biliniyorsa"| U2["+ 'Zemin arnavut kaldırımına dönüyor.'"]
   U -->|"cadde"| U3["+ 'Trafiği yoğun bir caddeye…'"]
-  U -->|"yok"| OK["Cümle hazır"]
+  U -->|"yok"| Q
+  U1 & U2 & U3 --> Q{"Anılan yer işaretinin<br/>duyu ipucu var mı?"}
+  Q -->|"evet, bu rotada ilk kez"| Q1["+ 'Açıkken fırın kokusu gelebilir.'"]
+  Q -->|"hayır"| OK["Cümle hazır"]
+  Q1 --> OK
 ```
 
 Ek kurallar:
-- İki talimat arası **90 m'yi aşarsa** ortada teyit verilir: "Doğru yoldasınız; Okçu Baba Türbesi sağınızda."
+- İki talimat arası **90 m'yi aşarsa** ortada teyit verilir: "Doğru yoldasınız; Okçu Baba Türbesi sağınızda." Teyitte 45 m içindeki yer işareti anılır.
+- **Yön, yer işaretinin kendi konumundan hesaplanır.** Yer işareti rota için en yakın yol düğümüne bağlanır, ama "sağınızda / solunuzda" ve uzaklık o düğümden değil, yapının durduğu yerden ölçülür. Yolun solundaki fırın, düğüme bağlandı diye "önünüzde" anılmaz.
+- **Duyu ipucu kuralları:**
+  - Her zaman "olabilir" diye söylenir. Talimat hiçbir zaman yalnız ipucuna dayanmaz.
+  - Bir yer işaretinin ipucu rotada **bir kez** söylenir; yan yana dönüşlerde aynı cami tekrar tekrar anılmaz.
+  - Duymayan kullanıcıya su ve ezan ipucu söylenmez; koku ipucu herkese söylenir.
+  - Bir eserin adıyla ancak nokta o esere bağlıysa söylenir. "Geyve Hanı yakınında… su sesi" gibi yanlış bir atıf çıkmaz.
+  - Uygulama yalnız yayındaki ipuçlarını kullanır; bugün 60 adayın hepsi taslak.
 - Tekerlekli sandalye rotasında merdiven zaten olmadığı için merdiven uyarısı verilmez.
 - Rota sonunda: "Vardınız."
 
@@ -348,6 +420,8 @@ Talimat sabit metrede değil, **yürüme hızına göre dönüşten yaklaşık 4
 - Anlatım ya da varış noktasının yarıçapına girilince **bir yürüyüşte bir kez** açılır.
 - Konum doğruluğu **50 m'den kötüyse** açılmaz (sıçrayan GPS yanlış pop-up açmasın).
 - Kayıt çalarken talimatlar bekler, kayıt bitince okunur.
+- Nokta bir esere bağlıysa kartta eserin fotoğrafı, türü ve dönemi görünür; karta dokununca eser sayfası açılır.
+- **Yoldaki eserler:** Yayında metni olan pilot eserin yanından geçerken (20 m) kısa bir anlatım kartı açılır. Rota bu eserlere sapmaz. Hedef ve turdaki eserler yolda açılmaz.
 
 ---
 
@@ -425,7 +499,7 @@ sequenceDiagram
 
 ## 9. Ses manzarası (soundscape)
 
-Görme engelli kullanıcı yer işaretlerini **sesinden** tanır: çeşmeden su sesi, handan çarşı uğultusu, diğer yapılardan yumuşak bir ton gelir. Sesler şimdilik sentezlenir; saha kayıtları gelince değişecek.
+Görme engelli kullanıcı yer işaretlerini **sesinden** tanır: çeşmeden su sesi, handan çarşı uğultusu, diğer yapılardan yumuşak bir ton gelir. Sesler şimdilik sentezlenir; saha kayıtları gelince değişecek. Sesin yönü de talimattaki gibi **yapının kendi konumundan** hesaplanır.
 
 ```mermaid
 flowchart LR
@@ -441,7 +515,9 @@ flowchart LR
 |---|---|
 | Çeşme, sebil, hamam, sarnıç | 💧 su |
 | Han, çarşı, kervansaray | 🛍️ çarşı |
-| Diğerleri (cami dahil; ezan gibi dinî ses kullanılmaz) | 🔔 ton |
+| Diğerleri (cami dahil) | 🔔 ton |
+
+> Ezan gibi dinî bir ses sentezlenip çalınmaz. Camiden gelebilecek gerçek ezan yalnız talimattaki "olabilir" cümlesiyle anılır (§6).
 
 ---
 
@@ -454,7 +530,7 @@ Kurala göre **her ses ipucunun görsel ve dokunsal bir karşılığı vardır.*
 | Yürüyen | ✅ talimat | ✅ harita + kart | ✅ |
 | Görme engelli | ✅ talimat + ses manzarası | — | ✅ |
 | Az gören | ✅ | ✅ tek renkli, yüksek kontrast | ✅ |
-| Duymayan | ❌ | ✅ ekran kenarı parlar (`CueFlash`) | ✅ |
+| Duymayan | ❌ | ✅ ekran kenarı parlar (`CueFlash`), talimat metni ekranda; su ve ezan ipucu yazılmaz, koku ipucu kalır | ✅ |
 | Gürültülü ortam (elle açılır) | ❌ geçici | ✅ parlama | ✅ |
 
 ---
@@ -464,12 +540,15 @@ Kurala göre **her ses ipucunun görsel ve dokunsal bir karşılığı vardır.*
 | Özellik | İnternetsiz | Neden |
 |---|---|---|
 | Rota hesabı | ✅ | Grafik uygulamanın içinde |
-| Noktalar (başlangıç, anlatım…) | ✅ son bilinen hâl | Cihazda saklanır |
+| Noktalar (başlangıç, anlatım, duyu ipuçları…) | ✅ son bilinen hâl | Cihazda saklanır |
+| Turlar | ✅ son bilinen hâl | Cihazda saklanır |
 | Nokta ses kayıtları | ✅ indirildiyse | Önceden indirilir |
+| Noktalara bağlı eserlerin kartı ve sayfası | ✅ | Eşitlemede cihaza alınır |
+| Yoldaki eserlerin anlatımı | ✅ | Metin cihazda, Türkçe sesi önceden indirilir |
 | Sabit Türkçe talimatlar | ✅ | Uygulamaya gömülü |
 | Rotanın diğer talimatları | ✅ rota internetliyken hesaplandıysa | Önceden indirilir |
 | Yeni bir Türkçe cümle | ⚠️ cihaz sesiyle | Sunucuya ulaşılamaz |
-| Eser listesi, fotoğraflar | ❌ | Henüz çevrimdışı önbellek yok |
+| Keşfet'teki eser listesi, fotoğraflar | ❌ | Henüz çevrimdışı önbellek yok |
 
 ---
 
@@ -489,7 +568,21 @@ flowchart LR
   RT --> X1["Profil karşılaştırması<br/>4 profil, aynı harita"]
   RT --> X2["Senaryolar<br/>yol kapat · yanlış dön"]
   RT --> X3["Zaman damgalı kayıt"]
+  RT --> X4["Taslak noktalar dahil<br/>yayınlamadan dene"]
 ```
+
+**Taslak noktaları dahil et** açıkken taslak noktalar da rotaya girer. Yeni bir yer işareti ya da duyu ipucu, uygulamaya çıkmadan önce burada denenir.
+
+---
+
+## 13. Web sitesi
+
+`sezi.info`, Next.js ile yazıldı ve `/tr` ile `/en` altında iki dilde çalışır.
+
+- **Sayfalar:** Eser, il ve külliye sayfaları sunucuda üretilir ve 10 dakikada bir yenilenir, böylece arama motorları içeriği görür. Bu sayfalarda da yalnız yayındaki içerik görünür.
+- **Ortak motor:** Rota, tur ve bildirim sayfaları uygulamayla aynı motoru ve aynı gömülü grafiği kullanır. Mesafeler ve durak sırası telefondakiyle aynı çıkar.
+- **Harita:** Harita mobildekiyle aynı görünür: 3B binalar, Lynch bölgesi, tür renginde yer işareti blokları ve tür simgeleri. Simge çizimi ve bina verisi ortak pakette tutulur.
+- **Sade görünüm:** Yüksek kontrastta ve "az gören" profilinde harita tek renkli ve düz olur. Hareket azaltma açıksa harita eğik bakış yerine yukarıdan görünür; tercih değişince sayfa yenilenmeden uygulanır.
 
 ---
 
@@ -503,6 +596,9 @@ flowchart LR
 | **Maliyet** | Bir yolun profile göre "zahmeti"; motor en az zahmetli yolu seçer |
 | **Dijkstra** | En ucuz yolu bulan klasik algoritma |
 | **Uğrama (via)** | Rotanın hedefe giderken bir anlatım noktasından geçmesi |
+| **Tur** | Admin'in seçtiği eserlerden oluşan hazır gezi; sırayı uygulama hesaplar ya da admin sabitler |
+| **Duyu ipucu (cue)** | Yer işaretine eklenen "olabilir" cümlesi: su sesi, fırın kokusu, ezan |
+| **Taslak (draft)** | Veri hattının ya da admin'in girdiği, henüz onaylanmamış içerik; uygulama ve web görmez |
 | **Sapma** | Kullanıcının rotadan uzaklaşması |
 | **Chirp 3 HD** | Google'ın doğal Türkçe sentetik sesi (Laomedeia) |
 | **RLS** | Veritabanında "kim hangi satırı görür" kuralı |
