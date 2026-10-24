@@ -433,3 +433,7 @@ verify_jwt = false
 # Hesap silme: kimliği fonksiyon içinde Auth sunucusu doğrular (auth.getUser), ağ geçidi JWT denetimi gerekmez.
 [functions.delete-account]
 verify_jwt = false
+
+# Sade özet önerisi (Gemini): yetkiyi fonksiyon içinde RLS denetler (admin'in anahtarıyla text_drafts okunur/yazılır).
+[functions.summarize]
+verify_jwt = false

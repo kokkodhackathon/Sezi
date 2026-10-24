@@ -21,7 +21,7 @@ import { toast } from 'sonner';
 
 import { BookPage } from '@/components/book-page';
 import { PageHeader } from '@/components/page-header';
-import { ArchitectureSuggest, BuiltYearSuggest } from '@/components/text-suggestions';
+import { ArchitectureSuggest, BuiltYearSuggest, SummarySuggest } from '@/components/text-suggestions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
   AlertDialog,
@@ -54,6 +54,7 @@ import {
   bookPageUrl,
   DRAFT_STATUS_LABEL,
   publishDraft,
+  requestSummary,
   setDraftStatus,
   useTextDrafts,
   WARNING_LABEL,
@@ -126,6 +127,12 @@ function toForm(d: TextDraft): Form {
     founder: d.founder ?? '',
   };
 }
+
+/** Özetin kaynağı: formdaki tarihçe ve mimari metni (henüz yayınlanmamış düzeltmeler dahil), dile göre. */
+const summarySourceOf = (f: Form) => ({
+  tr: [f.history.tr, f.architecture.tr].filter((s) => s.trim()).join('\n\n'),
+  en: [f.history.en, f.architecture.en].filter((s) => s.trim()).join('\n\n'),
+});
 
 const STATUSES: DraftStatus[] = ['pending', 'published', 'rejected'];
 const PILOT_WORKS = new Set(PILOT_AREAS['bursa-hanlar'].nodes.flatMap((n) => n.workSlug ? [n.workSlug] : []));
@@ -609,6 +616,22 @@ export function Texts() {
                             onApply={(next) => setForm({ ...form, history: { ...form.history, [l]: next.history }, architecture: { ...form.architecture, [l]: next.architecture } })}
                           />
                         ))}
+                      </div>
+                    ) : null}
+                    {key === 'summary' && draft.status !== 'rejected' ? (
+                      <div className="mt-4">
+                        <SummarySuggest
+                          suggestion={draft.summary_suggestion}
+                          by={draft.summary_suggestion_by}
+                          at={draft.summary_suggested_at}
+                          source={summarySourceOf(form)}
+                          disabled={busy}
+                          onGenerate={async () => {
+                            await requestSummary(draft.id, summarySourceOf(form));
+                            await qc.invalidateQueries({ queryKey: ['text-drafts', city] });
+                          }}
+                          onApply={(next) => setForm({ ...form, summary: next })}
+                        />
                       </div>
                     ) : null}
                   </CardContent>

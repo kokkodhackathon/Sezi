@@ -1,10 +1,11 @@
-import { moveToArchitecture, paragraphsOf, suggestArchitecture, suggestBuiltYears, type SuggestLang } from '@sezi/shared';
-import { ArrowDownToLine, CalendarSearch, Columns2 } from 'lucide-react';
+import { moveToArchitecture, paragraphsOf, suggestArchitecture, suggestBuiltYears, unsupportedInSummary, type LocalizedText, type SuggestLang } from '@sezi/shared';
+import { ArrowDownToLine, CalendarSearch, Columns2, Sparkles, TriangleAlert } from 'lucide-react';
 import { useMemo, useState } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Spinner } from '@/components/ui/spinner';
 
 /**
  * Tarihçe metninde mimari bölüm önerisi: önerilen paragraflar işaretli gelir, admin kitapla karşılaştırıp
@@ -114,5 +115,79 @@ export function BuiltYearSuggest({ text, current, disabled, onPick }: {
         </ul>
       </AlertDescription>
     </Alert>
+  );
+}
+
+/**
+ * Sade özet önerisi: "Özet oluştur" tek eser için Gemini'den öneri ister (toplu iş yok). Öneri taslakta saklanır,
+ * yayına girmez; "Özete taşı" yalnız formu doldurur, admin kitapla karşılaştırıp yayınlar. Özette kaynak metinde
+ * bulunamayan sayı ve özel adlar uyarı olarak gösterilir (formdaki o anki metne göre).
+ */
+export function SummarySuggest({ suggestion, by, at, source, disabled, onGenerate, onApply }: {
+  suggestion: LocalizedText | null;
+  by: string | null;
+  at: string | null;
+  source: { tr: string; en: string };
+  disabled: boolean;
+  onGenerate: () => Promise<void>;
+  onApply: (next: { tr: string; en: string }) => void;
+}) {
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState('');
+  const generate = async () => {
+    setRunning(true);
+    setError('');
+    try {
+      await onGenerate();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Özet oluşturulamadı.');
+    } finally {
+      setRunning(false);
+    }
+  };
+  // İngilizce kitap metni bazen ilk cümleyi (banisi, tarihi) içermez; adlar Türkçe metinde de aranır.
+  const missing = suggestion
+    ? [...unsupportedInSummary(suggestion.tr, source.tr, 'tr'), ...(suggestion.en ? unsupportedInSummary(suggestion.en, `${source.en}\n\n${source.tr}`, 'en') : [])]
+    : [];
+  const when = at ? new Date(at).toLocaleString('tr-TR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="outline" className="min-h-12" disabled={disabled || running || !source.tr.trim()} onClick={() => void generate()}>
+          {running ? <Spinner data-icon="inline-start" /> : <Sparkles data-icon="inline-start" />}
+          {suggestion ? 'Yeniden oluştur' : 'Özet oluştur'}
+        </Button>
+        <p className="text-sm text-muted-foreground">Tarihçe ve mimari metninden, Gemini ile. Öneri yayına girmez.</p>
+      </div>
+      {error ? (
+        <Alert variant="destructive" role="alert">
+          <TriangleAlert />
+          <AlertTitle>Özet oluşturulamadı</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+      {suggestion ? (
+        <Alert>
+          <Sparkles />
+          <AlertTitle>Özet önerisi{by ? ` · ${by}` : ''}{when ? ` · ${when}` : ''}</AlertTitle>
+          <AlertDescription className="flex flex-col gap-3">
+            <p lang="tr"><strong>TR:</strong> {suggestion.tr}</p>
+            {suggestion.en ? <p lang="en"><strong>EN:</strong> {suggestion.en}</p> : null}
+            {missing.length ? (
+              <p className="flex items-start gap-2 font-medium">
+                <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
+                Kitap metninde bulunamadı: {missing.join(', ')}. Kitapla karşılaştırmadan taşımayın.
+              </p>
+            ) : (
+              <p>Özetteki sayı ve özel adların hepsi kitap metninde geçiyor. Yine de anlamı kitapla karşılaştırın.</p>
+            )}
+            <Button variant="outline" size="sm" className="min-h-10 self-start" disabled={disabled} onClick={() => onApply({ tr: suggestion.tr, en: suggestion.en ?? '' })}>
+              <ArrowDownToLine data-icon="inline-start" />
+              Özete taşı
+            </Button>
+          </AlertDescription>
+        </Alert>
+      ) : null}
+    </div>
   );
 }

@@ -234,6 +234,10 @@ const textDraftSchema = draftFieldsSchema.extend({
   edited_at: z.string().nullable(),
   /** Eserin kitaptaki başlığı (yazı tipinden okunur); uygulamadaki addan farklıysa düzeltme önerilir. */
   book_title: LocalizedText.nullable(),
+  /** Sade özet önerisi (Gemini ya da hazır öneri); yayına girmez, admin özete taşır. */
+  summary_suggestion: LocalizedText.nullable(),
+  summary_suggestion_by: z.string().nullable(),
+  summary_suggested_at: z.string().nullable(),
   source: z.object({ title: z.string(), url: z.string().nullable(), volume: z.number().nullable() }),
   work: z.object({
     id: z.string(),
@@ -273,7 +277,7 @@ export function useTextDrafts(citySlug: string, status: DraftStatus) {
           supabase
             .from('text_drafts')
             .select(
-              'id, work_id, page, page_end, pdf_page, address, history, architecture, built_year, founder, period, summary, warnings, status, decided_at, edited_at, book_title, source:sources!inner(title, url, volume), work:works!inner(id, slug, name, district, address, history, architecture, cities!inner(slug))',
+              'id, work_id, page, page_end, pdf_page, address, history, architecture, built_year, founder, period, summary, summary_suggestion, summary_suggestion_by, summary_suggested_at, warnings, status, decided_at, edited_at, book_title, source:sources!inner(title, url, volume), work:works!inner(id, slug, name, district, address, history, architecture, cities!inner(slug))',
             )
             .eq('status', status)
             .eq('work.cities.slug', citySlug)
@@ -298,6 +302,33 @@ export function useTextDrafts(citySlug: string, status: DraftStatus) {
  */
 export async function publishDraft(d: TextDraft, fields: DraftFields): Promise<void> {
   await expectOne(supabase.from('text_drafts').update({ ...fields, status: 'published' }).eq('id', d.id).select('id'));
+}
+
+const SUMMARIZE_ERROR: Record<string, string> = {
+  not_configured: 'Özet servisi kurulmamış (Google API anahtarı eksik).',
+  forbidden: 'Bu taslağa erişim yok.',
+  too_long: 'Metin özet için çok uzun.',
+  upstream: 'Gemini isteği reddetti; biraz sonra tekrar deneyin.',
+  upstream_timeout: 'Gemini zamanında yanıt vermedi.',
+  upstream_format: 'Gemini beklenmeyen bir yanıt verdi; tekrar deneyin.',
+};
+
+/**
+ * Tek eser için sade özet önerisi ister (edge function `summarize`, Gemini). Kaynak, formdaki o anki Türkçe ve
+ * İngilizce metindir. Öneri taslağa yazılır; özet alanı ve yayın değişmez.
+ */
+export async function requestSummary(draftId: string, source: { tr: string; en: string }): Promise<void> {
+  const { error } = await supabase.functions.invoke('summarize', { body: { draft_id: draftId, tr: source.tr, en: source.en } });
+  if (!error) return;
+  const { code, detail } = await readError(error);
+  const message = SUMMARIZE_ERROR[code] ?? 'Özet oluşturulamadı.';
+  throw new Error(detail ? `${message} Google: ${detail}` : message);
+}
+
+async function readError(error: unknown): Promise<{ code: string; detail?: string }> {
+  if (typeof error !== 'object' || error === null || !('context' in error) || !(error.context instanceof Response)) return { code: '' };
+  const body = z.object({ error: z.string(), detail: z.string().optional() }).safeParse(await error.context.json().catch(() => null));
+  return body.success ? { code: body.data.error, detail: body.data.detail } : { code: '' };
 }
 
 export async function setDraftStatus(id: string, status: DraftStatus): Promise<void> {
