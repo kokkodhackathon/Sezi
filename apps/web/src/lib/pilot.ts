@@ -24,7 +24,7 @@ let appliedKey: string | null = null;
 export function usePlannerOverlay(overlay: NavOverlay): number {
   useState(() => {
     // Sunucuda modül istekler arasında yaşar: veri değiştiyse (ISR yenilemesi) yeniden uygulanır.
-    const key = JSON.stringify(overlay);
+    const key = JSON.stringify([overlay.points, overlay.overrides]);
     if (key === appliedKey) return null;
     appliedKey = key;
     planner.setOverrides(overlay.overrides);

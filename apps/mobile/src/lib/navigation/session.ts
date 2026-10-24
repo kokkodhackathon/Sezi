@@ -1,4 +1,5 @@
 import {
+  arrivalText,
   bearingDeg,
   createWalker,
   distanceM,
@@ -15,6 +16,7 @@ import {
   stepWalker,
   stereoPan,
   walkerOnLine,
+  withoutSupersededArrivals,
   type Walker,
   type GuidanceStep,
   type LngLat,
@@ -185,8 +187,8 @@ function emit(patch: Partial<NavState>) {
 
 const totalOf = (plan: PlannedRoute) => plan.geometry.nodeAtM.at(-1)!;
 const findPoint = (id: string): NavPoint | undefined => navPoints().find((p) => p.id === id) ?? workPoints().find((p) => p.id === id);
-/** Admin'de varış bilgisi olmayan hedefte eserin kendi anlatımı kullanılır. */
-const workArrival = (slug: string | null) => (slug ? workPoints().find((p) => p.workSlug === slug) : undefined);
+/** Varış metni: eserin özeti, yoksa tarihçesinin başı, o da yoksa admin'in varış noktası (`shared/points.ts › arrivalText`). */
+const workArrival = (slug: string | null, fallback: NavPoint | undefined) => arrivalText(slug, workPoints(), fallback);
 const canHear = () => !!cfg && cfg.profile.hearing !== 'deaf' && cfg.profile.senses.audio && !state.noisy;
 const wantsSim = (c: NavConfig, start: StartChoice) => c.sim && start.kind !== 'here';
 
@@ -430,9 +432,11 @@ function onFix(fix: LocationFix, truthAt: LngLat, walkerAtEnd: boolean) {
   const heading = fix.heading ?? state.heading;
 
   // 1. Noktalar: yarıçapa girilen her nokta bu yürüyüşte bir kez açılır.
-  const due = duePoints(navPoints(), fix, new Set(state.fired)).filter((p) => p.id !== state.plan?.arrival?.id);
+  // Metni yayında olan eserin varış noktası yedekte kalır: o eser yanından geçerken de kendi anlatımıyla açılır.
+  const points = withoutSupersededArrivals(navPoints(), workPoints());
+  const due = duePoints(points, fix, new Set(state.fired)).filter((p) => p.id !== state.plan?.arrival?.id);
   // Yanından geçilen eserler: hedef ve turdaki eserler varışta açılır, yolda değil.
-  const passing = passingWorkPoints(workPoints(), navPoints(), new Set([...(state.dest ? [state.dest] : []), ...state.tour]));
+  const passing = passingWorkPoints(workPoints(), points, new Set([...(state.dest ? [state.dest] : []), ...state.tour]));
   for (const p of duePoints(passing, fix, new Set([...state.fired, ...shownWorks]))) {
     due.push(p);
     shownWorks.add(p.id);
@@ -530,7 +534,7 @@ function arrive() {
     shownWorks.add(WORK_POINT_PREFIX + slug);
   }
   // Varış bilgisi: kart ekranda; ses ayara göre.
-  const arrival = plan?.arrival ?? workArrival(slug);
+  const arrival = workArrival(slug, plan?.arrival);
   if (arrival) {
     emit({ fired: [...state.fired, arrival.id], cueCount: state.cueCount + 1 });
     if (cfg.playback === 'auto') playPoint(arrival.id);

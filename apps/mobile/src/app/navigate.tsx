@@ -1,4 +1,4 @@
-import { coverOf, distanceToLineM, loc, sliceLine, type LngLat, type NavPoint, type SweetTheme } from '@sezi/shared';
+import { arrivalText, coverOf, distanceToLineM, loc, sliceLine, type LngLat, type NavPoint, type SweetTheme } from '@sezi/shared';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -463,8 +463,8 @@ function ArrivalPanel({ state, points, canHear, t }: { state: NavState; points: 
   const slug = state.arrived;
   const { data: work } = useWork(slug ?? '');
   const workPts = useWorkPoints();
-  // Admin'de varış bilgisi yoksa eserin yayındaki metninden kısa anlatım (oturumdaki varışla aynı nokta).
-  const arrival = state.plan?.arrival ?? workPts.find((p) => p.workSlug === slug);
+  // Oturumdaki varışla aynı sıra: eserin özeti, yoksa tarihçe başı, o da yoksa admin'in varış noktası.
+  const arrival = arrivalText(slug, workPts, state.plan?.arrival);
   const cover = work ? coverOf(work) : undefined;
   const nextSlug = state.tour[0];
   const next = nextSlug ? DESTINATIONS.find((n) => n.workSlug === nextSlug) : undefined;

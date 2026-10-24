@@ -395,7 +395,7 @@ export function RoutePlanner({ overlay, initial }: { overlay: NavOverlay; initia
 
           {current ? (
             <>
-              <ViaList plan={current.plan} pointsById={pointsById} />
+              <ViaList plan={current.plan} pointsById={pointsById} workPoints={overlay.works} />
               <section aria-labelledby="route-steps">
                 <h2 id="route-steps" className="font-heading text-sm font-bold">
                   {t("route.steps")}

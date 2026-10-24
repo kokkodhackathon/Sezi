@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { duePoints, excerpt, passingWorkPoints, pointVoice, startPointsOf, workPoint, type LngLat, type LocationFix, type NavPoint } from "./index";
+import { arrivalText, duePoints, excerpt, passingWorkPoints, pointVoice, startPointsOf, withoutSupersededArrivals, workPoint, type LngLat, type LocationFix, type NavPoint } from "./index";
 
 const pt = (x: number, y: number): LngLat => [29 + x / 85_277, 40 + y / 110_540];
 
@@ -111,5 +111,23 @@ describe("passingWorkPoints", () => {
   it("yanından geçerken yarıçapta tetiklenir", () => {
     expect(duePoints([w("c")], fix(pt(15, 0)), new Set()).map((p) => p.id)).toEqual(["work:c"]);
     expect(duePoints([w("c")], fix(pt(30, 0)), new Set())).toEqual([]);
+  });
+});
+
+describe("varış metninin sırası", () => {
+  const w = (slug: string) => workPoint({ slug, citySlug: "bursa", name: { tr: slug }, location: pt(0, 0), text: { tr: `${slug} özeti.` } });
+  const arrival = (slug: string) => point(`v-${slug}`, pt(0, 0), { roles: ["arrival"], workSlug: slug, body: { tr: `${slug} varış notu.` } });
+
+  it("eserin metni varsa o, yoksa admin'in varış noktası", () => {
+    expect(arrivalText("a", [w("a")], arrival("a"))?.body?.tr).toBe("a özeti.");
+    expect(arrivalText("b", [w("a")], arrival("b"))?.body?.tr).toBe("b varış notu.");
+    expect(arrivalText("c", [w("a")], undefined)).toBeUndefined();
+  });
+
+  it("metni olan eserin varış noktası yolda açılmaz, yerine eserin anlatımı açılır; anlatım noktası kalır", () => {
+    const story = point("s-a", pt(0, 0), { roles: ["story", "arrival"], workSlug: "a" });
+    const nav = withoutSupersededArrivals([arrival("a"), arrival("b"), story], [w("a")]);
+    expect(nav.map((p) => p.id)).toEqual(["v-b", "s-a"]);
+    expect(passingWorkPoints([w("a")], withoutSupersededArrivals([arrival("a")], [w("a")]), new Set()).map((p) => p.workSlug)).toEqual(["a"]);
   });
 });

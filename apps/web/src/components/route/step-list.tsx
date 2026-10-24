@@ -1,6 +1,6 @@
 "use client";
 
-import { excerpt, formatDistance, loc, type GuidanceStep, type Hazard, type NavPoint, type PlannedRoute, type Turn } from "@sezi/shared";
+import { arrivalText, excerpt, formatDistance, loc, type GuidanceStep, type Hazard, type NavPoint, type PlannedRoute, type Turn } from "@sezi/shared";
 import {
   ArrowUp,
   ArrowUpLeft,
@@ -75,13 +75,15 @@ export function StepList({ steps }: { steps: GuidanceStep[] }) {
 }
 
 /** Yol üstündeki anlatım noktaları ve varış bilgisi: başlık görünür, metin açılınca. */
-export function ViaList({ plan, pointsById }: { plan: PlannedRoute; pointsById: Record<string, NavPoint> }) {
+export function ViaList({ plan, pointsById, workPoints }: { plan: PlannedRoute; pointsById: Record<string, NavPoint>; workPoints: readonly NavPoint[] }) {
   const { t, lang } = useT();
   const items = plan.via.pointIds.flatMap((id, idx) => {
     const point = pointsById[id];
     return point ? [{ point, index: idx + 1 }] : [];
   });
-  if (items.length === 0 && !plan.arrival) return null;
+  // Mobille aynı sıra: eserin sade özeti, yoksa tarihçe başı, o da yoksa admin'in varış noktası.
+  const arrival = arrivalText(plan.end.workSlug, workPoints, plan.arrival);
+  if (items.length === 0 && !arrival) return null;
 
   const row = (key: string, badge: ReactNode, title: string, body: string | undefined) => (
     <li key={key}>
@@ -107,12 +109,12 @@ export function ViaList({ plan, pointsById }: { plan: PlannedRoute; pointsById: 
           point.body ? loc(point.body, lang) : undefined,
         ),
       )}
-      {plan.arrival
+      {arrival
         ? row(
             "arrival",
             <MapPinCheckInside className="size-6 shrink-0 text-accent-text" aria-label={t("route.arrival")} />,
-            loc(plan.arrival.title, lang),
-            plan.arrival.body ? loc(plan.arrival.body, lang) : undefined,
+            loc(arrival.title, lang),
+            arrival.body ? loc(arrival.body, lang) : undefined,
           )
         : null}
     </ul>

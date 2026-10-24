@@ -6,6 +6,10 @@ import {
   NAV_POINT_COLUMNS,
   TOUR_COLUMNS,
   toTours,
+  toWorkPoints,
+  WORK_TEXT_COLUMNS,
+  workTextRows,
+  type NavPoint,
   WorkRowSchema,
   type CityRow,
   type ExhibitionRow,
@@ -16,6 +20,8 @@ import {
 import { createClient } from "@supabase/supabase-js";
 import { cache } from "react";
 import { z } from "zod";
+
+import { PILOT_SLUGS } from "@/lib/pilot-slugs";
 
 /**
  * Sunucu veri katmanı: sorgular anonim çalışır, RLS yalnız `verified` içeriği döndürür (ayrıca her sorguda
@@ -118,15 +124,28 @@ export interface NavOverlay {
   /** `nav_points_view` satırları; istemcide `toNavPoints` ile ayrıştırılır. */
   points: unknown[];
   overrides: { segment_key: string; type: OverrideType }[];
+  /** Pilot alan eserlerinin anlatımı: yayındaki sade özet, yoksa tarihçenin ilk cümleleri (sunucuda kısaltılır). Varışta önce bu gösterilir (`arrivalText`). */
+  works: NavPoint[];
 }
 
 /** Rota grafiğine uygulanan admin verisi: yayındaki noktalar ve onaylı yol düzeltmeleri (admin ile aynı sıra). */
 export const getNavOverlay = cache(async (): Promise<NavOverlay> => {
-  const [points, overrides] = await Promise.all([
+  const [points, overrides, works] = await Promise.all([
     supabase.from("nav_points_view").select(NAV_POINT_COLUMNS).eq("status", "verified"),
     supabase.from("segment_overrides").select("segment_key, type").eq("area", PILOT_AREA),
+    supabase
+      .from("works_view")
+      .select(WORK_TEXT_COLUMNS)
+      .eq("status", "verified")
+      .eq("location_precision", "exact")
+      .in("slug", [...PILOT_SLUGS]),
   ]);
   if (points.error) throw points.error;
   if (overrides.error) throw overrides.error;
-  return { points: points.data ?? [], overrides: z.array(OverrideRowSchema).parse(overrides.data) };
+  if (works.error) throw works.error;
+  return {
+    points: points.data ?? [],
+    overrides: z.array(OverrideRowSchema).parse(overrides.data),
+    works: toWorkPoints(workTextRows(works.data ?? [], () => true)),
+  };
 });

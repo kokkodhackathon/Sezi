@@ -188,6 +188,36 @@ export function workPoint(w: WorkText): NavPoint {
   };
 }
 
+/** `works_view` sütunları: eser anlatım noktası için (mobil ve web aynı satırı okur). */
+export const WORK_TEXT_COLUMNS = "slug, city_slug, name, lng, lat, location_precision, summary, history";
+
+export const WorkTextRow = z.object({
+  slug: z.string(),
+  city_slug: z.string(),
+  name: LocalizedText,
+  lng: z.number(),
+  lat: z.number(),
+  location_precision: z.literal("exact"),
+  summary: LocalizedText.nullable(),
+  history: LocalizedText.nullable(),
+});
+export type WorkTextRow = z.infer<typeof WorkTextRow>;
+
+/** Geçerli, metinli ve `keep` ile seçilen (ör. pilot alandaki) satırlar; bozuk satır atlanır. */
+export function workTextRows(rows: readonly unknown[], keep: (row: WorkTextRow) => boolean): WorkTextRow[] {
+  return rows.flatMap((r) => {
+    const p = WorkTextRow.safeParse(r);
+    return p.success && (p.data.summary ?? p.data.history) && keep(p.data) ? [p.data] : [];
+  });
+}
+
+/** Eser anlatım noktaları: metin sade özet, yoksa tarihçe (ilk cümleleri `excerpt` ile). */
+export const toWorkPoints = (rows: readonly WorkTextRow[]): NavPoint[] =>
+  rows.flatMap((d) => {
+    const text = d.summary ?? d.history;
+    return text ? [workPoint({ slug: d.slug, citySlug: d.city_slug, name: d.name, location: [d.lng, d.lat], text })] : [];
+  });
+
 /**
  * Yanından geçerken açılabilecek eser noktaları. Admin'de esere bağlı anlatım ya da varış noktası varsa
  * o kullanılır (aynı eser iki kez açılmaz); hedef ve turdaki eserler varışta açılır, yolda değil.
@@ -195,4 +225,22 @@ export function workPoint(w: WorkText): NavPoint {
 export function passingWorkPoints(workPoints: readonly NavPoint[], navPoints: readonly NavPoint[], exclude: ReadonlySet<string>): NavPoint[] {
   const covered = new Set(navPoints.flatMap((p) => (p.workSlug && opensOnApproach(p) ? [p.workSlug] : [])));
   return workPoints.filter((p) => p.workSlug && !covered.has(p.workSlug) && !exclude.has(p.workSlug));
+}
+
+/**
+ * Esere varışta (ve yanından geçerken) açılacak metnin sırası: eserin yayındaki sade özeti, yoksa tarihçenin ilk
+ * cümleleri (ikisi de `workPoint`), o da yoksa admin'in girdiği varış noktası. `workPoint` yalnız metni yayında olan
+ * eser için üretildiğinden onun varlığı "özet ya da tarihçe var" demektir.
+ */
+export function arrivalText(workSlug: string | null | undefined, workPoints: readonly NavPoint[], fallback: NavPoint | undefined): NavPoint | undefined {
+  return (workSlug ? workPoints.find((p) => p.workSlug === workSlug) : undefined) ?? fallback;
+}
+
+/**
+ * Yürüyüşte tetiklenecek noktalar: metni yayında olan eserin varış noktası yedekte kalır (eserin kendi anlatımı açılır,
+ * aynı eser iki kez açılmaz). Anlatım rolü de taşıyan nokta etkilenmez.
+ */
+export function withoutSupersededArrivals(navPoints: readonly NavPoint[], workPoints: readonly NavPoint[]): NavPoint[] {
+  const withText = new Set(workPoints.flatMap((p) => (p.workSlug ? [p.workSlug] : [])));
+  return navPoints.filter((p) => !(p.workSlug && withText.has(p.workSlug) && p.roles.includes("arrival") && !p.roles.includes("story")));
 }
