@@ -211,6 +211,8 @@ function announce(step: GuidanceStep, arrived: boolean, at: LngLat, heading: num
   if (cfg.profile.senses.haptic || !canHear()) {
     void hapticForTurn(step.turn, arrived).then(() => {
       if (step.hazard) return Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      // Duyu ipucunun da titreşim karşılığı olur (düz devam adımında dönüş titreşimi yok): hafif, uyarıdan ayrı.
+      if (step.cue) return Haptics.selectionAsync();
     });
   }
   if (!canHear()) return;
