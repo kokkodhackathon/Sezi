@@ -318,7 +318,7 @@ flowchart LR
 |---|---|---|
 | Esere git | Seçilen eser | Uğrama en çok %25 ya da +300 m uzatır |
 | Gezinti | Hedef yok, anlatım noktaları | 5 nokta, bacak ≤ 500 m, toplam ≤ 1,2 km |
-| Tur | Admin'in girdiği eserler | Sıra: varsayılan başlangıçtan en yakın komşu, ya da admin'in sabitlediği sıra. Profile ulaşılamayan durak atlanır. Her durak ayrı "esere git" |
+| Tur | Admin'in girdiği eserler | Sıra: varsayılan olarak gerçek yol mesafesiyle en kısa yürüyüş (en yakın komşu, sonra 2-opt), ya da admin'in sabitlediği sıra. Profile ulaşılamayan durak atlanır. Her durak ayrı "esere git" |
 
 ---
 

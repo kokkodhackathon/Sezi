@@ -8,6 +8,7 @@ import {
   planTour,
   walkingSpeed,
   type LngLat,
+  type PlannedRoute,
   type Tour,
   type TourStop,
 } from "@sezi/shared";
@@ -16,7 +17,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 
-import { SeziMap, type MapLine, type MapMarker } from "@/components/map";
+import { SeziMap, type MapRoute, type MapMarker } from "@/components/map";
 import {
   ProfileSelect,
   resolveProfileChoice,
@@ -26,20 +27,18 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { WorkThumb } from "@/components/work-thumb";
-import { useAppearance } from "@/lib/appearance";
 import type { NavOverlay, WorkListItem } from "@/lib/data";
 import { href } from "@/lib/i18n";
 import { useT } from "@/lib/i18n-client";
 import { planner, usePlannerOverlay } from "@/lib/pilot";
 import { useProfile } from "@/lib/profile";
-import { routeLineColor } from "@/lib/route-style";
 
 interface ComputedLeg {
   stop: TourStop;
   index: number;
   fromLocation: LngLat;
   nodeLocation: LngLat;
-  coords: LngLat[];
+  plan: PlannedRoute | null;
 }
 
 export function TourDetail({
@@ -54,7 +53,6 @@ export function TourDetail({
   initialProfile?: string;
 }) {
   const { t, lang } = useT();
-  const { contrast } = useAppearance();
   const router = useRouter();
   const pathname = usePathname();
   const savedProfile = useProfile();
@@ -63,6 +61,7 @@ export function TourDetail({
   const [explicitProfile, setExplicitProfile] = useState<ProfileChoice | null>(() =>
     initialProfile ? resolveProfileChoice(initialProfile, true) : null,
   );
+  const [activeLeg, setActiveLeg] = useState<number | null>(null);
 
   const profileChoice: ProfileChoice = explicitProfile
     ? resolveProfileChoice(explicitProfile, savedProfile !== null)
@@ -77,6 +76,7 @@ export function TourDetail({
 
   const handleProfileChange = (next: ProfileChoice) => {
     setExplicitProfile(next);
+    setActiveLeg(null);
     const defaultChoice: ProfileChoice = savedProfile ? "benim" : "walker";
     const qs = next !== defaultChoice ? `?profil=${next}` : "";
     router.replace(`${pathname}${qs}`, { scroll: false });
@@ -107,7 +107,7 @@ export function TourDetail({
         index: i + 1,
         fromLocation: prevLocation,
         nodeLocation,
-        coords: legPlan?.geometry.line ?? [prevLocation, nodeLocation],
+        plan: legPlan,
       });
       prevLocation = nodeLocation;
     });
@@ -115,19 +115,22 @@ export function TourDetail({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [plan, activeProfile, version]);
 
-  const allCoords: LngLat[] = useMemo(() => legs.flatMap((l) => l.coords), [legs]);
+  const allCoords: LngLat[] = useMemo(() => legs.flatMap((l) => l.plan?.geometry.line ?? []), [legs]);
 
-  const mapLines: MapLine[] = useMemo(() => {
-    if (allCoords.length === 0) return [];
-    return [
-      {
-        id: "tour-route",
-        coords: allCoords,
-        color: routeLineColor(contrast),
-        width: 5,
-      },
-    ];
-  }, [allCoords, contrast]);
+  const mapRoute: MapRoute = useMemo(() => ({
+    pieces: legs.flatMap((leg) => leg.plan ? [leg.plan] : []),
+    activeLeg,
+    stops: legs.map((leg) => {
+      const w = worksBySlug[leg.stop.slug];
+      return {
+        id: leg.stop.slug,
+        number: leg.index,
+        onLine: leg.plan?.geometry.line.at(-1) ?? leg.nodeLocation,
+        place: w?.lng != null && w.lat != null ? [w.lng, w.lat] : leg.nodeLocation,
+        label: loc(w?.name ?? leg.stop.name, lang) || leg.stop.slug,
+      };
+    }),
+  }), [legs, activeLeg, worksBySlug, lang]);
 
   const mapMarkers: MapMarker[] = useMemo(() => {
     const list: MapMarker[] = [
@@ -138,20 +141,9 @@ export function TourDetail({
         emphasis: "start",
       },
     ];
-    for (const leg of legs) {
-      const w = worksBySlug[leg.stop.slug];
-      const name = loc(w?.name ?? leg.stop.name, lang) || leg.stop.slug;
-      list.push({
-        id: leg.stop.slug,
-        location: leg.nodeLocation,
-        label: name,
-        number: leg.index,
-        typeSlug: w?.type_slug ?? leg.stop.type,
-      });
-    }
     return list;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [legs, worksBySlug, lang, t, version]);
+  }, [t, version]);
 
   const mapBounds = useMemo(
     () => (allCoords.length > 0 ? boundsOf(allCoords) : null),
@@ -194,7 +186,7 @@ export function TourDetail({
               zoom={15.5}
               bounds={mapBounds}
               markers={mapMarkers}
-              lines={mapLines}
+              route={mapRoute}
               className="h-[360px] w-full rounded-lg border sm:h-[440px]"
             />
           </section>
@@ -242,6 +234,12 @@ export function TourDetail({
             <h2 className="font-heading text-lg font-bold text-foreground">
               {t("tours.stopsTitle")}
             </h2>
+            <div role="group" aria-label={t("route.legSelect")} className="flex flex-wrap gap-2">
+              <Button variant={activeLeg === null ? "default" : "outline"} className="min-h-12" aria-pressed={activeLeg === null} onClick={() => setActiveLeg(null)}>{t("route.allLegs")}</Button>
+              {legs.map((leg, i) => (
+                <Button key={leg.stop.slug} variant={activeLeg === i ? "default" : "outline"} className="min-h-12 min-w-12" aria-pressed={activeLeg === i} aria-label={i === 0 ? t("route.firstLeg") : t("route.betweenStops", { from: i, to: i + 1 })} onClick={() => setActiveLeg(i)}>{i + 1}</Button>
+              ))}
+            </div>
             <ol className="flex flex-col gap-3">
               {legs.map((leg) => {
                 const w = worksBySlug[leg.stop.slug];
@@ -258,6 +256,8 @@ export function TourDetail({
                 return (
                   <li
                     key={leg.stop.slug}
+                    onClick={() => setActiveLeg(leg.index - 1)}
+                    onFocus={() => setActiveLeg(leg.index - 1)}
                     className="flex flex-col justify-between gap-3 rounded-lg border bg-card p-3 sm:flex-row sm:items-center"
                   >
                     <div className="flex items-center gap-3">

@@ -1,6 +1,6 @@
 import Mapbox, { Camera, CircleLayer, FillExtrusionLayer, FillLayer, Image as MapImage, Images, LineLayer, MapView, ShapeSource, StyleImport, SymbolLayer } from '@rnmapbox/maps';
-import { GLYPH_TYPES, glyphType, LANDMARK_FULL_ZOOM, LANDMARK_MIN_ZOOM, LANDMARK_OPACITY, MAP_PITCH, PilotBuildingsSchema, toneForType, type LngLat } from '@sezi/shared';
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState, type ComponentRef, type ReactNode } from 'react';
+import { GLYPH_TYPES, glyphType, LANDMARK_FULL_ZOOM, LANDMARK_MIN_ZOOM, LANDMARK_OPACITY, laneOffsetPx, MAP_PITCH, PilotBuildingsSchema, polylineLength, ROUTE_ARROW_SPACING_PX, ROUTE_FLOW_DASHES, ROUTE_FLOW_STEP_MS, routeLineParts, sliceLine, stopConnector, toneForType, type LinePart, type LngLat, type RoutePiece } from '@sezi/shared';
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, type ComponentRef, type ReactNode } from 'react';
 import { InteractionManager, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { WorkGlyphInline } from '@/design/work-glyph';
@@ -169,6 +169,9 @@ export const SeziMap = forwardRef<SeziMapHandle, SeziMapProps>(function SeziMap(
 /** Harita resim adı: tema değişince yeni ad, eski resim önbellekte kalmaz. Simgesi olmayan tür `diger`. */
 const iconName = (slug: string, theme: string) => `type-${theme}-${glyphType(slug)}`;
 const ICON_SIZE = 30;
+const ROUTE_WIDTH = 6;
+const ARROW_SIZE = 16;
+const arrowName = (theme: string) => `route-arrow-${theme}`;
 
 /**
  * Eser türü simgeleri: yüzey renginde yuvarlak, kenarı ve glifi tür mürekkebinde. Siluet türü anlatır,
@@ -179,6 +182,12 @@ function TypeIcons() {
   const theme = useThemeKey();
   return (
     <Images>
+      <MapImage name={arrowName(theme)}>
+        {/* Sağa bakan şevron: çizgi yerleşimi resmi yürüyüş yönüne döndürür. */}
+        <View collapsable={false} style={{ width: ARROW_SIZE, height: ARROW_SIZE, alignItems: 'center', justifyContent: 'center' }}>
+          <View style={{ width: 7, height: 7, borderTopWidth: 2.5, borderRightWidth: 2.5, borderColor: t.surface, transform: [{ rotate: '45deg' }] }} />
+        </View>
+      </MapImage>
       {GLYPH_TYPES.map((slug) => {
         const ink = t.tones[toneForType(slug)].ink;
         return (
@@ -279,21 +288,72 @@ function PilotLandmarks() {
   );
 }
 
-/** Rota çizgisi: yürünen kısım soluk, kalan kısım vurgulu. Etiketlerin altında, yolların üstünde. */
-export function RouteLine({ id = 'route', line, walked }: { id?: string; line: LngLat[]; walked?: LngLat[] }) {
+/** Segment rengi ve şerit kayması; aynı bacak/şerit birleşimleri okları ve akışı taşır. */
+function lineFeatures(parts: LinePart[]): GeoJSON.FeatureCollection<GeoJSON.LineString> {
+  return {
+    type: 'FeatureCollection',
+    features: parts.map((part) => ({
+      type: 'Feature',
+      properties: { leg: part.leg, progress: part.progress, offset: laneOffsetPx(part.lane, ROUTE_WIDTH), arrowOffset: [0, laneOffsetPx(part.lane, ROUTE_WIDTH)] },
+      geometry: { type: 'LineString', coordinates: part.coords },
+    })),
+  };
+}
+
+/** Rota: yön okları, git-dön şeritleri ve bacak vurgusu; hareket yalnız önizlemede açıktır. */
+export function RouteLine({ id = 'route', pieces, activeLeg = null, walked, animate = false }: { id?: string; pieces: RoutePiece[]; activeLeg?: number | null; walked?: LngLat[]; animate?: boolean }) {
   const t = useSweetTheme();
-  if (line.length < 2) return null;
+  const theme = useThemeKey();
+  const reduced = useReducedMotion();
+  const flowing = animate && !reduced && !t.outlined;
+  const [flowStep, setFlowStep] = useState(0);
+  const { parts, runs } = useMemo(() => routeLineParts(pieces), [pieces]);
+  const shape = useMemo(() => lineFeatures(parts), [parts]);
+  const runShape = useMemo(() => lineFeatures(runs), [runs]);
+  const walkedShape = useMemo(() => {
+    let remaining = walked ? polylineLength(walked) : 0;
+    const completed: LinePart[] = [];
+    for (const part of parts) {
+      if (remaining <= 0) break;
+      const length = polylineLength(part.coords);
+      completed.push({ ...part, coords: remaining >= length ? part.coords : sliceLine(part.coords, 0, remaining) });
+      remaining -= length;
+    }
+    return lineFeatures(completed);
+  }, [parts, walked]);
+  useEffect(() => {
+    if (!flowing) return;
+    const timer = setInterval(() => setFlowStep((step) => (step + 1) % ROUTE_FLOW_DASHES.length), ROUTE_FLOW_STEP_MS);
+    return () => clearInterval(timer);
+  }, [flowing]);
+  const opacity = activeLeg === null ? 1 : ['case', ['==', ['get', 'leg'], activeLeg], 1, 0.3] as const;
+  if (!parts.length) return null;
   return (
     <>
-      <ShapeSource id={`${id}-src`} shape={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: line } }}>
-        <LineLayer id={`${id}-casing`} slot="middle" style={{ lineCap: 'round', lineJoin: 'round', lineColor: t.surface, lineWidth: 11 }} />
-        <LineLayer id={`${id}-line`} slot="middle" style={{ lineCap: 'round', lineJoin: 'round', lineColor: t.primaryText, lineWidth: 6 }} />
+      <ShapeSource id={`${id}-src`} shape={shape}>
+        <LineLayer id={`${id}-casing`} slot="middle" style={{ lineCap: 'round', lineJoin: 'round', lineColor: t.surface, lineWidth: 11, lineOffset: ['get', 'offset'], lineOpacity: opacity }} />
+        <LineLayer id={`${id}-line`} slot="middle" style={{ lineCap: 'round', lineJoin: 'round', lineColor: t.outlined ? t.primaryText : ['interpolate', ['linear'], ['get', 'progress'], 0, t.primaryText, 1, t.accentText], lineWidth: ROUTE_WIDTH, lineOffset: ['get', 'offset'], lineOpacity: opacity }} />
       </ShapeSource>
-      {walked && walked.length >= 2 ? (
-        <ShapeSource id={`${id}-walked-src`} shape={{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: walked } }}>
-          <LineLayer id={`${id}-walked`} slot="middle" style={{ lineCap: 'round', lineJoin: 'round', lineColor: t.textMuted, lineWidth: 6, lineOpacity: 0.7 }} />
+      {walkedShape.features.length ? (
+        <ShapeSource id={`${id}-walked-src`} shape={walkedShape}>
+          <LineLayer id={`${id}-walked`} slot="middle" style={{ lineCap: 'round', lineJoin: 'round', lineColor: t.textMuted, lineWidth: ROUTE_WIDTH, lineOffset: ['get', 'offset'], lineOpacity: ['*', opacity, 0.7] }} />
         </ShapeSource>
       ) : null}
+      <ShapeSource id={`${id}-runs-src`} shape={runShape}>
+        {flowing ? (
+          <LineLayer
+            id={`${id}-flow`}
+            slot="middle"
+            filter={activeLeg === null ? ['has', 'leg'] : ['==', ['get', 'leg'], activeLeg]}
+            style={{ lineColor: t.surface, lineWidth: ROUTE_WIDTH * 0.4, lineOffset: ['get', 'offset'], lineOpacity: 0.6, lineDasharray: [...ROUTE_FLOW_DASHES[flowStep]!] }}
+          />
+        ) : <></>}
+        <SymbolLayer
+          id={`${id}-arrows`}
+          slot="middle"
+          style={{ symbolPlacement: 'line', symbolSpacing: ROUTE_ARROW_SPACING_PX, iconImage: arrowName(theme), iconSize: 1, iconRotationAlignment: 'map', iconKeepUpright: false, iconOffset: ['get', 'arrowOffset'], iconOpacity: opacity, iconAllowOverlap: true, iconIgnorePlacement: true, iconOcclusionOpacity: 1 }}
+        />
+      </ShapeSource>
     </>
   );
 }
@@ -325,6 +385,26 @@ export interface MapPoint {
   selected?: boolean;
   /** Eser türü (work_types.slug): verilirse nokta türün simgesiyle çizilir (siluet türü anlatır). */
   typeSlug?: string;
+}
+
+/** Numaralı durak çizgi üstünde kalır; eserin gerçek yeri uzaktaysa kesikli bağ gösterilir. */
+export function StopBadges({ id = 'stops', stops, onPress }: { id?: string; stops: (MapPoint & { onLine: LngLat })[]; onPress?: (pointId: string) => void }) {
+  const t = useSweetTheme();
+  const connectors: GeoJSON.FeatureCollection<GeoJSON.LineString> = {
+    type: 'FeatureCollection',
+    features: stops.flatMap((stop) => {
+      const coords = stopConnector(stop.onLine, stop.location);
+      return coords ? [{ type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } }] : [];
+    }),
+  };
+  return (
+    <>
+      <ShapeSource id={`${id}-connectors-src`} shape={connectors}>
+        <LineLayer id={`${id}-connectors`} slot="middle" style={{ lineColor: t.textMuted, lineWidth: 1.5, lineDasharray: [2, 2] }} />
+      </ShapeSource>
+      <PointsLayer id={id} points={stops.map((stop) => ({ ...stop, location: stop.onLine }))} onPress={onPress} />
+    </>
+  );
 }
 
 /** Seçili simge yaklaşık 1,25 kat; harita animasyonu değil, yeniden çizim (hareket azaltmadan etkilenmez). */

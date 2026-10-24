@@ -64,4 +64,28 @@ describe("planTour", () => {
     expect(planTour(planner, tour("t", ["yok", "han-duz"]), walker, pt(0, 0))?.stops.map((s) => s.slug)).toEqual(["han-duz"]);
     expect(planTour(planner, tour("t", ["yok", "yok-2"]), walker, pt(0, 0))).toBeNull();
   });
+
+  it("otomatik sıra en yakın komşudan kısaysa onu seçer (git-gel yapmaz)", () => {
+    // Düz yol: -60 (C) ... -10 (A) ... 0 (S) ... +20 (B). En yakın komşu: A, B, C = 10 + 30 + 80 = 120 m.
+    // En kısa: B, A, C = 20 + 30 + 50 = 100 m.
+    const line: PilotGraphData = {
+      area: "test-line",
+      name: { tr: "Düz" },
+      center: pt(0, 0),
+      nodes: [
+        { id: "C", lynchType: "landmark", location: pt(-60, 0), workSlug: "c", workType: "han", name: { tr: "C" } },
+        { id: "A", lynchType: "landmark", location: pt(-10, 0), workSlug: "a", workType: "han", name: { tr: "A" } },
+        { id: "S", lynchType: "node", location: pt(0, 0) },
+        { id: "B", lynchType: "landmark", location: pt(20, 0), workSlug: "b", workType: "han", name: { tr: "B" } },
+      ],
+      segments: [
+        { id: "CA", from: "C", to: "A", lengthM: 50, steps: 0 },
+        { id: "AS", from: "A", to: "S", lengthM: 10, steps: 0 },
+        { id: "SB", from: "S", to: "B", lengthM: 20, steps: 0 },
+      ],
+    };
+    const plan = planTour(createPlanner(line), tour("t", ["a", "b", "c"]), profileFor("walker", "tr"), pt(0, 0));
+    expect(plan?.stops.map((s) => s.slug)).toEqual(["b", "a", "c"]);
+    expect(plan?.lengthM).toBe(100);
+  });
 });

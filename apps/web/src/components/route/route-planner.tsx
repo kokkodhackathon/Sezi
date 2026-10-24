@@ -4,6 +4,7 @@ import {
   boundsOf,
   formatDistance,
   loc,
+  pointAlong,
   PROFILE_KEYS,
   profileFor,
   toNavPoints,
@@ -18,7 +19,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useMemo, useState, useSyncExternalStore } from "react";
 
-import { SeziMap, type MapLine, type MapMarker } from "@/components/map";
+import { SeziMap, type MapLine, type MapMarker, type MapRoute } from "@/components/map";
 import { PlacePicker, type PlaceOption } from "@/components/route/place-picker";
 import { PROFILE_ICON, ProfileSelect, resolveProfileChoice, resolveUserProfile, type ProfileChoice } from "@/components/route/profile-select";
 import { RollingText } from "@/components/rolling-text";
@@ -30,7 +31,7 @@ import { href } from "@/lib/i18n";
 import { useT } from "@/lib/i18n-client";
 import { planner, usePlannerOverlay } from "@/lib/pilot";
 import { useProfile } from "@/lib/profile";
-import { PROFILE_DRAW_ORDER, profileLine, routeLineColor } from "@/lib/route-style";
+import { PROFILE_DRAW_ORDER, profileLine } from "@/lib/route-style";
 import { cn } from "@/lib/utils";
 
 export interface InitialRouteParams {
@@ -126,6 +127,7 @@ export function RoutePlanner({ overlay, initial }: { overlay: NavOverlay; initia
     initial.profil ? resolveProfileChoice(initial.profil, true) : null,
   );
   const [compare, setCompare] = useState(initial.karsilastir === "1");
+  const [activeLeg, setActiveLeg] = useState<number | null>(null);
 
   const profileChoice: ProfileChoice = explicitProfile
     ? resolveProfileChoice(explicitProfile, savedProfile !== null)
@@ -158,6 +160,7 @@ export function RoutePlanner({ overlay, initial }: { overlay: NavOverlay; initia
   );
 
   const sync = (next: Partial<{ startId: string; picked: LngLat | null; destSlug: string; profile: ProfileChoice; compare: boolean }>) => {
+    setActiveLeg(null);
     const s = { startId, picked, destSlug, profile: profileChoice, compare, ...next };
     const q = new URLSearchParams();
     if (s.destSlug) q.set("hedef", s.destSlug);
@@ -222,8 +225,23 @@ export function RoutePlanner({ overlay, initial }: { overlay: NavOverlay; initia
         return [{ id: k, coords: r.plan.geometry.line, color: s.color, width: s.width, dash: s.dash }];
       });
     }
-    return current ? [{ id: "route", coords: current.plan.geometry.line, color: routeLineColor(contrast), width: 6 }] : [];
-  }, [rows, current, contrast]);
+    return [];
+  }, [rows, contrast]);
+
+  const mapRoute: MapRoute | null = useMemo(() => {
+    if (!current || rows) return null;
+    const plan = current.plan;
+    return {
+      pieces: [{ route: plan.route, geometry: plan.geometry, breaksM: plan.via.atM }],
+      activeLeg,
+      stops: plan.via.pointIds.flatMap((id, i) => {
+        const point = pointsById[id];
+        const atM = plan.via.atM[i];
+        if (!point || atM === undefined) return [];
+        return [{ id: `via:${id}`, number: i + 1, onLine: pointAlong(plan.geometry.line, atM), place: point.location, label: loc(point.title, lang) }];
+      }),
+    };
+  }, [current, rows, activeLeg, pointsById, lang]);
 
   const markers: MapMarker[] = useMemo(() => {
     const list: MapMarker[] = works
@@ -232,14 +250,8 @@ export function RoutePlanner({ overlay, initial }: { overlay: NavOverlay; initia
     list.push({ id: "start", location: usePicked && picked ? picked : (current?.plan.start.location ?? from), label: t("route.markerStart"), emphasis: usePicked ? "picked" : "start" });
     const dest = current?.plan.end ?? (destSlug ? planner.landmarkNodeForWork(destSlug) : undefined);
     if (dest && (destSlug || current)) list.push({ id: "dest", location: dest.location, label: loc(dest.name, lang) || t("route.markerDest"), emphasis: "dest" });
-    if (current && !rows) {
-      current.plan.via.pointIds.forEach((id, i) => {
-        const p = pointsById[id];
-        if (p) list.push({ id: `via:${id}`, location: p.location, label: loc(p.title, lang), number: i + 1 });
-      });
-    }
     return list;
-  }, [works, destSlug, usePicked, picked, current, from, rows, pointsById, lang, t]);
+  }, [works, destSlug, usePicked, picked, current, from, lang, t]);
 
   const bounds = useMemo(() => {
     const all = rows ? rows.flatMap((r) => r.summary?.plan.geometry.line ?? []) : (current?.plan.geometry.line ?? []);
@@ -260,6 +272,7 @@ export function RoutePlanner({ overlay, initial }: { overlay: NavOverlay; initia
           bounds={bounds}
           markers={markers}
           lines={lines}
+          route={mapRoute}
           onMarkerClick={(id) => {
             if (id.startsWith("work:")) chooseDest(id.slice(5));
           }}
@@ -395,7 +408,7 @@ export function RoutePlanner({ overlay, initial }: { overlay: NavOverlay; initia
 
           {current ? (
             <>
-              <ViaList plan={current.plan} pointsById={pointsById} workPoints={overlay.works} />
+              <ViaList plan={current.plan} pointsById={pointsById} workPoints={overlay.works} activeLeg={activeLeg} onSelectLeg={setActiveLeg} />
               <section aria-labelledby="route-steps">
                 <h2 id="route-steps" className="font-heading text-sm font-bold">
                   {t("route.steps")}

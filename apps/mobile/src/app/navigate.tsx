@@ -1,4 +1,4 @@
-import { arrivalText, coverOf, distanceToLineM, loc, sliceLine, type LngLat, type NavPoint, type SweetTheme } from '@sezi/shared';
+import { arrivalText, coverOf, distanceToLineM, loc, pointAlong, sliceLine, type LngLat, type NavPoint, type RoutePiece, type SweetTheme } from '@sezi/shared';
 import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -7,7 +7,7 @@ import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CueFlash } from '@/components/cue-flash';
-import { EndPin, ExtraLines, PointsLayer, RouteLine, SeziMap, UserDot, type MapPoint, type SeziMapHandle } from '@/components/map';
+import { EndPin, ExtraLines, PointsLayer, RouteLine, SeziMap, StopBadges, UserDot, type MapPoint, type SeziMapHandle } from '@/components/map';
 import { LynchLine, type LynchStop } from '@/components/lynch-line';
 import { NavSheet } from '@/components/nav-sheet';
 import { NavAlertBanner } from '@/components/nav-alert';
@@ -100,6 +100,13 @@ export default function Navigate() {
 
   const order = useMemo(() => new Map((plan?.via.pointIds ?? []).map((id, i) => [id, i + 1])), [plan]);
   const mapPoints = useMemo(() => buildMapPoints(points, starts, state, order, lang), [points, starts, state, order, lang]);
+  const pieces = useMemo<RoutePiece[]>(() => plan ? [{ route: plan.route, geometry: plan.geometry, breaksM: plan.via.atM }] : [], [plan]);
+  const stopBadges = useMemo(() => !plan ? [] : mapPoints.flatMap((point) => {
+    if (!point.order) return [];
+    const atM = plan.via.atM[point.order - 1];
+    return atM === undefined ? [] : [{ ...point, onLine: pointAlong(plan.geometry.line, atM) }];
+  }), [plan, mapPoints]);
+  const otherPoints = useMemo(() => mapPoints.filter((point) => !point.order), [mapPoints]);
 
   if (!profile || !cfg) return null;
 
@@ -107,6 +114,7 @@ export default function Navigate() {
   const sim = cfg.sim && state.start.kind !== 'here';
   const popupPoint = state.popup ? (points.find((p) => p.id === state.popup) ?? workPts.find((p) => p.id === state.popup)) : undefined;
   const walked = plan && state.phase === 'active' && state.distance > 1 ? sliceLine(plan.geometry.line, 0, state.distance) : undefined;
+  const activeLeg = plan && state.phase === 'active' ? plan.via.atM.filter((atM) => atM <= state.distance).length : null;
   const userAt = state.phase === 'active' ? state.position : state.start.kind === 'here' ? state.here : null;
   const startAt = state.start.kind === 'pick' ? state.start.location : plan?.geometry.line[0];
 
@@ -130,9 +138,10 @@ export default function Navigate() {
         initialPadding={{ top: insets.top + 72 }}
         onPress={onMapPress}
         accessibilityLabel={tr('nav.mapLabel', { n: order.size })}>
-        {plan ? <RouteLine line={plan.geometry.line} walked={walked} /> : null}
+        {plan ? <RouteLine pieces={pieces} activeLeg={activeLeg} walked={walked} animate={state.phase === 'plan'} /> : null}
         {state.blocked.length ? <ExtraLines id="blocked" data={segmentLines(state.blocked)} color={t.danger} dashed /> : null}
-        <PointsLayer points={mapPoints} onPress={onPointPress} />
+        <PointsLayer points={otherPoints} onPress={onPointPress} />
+        <StopBadges stops={stopBadges} onPress={onPointPress} />
         {startAt && state.phase === 'plan' ? <EndPin id="start" location={startAt} kind="start" /> : null}
         {plan ? <EndPin id="end" location={plan.end.location} kind="end" /> : null}
         {userAt ? <UserDot location={userAt} /> : null}

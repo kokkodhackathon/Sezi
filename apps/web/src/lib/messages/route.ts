@@ -37,6 +37,10 @@ export const tr = {
   "route.markerStart": "Başlangıç",
   "route.markerDest": "Hedef",
   "route.sameAs": "{profile} ile aynı yol",
+  "route.legSelect": "Haritada vurgulanan rota bölümü",
+  "route.allLegs": "Tümü",
+  "route.firstLeg": "Başlangıç → 1. durak",
+  "route.betweenStops": "{from}. durak → {to}. durak",
 
   "tours.title": "Turlar",
   "tours.subtitle": "Profilinize göre hesaplanır; durak sırası ve mesafeler gerçek yol ağından gelir.",
@@ -91,6 +95,10 @@ export const en: Record<keyof typeof tr, string> = {
   "route.markerStart": "Start",
   "route.markerDest": "Destination",
   "route.sameAs": "Same path as {profile}",
+  "route.legSelect": "Route section highlighted on the map",
+  "route.allLegs": "All",
+  "route.firstLeg": "Start → stop 1",
+  "route.betweenStops": "Stop {from} → stop {to}",
 
   "tours.title": "Tours",
   "tours.subtitle": "Calculated for your profile; stop order and distances come from the real path network.",

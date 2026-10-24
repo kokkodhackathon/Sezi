@@ -12,11 +12,18 @@ import {
   PilotBuildingsSchema,
   sweetThemes,
   toneForType,
+  routeLineParts,
+  laneOffsetPx,
+  stopConnector,
+  ROUTE_ARROW_SPACING_PX,
+  ROUTE_FLOW_DASHES,
+  ROUTE_FLOW_STEP_MS,
+  type RoutePiece,
   type LngLat,
   type SweetTheme,
 } from "@sezi/shared";
 import type { Feature, FeatureCollection, GeoJsonProperties } from "geojson";
-import type { ExpressionSpecification, Map as MapboxMap } from "mapbox-gl";
+import type { ExpressionSpecification, LineLayerSpecification, Map as MapboxMap } from "mapbox-gl";
 import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import { useAppearance } from "@/lib/appearance";
@@ -50,6 +57,12 @@ export interface MapLine {
   dash?: number[];
 }
 
+export interface MapRoute {
+  pieces: RoutePiece[];
+  activeLeg?: number | null;
+  stops?: { id: string; number: number; onLine: LngLat; place: LngLat; label: string }[];
+}
+
 export interface SeziMapProps {
   /** Ekran okuyucu için bölge adı. */
   label: string;
@@ -61,6 +74,7 @@ export interface SeziMapProps {
   fitPadding?: { top: number; right: number; bottom: number; left: number };
   markers?: MapMarker[];
   lines?: MapLine[];
+  route?: MapRoute | null;
   /** Vurgulanan yol parçası (bildirim). */
   highlight?: LngLat[] | null;
   onMarkerClick?: (id: string) => void;
@@ -89,6 +103,29 @@ const ICON_RATIO = 2;
 const ICON_SCALE = 0.95;
 const ICON_SCALE_SELECTED = 1.2;
 const iconName = (slug: string) => `type-${glyphType(slug)}`;
+const ROUTE_WIDTH = 7;
+
+/** Yön oku: çizginin içine sığan yüzey renginde şerit (çizgi 7 px, ok 5 px yüksek). */
+async function addRouteArrow(m: MapboxMap, th: SweetTheme) {
+  const img = new Image(28, 28);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 14 14"><path d="m5 4 3.4 3-3.4 3" fill="none" stroke="${th.surface}" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+  await img.decode();
+  if (!m.hasImage("route-arrow")) m.addImage("route-arrow", img, { pixelRatio: 2 });
+}
+
+function addRouteLayers(m: MapboxMap, th: SweetTheme) {
+  for (const id of ["route-parts", "route-runs", "route-connectors"]) m.addSource(id, { type: "geojson", data: fc([]) });
+  const opacity: ExpressionSpecification = ["get", "opacity"];
+  const offset: ExpressionSpecification = ["get", "offset"];
+  const layout: LineLayerSpecification["layout"] = { "line-join": "round", "line-cap": "round" };
+  m.addLayer({ id: "route-casing", type: "line", slot: "top", source: "route-parts", layout, paint: { "line-color": th.surface, "line-width": ROUTE_WIDTH + 4, "line-offset": offset, "line-opacity": opacity } });
+  m.addLayer({ id: "route-parts", type: "line", slot: "top", source: "route-parts", layout, paint: { "line-color": th.outlined ? th.primaryText : ["interpolate", ["linear"], ["get", "progress"], 0, th.primaryText, 1, th.accentText], "line-width": ROUTE_WIDTH, "line-offset": offset, "line-opacity": opacity } });
+  m.addLayer({ id: "route-connectors", type: "line", slot: "top", source: "route-connectors", paint: { "line-color": th.textMuted, "line-width": 1.5, "line-dasharray": [2, 2] } });
+  // Akan çizgi okların altında ve soluk: yönü oklar söyler, akış yalnız hareket hissi verir.
+  m.addLayer({ id: "route-flow", type: "line", slot: "top", source: "route-runs", layout, paint: { "line-color": th.surface, "line-width": 1.5, "line-offset": offset, "line-opacity": 0, "line-dasharray": [...ROUTE_FLOW_DASHES[0]!] } });
+  m.addLayer({ id: "route-arrows", type: "symbol", slot: "top", source: "route-runs", layout: { "symbol-placement": "line", "symbol-spacing": ROUTE_ARROW_SPACING_PX, "icon-image": "route-arrow", "icon-size": 1, "icon-rotation-alignment": "map", "icon-keep-upright": false, "icon-offset": ["array", "number", 2, ["get", "arrowOffset"]], "icon-allow-overlap": true, "icon-ignore-placement": true }, paint: { "icon-opacity": opacity, "icon-occlusion-opacity": 1 } });
+}
 
 /**
  * Eser türü simgeleri (mobil haritayla aynı): yüzey renginde yuvarlak, kenarı ve glifi tür mürekkebinde.
@@ -204,13 +241,25 @@ export default function SeziMap(props: SeziMapProps) {
         m.setPaintProperty(`line-${i}`, "line-dasharray", l.dash ?? [1, 0]);
       }
     }
+    const drawing = routeLineParts(p.route?.pieces ?? []);
+    const feature = (part: (typeof drawing.parts)[number]) => {
+      const offset = laneOffsetPx(part.lane, ROUTE_WIDTH);
+      return lineFeature(part.coords, { leg: part.leg, progress: part.progress, offset, arrowOffset: [0, offset], opacity: p.route?.activeLeg == null || part.leg === p.route.activeLeg ? 1 : 0.3 });
+    };
+    setData(m, "route-parts", fc(drawing.parts.map(feature)));
+    setData(m, "route-runs", fc(drawing.runs.map(feature)));
+    setData(m, "route-connectors", fc((p.route?.stops ?? []).flatMap((s) => {
+      const coords = stopConnector(s.onLine, s.place);
+      return coords ? [lineFeature(coords)] : [];
+    })));
+    m.setFilter("route-flow", p.route?.activeLeg == null ? null : ["==", ["get", "leg"], p.route.activeLeg]);
     setData(m, "highlight", fc(p.highlight ? [lineFeature(p.highlight)] : []));
     m.getCanvas().style.cursor = p.onMapClick ? "crosshair" : "";
     setData(
       m,
       "markers",
       fc(
-        (p.markers ?? []).map((k) => ({
+        [...(p.markers ?? []), ...(p.route?.stops ?? []).map((s): MapMarker => ({ id: s.id, number: s.number, location: s.onLine, label: s.label }))].map((k) => ({
           type: "Feature",
           properties: {
             id: k.id,
@@ -246,9 +295,10 @@ export default function SeziMap(props: SeziMapProps) {
     const th = themeRef.current;
     const look = lookRef.current;
     const m = createMap(box.current, latest.current.center, latest.current.zoom ?? 15, look);
+    let flowTimer: number | undefined;
     map.current = m;
     m.on("load", async () => {
-      await addTypeIcons(m, th);
+      await Promise.all([addTypeIcons(m, th), addRouteArrow(m, th)]);
       if (map.current !== m) return; // simgeler yüklenirken harita kaldırıldı
       addPilotLayers(m, th, look);
       for (let i = 0; i < MAX_LINES; i++) {
@@ -271,6 +321,15 @@ export default function SeziMap(props: SeziMapProps) {
           paint: { "line-color": th.primaryText, "line-width": 4 },
           layout: { "line-join": "round" },
         });
+      }
+      addRouteLayers(m, th);
+      if (!reducedMotion && !th.outlined) {
+        let step = 0;
+        m.setPaintProperty("route-flow", "line-opacity", 0.45);
+        flowTimer = window.setInterval(() => {
+          step = (step + 1) % ROUTE_FLOW_DASHES.length;
+          m.setPaintProperty("route-flow", "line-dasharray", [...ROUTE_FLOW_DASHES[step]!]);
+        }, ROUTE_FLOW_STEP_MS);
       }
       m.addSource("highlight", { type: "geojson", data: fc([]) });
       m.addLayer({ id: "highlight", type: "line", slot: "top", source: "highlight", paint: { "line-color": th.accentText, "line-width": 8 }, layout: { "line-cap": "round" } });
@@ -308,6 +367,8 @@ export default function SeziMap(props: SeziMapProps) {
         layout: { "text-field": ["get", "number"], "text-font": MAP_FONT, "text-size": 12, "text-allow-overlap": true },
         paint: { "text-color": th.surface, "text-occlusion-opacity": 1 },
       });
+      // Numaralı duraklar aynı yerdeki eser simgesinin altında kalmaz.
+      m.moveLayer("markers", "markers-number");
       m.addLayer({
         id: "markers-label",
         type: "symbol",
@@ -340,6 +401,7 @@ export default function SeziMap(props: SeziMapProps) {
       sync();
     });
     return () => {
+      clearInterval(flowTimer);
       ready.current = false;
       fitted.current = null;
       map.current = null;
@@ -347,7 +409,7 @@ export default function SeziMap(props: SeziMapProps) {
     };
     // Tema, sade harita ya da eğik bakış değişince harita yeniden kurulur (taban harita ayarları ve katman renkleri).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contrast, plain, pitched]);
+  }, [contrast, plain, pitched, reducedMotion]);
 
   useEffect(sync);
 

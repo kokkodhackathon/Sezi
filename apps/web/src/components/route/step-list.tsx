@@ -74,31 +74,42 @@ export function StepList({ steps }: { steps: GuidanceStep[] }) {
   );
 }
 
-/** Yol üstündeki anlatım noktaları ve varış bilgisi: başlık görünür, metin açılınca. */
-export function ViaList({ plan, pointsById, workPoints }: { plan: PlannedRoute; pointsById: Record<string, NavPoint>; workPoints: readonly NavPoint[] }) {
+/** Yol üstündeki anlatım noktaları ve varış bilgisi; seçilen satır haritadaki geliş bacağını vurgular. */
+export function ViaList({ plan, pointsById, workPoints, activeLeg, onSelectLeg }: { plan: PlannedRoute; pointsById: Record<string, NavPoint>; workPoints: readonly NavPoint[]; activeLeg: number | null; onSelectLeg: (leg: number | null) => void }) {
   const { t, lang } = useT();
+  // Yol üstündeki eser varış noktası da aynı sırayla: eserin özeti/tarihçesi varsa o (anlatım noktası kendi metniyle kalır).
   const items = plan.via.pointIds.flatMap((id, idx) => {
-    const point = pointsById[id];
-    return point ? [{ point, index: idx + 1 }] : [];
+    const raw = pointsById[id];
+    if (!raw) return [];
+    const point = raw.roles.includes("story") ? raw : (arrivalText(raw.workSlug, workPoints, raw) ?? raw);
+    return [{ point, index: idx + 1 }];
   });
   // Mobille aynı sıra: eserin sade özeti, yoksa tarihçe başı, o da yoksa admin'in varış noktası.
   const arrival = arrivalText(plan.end.workSlug, workPoints, plan.arrival);
   if (items.length === 0 && !arrival) return null;
 
-  const row = (key: string, badge: ReactNode, title: string, body: string | undefined) => (
+  const row = (key: string, badge: ReactNode, title: string, body: string | undefined, leg: number) => (
     <li key={key}>
-      <details className="group rounded-lg open:bg-secondary/60">
-        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 rounded-lg px-2 hover:bg-muted [&::-webkit-details-marker]:hidden">
-          {badge}
-          <span className="flex-1 font-semibold">{title}</span>
-        </summary>
-        {body ? <p className="px-3 pb-3 text-sm text-muted-foreground">{excerpt(body)}</p> : null}
-      </details>
+      <button
+        type="button"
+        aria-pressed={activeLeg === leg}
+        onMouseEnter={() => onSelectLeg(leg)}
+        onFocus={() => onSelectLeg(leg)}
+        onClick={() => onSelectLeg(leg)}
+        className="flex min-h-12 w-full items-start gap-3 rounded-lg px-2 py-3 text-left hover:bg-muted aria-pressed:bg-secondary aria-pressed:outline aria-pressed:outline-2 aria-pressed:outline-border"
+      >
+        {badge}
+        <span className="grid flex-1 gap-1">
+          <span className="font-semibold">{title}</span>
+          {body ? <span className="text-sm text-muted-foreground">{excerpt(body)}</span> : null}
+        </span>
+      </button>
     </li>
   );
 
   return (
     <ul className="grid gap-1">
+      <li><button type="button" className="min-h-12 min-w-12 rounded-lg px-3 text-sm font-semibold hover:bg-muted" aria-pressed={activeLeg === null} onClick={() => onSelectLeg(null)}>{t("route.allLegs")}</button></li>
       {items.map(({ point, index }) =>
         row(
           point.id,
@@ -107,6 +118,7 @@ export function ViaList({ plan, pointsById, workPoints }: { plan: PlannedRoute; 
           </span>,
           loc(point.title, lang),
           point.body ? loc(point.body, lang) : undefined,
+          index - 1,
         ),
       )}
       {arrival
@@ -115,6 +127,7 @@ export function ViaList({ plan, pointsById, workPoints }: { plan: PlannedRoute; 
             <MapPinCheckInside className="size-6 shrink-0 text-accent-text" aria-label={t("route.arrival")} />,
             loc(arrival.title, lang),
             arrival.body ? loc(arrival.body, lang) : undefined,
+            plan.via.pointIds.length,
           )
         : null}
     </ul>
