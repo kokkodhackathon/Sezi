@@ -4,7 +4,7 @@ import { AccessibilityInfo, ActivityIndicator, Text, View } from 'react-native';
 
 import { FormError, FormScreen } from '@/components/account-fields';
 import { Avatar } from '@/components/avatar';
-import { Badge, Button, Card, ListRow, Note } from '@/components/ui';
+import { Button, Card, ListRow, Note } from '@/components/ui';
 import { InfoIcon } from '@/design/icons';
 import { space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
@@ -77,9 +77,23 @@ export default function AccountHome() {
           </Text>
         </View>
       </View>
-      {identity ? <Badge label={tr(identity.visibility === 'public' ? 'account.visPublic' : 'account.visPrivate')} /> : null}
       <Card padded={false}>
         <ListRow first title={tr('account.editProfile')} subtitle={tr('account.editProfileSub')} onPress={() => router.push('/account/edit')} />
+        <ListRow
+          title={tr('privacy.title')}
+          subtitle={
+            identity
+              ? tr(
+                  identity.visibility === 'public'
+                    ? 'account.visPublic'
+                    : identity.visibility === 'friends'
+                      ? 'account.visFriends'
+                      : 'account.visPrivate',
+                )
+              : undefined
+          }
+          onPress={() => router.push('/privacy')}
+        />
         <ListRow title={tr('account.changePassword')} onPress={() => router.push({ pathname: '/account/password', params: { mode: 'change' } })} />
       </Card>
       <Note text={tr(pending ? 'account.syncPending' : 'account.syncDone')} icon={<InfoIcon color={t.textMuted} />} />

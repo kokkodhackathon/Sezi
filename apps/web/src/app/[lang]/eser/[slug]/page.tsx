@@ -16,6 +16,7 @@ import { SeziMap } from "@/components/map";
 import { PageContainer } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CommunityPhotos } from "@/components/works/community-photos";
 import { PhotoGallery } from "@/components/works/photo-gallery";
 import { ReadMore } from "@/components/works/read-more";
 import { PrecisionBadge, WorkCard } from "@/components/works/work-card";
@@ -230,6 +231,8 @@ export default async function WorkDetailPage({
           />
         </div>
       ) : null}
+
+      <CommunityPhotos slug={work.slug} />
 
       {/* 3. Tarihçe ve Mimari (ReadMore) */}
       {history ? (

@@ -1,5 +1,6 @@
 import {
   Building2,
+  Camera,
   FilePlus2,
   FileText,
   Flag,
@@ -81,6 +82,13 @@ export const NAV: NavGroup[] = [
         hint: 'Kullanıcıların erişilebilirlik bildirimlerini onayla ya da reddet.',
         icon: Flag,
         badge: (d) => d.reports.pending,
+      },
+      {
+        to: '/topluluk-fotograflari',
+        title: 'Ziyaretçi fotoğrafları',
+        hint: 'Herkese açılmak ya da arşive önerilmek istenen kullanıcı fotoğrafları.',
+        icon: Camera,
+        badge: (d) => d.community.pending,
       },
     ],
   },

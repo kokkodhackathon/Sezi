@@ -13,6 +13,7 @@ import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
 import { hasRouteTo } from '@/lib/nav';
 import { useSettings } from '@/lib/settings';
+import { usePassport } from '@/lib/passport';
 import { useWorks } from '@/lib/works';
 
 export default function Search() {
@@ -180,7 +181,7 @@ const makeStyles = (t: SweetTheme) =>
 function ResultCard({ work, open, onToggle, t }: { work: WorkRow; open: boolean; onToggle: () => void; t: SweetTheme }) {
   const s = makeStyles(t);
   const { t: tr, lang } = useT();
-  const { visited } = useSettings();
+  const { has } = usePassport();
   const name = loc(work.name, lang);
   const place = [work.district, loc(work.city_name, lang)].filter(Boolean).join(', ');
   const era = workEra(work, lang);
@@ -218,7 +219,7 @@ function ResultCard({ work, open, onToggle, t }: { work: WorkRow; open: boolean;
           ) : null}
           <View style={s.badges}>
             {route ? <Badge label={tr('search.routeReady')} tone="primary" /> : null}
-            {visited.includes(work.slug) ? <Badge label={tr('work.visited')} /> : null}
+            {has(work.slug) ? <Badge label={tr('work.visited')} /> : null}
             {work.photos.length > 0 ? <Badge label={tr('search.photos', { n: work.photos.length })} /> : null}
           </View>
         </View>

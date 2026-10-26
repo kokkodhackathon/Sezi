@@ -26,6 +26,7 @@ import { navigation, useNavigation, type NavConfig, type NavState } from '@/lib/
 import { useNavPoints, useWorkPoints } from '@/lib/points';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
+import { usePassport } from '@/lib/passport';
 import { photoUrl, useWork } from '@/lib/works';
 
 /** Hedef seçenekleri: pilot alandaki eserler, ada göre. */
@@ -45,7 +46,8 @@ export default function Navigate() {
   const { t: tr, lang } = useT();
   const insets = useSafeAreaInsets();
   const { profile } = useProfile();
-  const { settings, markVisited } = useSettings();
+  const { settings } = useSettings();
+  const { record } = usePassport();
   const state = useNavigation();
   const points = useNavPoints();
   const workPts = useWorkPoints();
@@ -56,8 +58,17 @@ export default function Navigate() {
   const [follow, setFollow] = useState(true);
 
   const cfg = useMemo<NavConfig | null>(
-    () => (profile ? { profile, speechRate: settings.speechRate, playback: settings.storyPlayback, sim: settings.devSimulation, onArrive: markVisited } : null),
-    [profile, settings.speechRate, settings.storyPlayback, settings.devSimulation, markVisited],
+    () =>
+      profile
+        ? {
+            profile,
+            speechRate: settings.speechRate,
+            playback: settings.storyPlayback,
+            sim: settings.devSimulation,
+            onArrive: (slug, walked) => record(slug, 'route', walked),
+          }
+        : null,
+    [profile, settings.speechRate, settings.storyPlayback, settings.devSimulation, record],
   );
 
   // Ekran açılınca hedef/tur yüklenir; çıkınca her şey susar ve konum izlenmez.

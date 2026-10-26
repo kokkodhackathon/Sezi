@@ -8,6 +8,7 @@ import { toast } from "sonner";
 
 import { Avatar } from "@/components/account/avatar";
 import { AccountNote, FormError } from "@/components/account/form-error";
+import { SocialOverview } from "@/components/account/social-overview";
 import { PageContainer } from "@/components/page";
 import { ProfileDialog } from "@/components/profile-dialog";
 import { Badge } from "@/components/ui/badge";
@@ -114,7 +115,7 @@ export default function AccountPage() {
               {identity ? (
                 <div className="pt-0.5">
                   <Badge variant="secondary" className="text-[10px] py-0">
-                    {t(identity.visibility === "public" ? "account.visPublic" : "account.visPrivate")}
+                    {t(identity.visibility === "public" ? "account.visPublic" : identity.visibility === "friends" ? "account.visFriends" : "account.visPrivate")}
                   </Badge>
                 </div>
               ) : null}
@@ -133,6 +134,8 @@ export default function AccountPage() {
             </Link>
           </div>
         </div>
+
+        <SocialOverview uid={user.id} />
 
         <div className="flex flex-wrap items-center justify-between gap-4 rounded-lg border bg-card p-4">
           <div className="flex items-center gap-3">

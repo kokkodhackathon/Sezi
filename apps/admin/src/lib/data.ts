@@ -22,7 +22,7 @@ export interface WorkListRow {
   district: string | null;
   status: Status;
   location_precision: Precision;
-  photos: { id: string; thumb: string | null; path: string; origin?: 'inventory' | 'commons' | 'upload' }[];
+  photos: { id: string; thumb: string | null; path: string; origin?: 'inventory' | 'commons' | 'upload' | 'community' }[];
   sources: { kind: string; volume: number | null; page: string | null }[];
 }
 
@@ -36,7 +36,7 @@ export interface WorkFilters {
   review: string;
   /** 'with' | 'without' | '' */
   photo: string;
-  /** 'inventory' | 'commons' | '' */
+  /** 'inventory' | 'commons' | 'upload' | 'community' | '' */
   origin?: string;
   page: number;
 }
@@ -62,6 +62,7 @@ export function useWorkList(f: WorkFilters) {
       if (f.origin === 'commons') q = q.filter('photos', 'cs', '[{"origin":"commons"}]');
       if (f.origin === 'inventory') q = q.filter('photos', 'cs', '[{"origin":"inventory"}]');
       if (f.origin === 'upload') q = q.filter('photos', 'cs', '[{"origin":"upload"}]');
+      if (f.origin === 'community') q = q.filter('photos', 'cs', '[{"origin":"community"}]');
       if (f.review === '1') {
         // needs_review görünümde yok: önce tablodan kimlikler alınır.
         const { data: ids, error } = await supabase.from('works').select('id').eq('needs_review', true);
@@ -180,7 +181,7 @@ export interface MediaRow {
   source_file: string | null;
   source_volume: number | null;
   source_page: number | null;
-  origin: 'inventory' | 'commons' | 'upload';
+  origin: 'inventory' | 'commons' | 'upload' | 'community';
   author: string | null;
   license: string | null;
   license_url: string | null;
@@ -328,7 +329,7 @@ export interface InboxPhoto {
   folder: string | null;
   source_file: string | null;
   kind: 'photo' | 'aerial' | 'inscription';
-  origin: 'inventory' | 'commons' | 'upload';
+  origin: 'inventory' | 'commons' | 'upload' | 'community';
   author: string | null;
   license: string | null;
   license_url: string | null;

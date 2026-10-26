@@ -86,6 +86,33 @@ export function SectionTitle({ title, action }: { title: string; action?: ReactN
   );
 }
 
+/** Sayısal ilerleme: renk dışında görünür oran ve ekran okuyucu değeri de taşır. */
+export function ProgressBar({ value, max, label }: { value: number; max: number; label: string }) {
+  const t = useSweetTheme();
+  const limit = Math.max(0, max);
+  const now = Math.min(limit, Math.max(0, value));
+  return (
+    <View
+      style={{ gap: space.sm }}
+      accessibilityRole="progressbar"
+      accessibilityLabel={label}
+      accessibilityValue={{ min: 0, max: limit, now }}>
+      <Text style={[type.meta, { color: t.text }]}>
+        {value} / {max}
+      </Text>
+      <View style={{ height: 8, borderRadius: 4, backgroundColor: t.border, overflow: 'hidden' }}>
+        <View
+          style={{
+            height: 8,
+            width: `${limit ? now / limit * 100 : 0}%`,
+            backgroundColor: t.primary.fill,
+          }}
+        />
+      </View>
+    </View>
+  );
+}
+
 export function Eyebrow({ text, color }: { text: string; color?: string }) {
   const t = useSweetTheme();
   return <Text style={[type.meta, { color: color ?? t.textMuted }]}>{text}</Text>;

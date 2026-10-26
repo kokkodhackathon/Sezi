@@ -70,8 +70,23 @@ export function SoftPressable({ style, onPressIn, onPressOut, ...rest }: SoftPre
 }
 
 /** Yuvarlak ikon düğmesi (48 dp, gri dolgu); `label` görünmez, ekran okuyucuya söylenir. */
-export function IconBubble({ icon, label, onPress }: { icon: (color: string) => ReactNode; label: string; onPress: () => void }) {
+export function IconBubble({
+  icon,
+  label,
+  onPress,
+}: {
+  icon: (color: string) => ReactNode;
+  label: string;
+  onPress?: () => void;
+}) {
   const t = useSweetTheme();
+  if (!onPress) {
+    return (
+      <View accessible={false} style={[s.iconBubble, { backgroundColor: t.soft }, outline(t)]}>
+        {icon(t.text)}
+      </View>
+    );
+  }
   return (
     <SoftPressable onPress={onPress} accessibilityRole="button" accessibilityLabel={label} style={[s.iconBubble, { backgroundColor: t.soft }, outline(t)]}>
       {icon(t.text)}

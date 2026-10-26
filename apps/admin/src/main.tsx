@@ -8,6 +8,7 @@ import './index.css';
 import { Layout } from './components/Layout';
 import { AuthProvider } from './lib/auth';
 import { Cities } from './pages/Cities';
+import { CommunityPhotos } from './pages/CommunityPhotos';
 import { Dashboard } from './pages/Dashboard';
 import { Inbox } from './pages/Inbox';
 import { Matching } from './pages/Matching';
@@ -45,6 +46,7 @@ const router = createBrowserRouter([
       { path: 'metinler', element: <Texts /> },
       { path: 'fotograflar', element: <Inbox /> },
       { path: 'bildirimler', element: <Reports /> },
+      { path: 'topluluk-fotograflari', element: <CommunityPhotos /> },
       { path: 'noktalar', element: <Points /> },
       { path: 'turlar', element: <Tours /> },
       { path: 'rota-testi', element: <RouteTest /> },

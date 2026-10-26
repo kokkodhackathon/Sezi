@@ -60,7 +60,7 @@ interface DraftMediaRow {
   source_page: number | null;
   kind: 'photo' | 'aerial' | 'inscription';
   alt_text: LocalizedText | null;
-  origin: 'inventory' | 'commons' | 'upload';
+  origin: 'inventory' | 'commons' | 'upload' | 'community';
   author: string | null;
   license: string | null;
   license_url: string | null;
@@ -102,7 +102,7 @@ export function Inbox() {
   const [params, setParams] = useSearchParams();
   const requestedTab = params.get('tab');
   const tab: InboxTab = requestedTab === 'upload' || requestedTab === 'draft' ? requestedTab : 'unlinked';
-  const [origin, setOrigin] = useState<'all' | 'inventory' | 'commons' | 'upload'>('all');
+  const [origin, setOrigin] = useState<'all' | 'inventory' | 'commons' | 'upload' | 'community'>('all');
   const [preview, setPreview] = useState<PreviewState | null>(null);
   const { data: unlinkedData, isLoading: unlinkedLoading, error: unlinkedError, refetch: refetchUnlinked } = useInbox();
   const {
@@ -201,7 +201,7 @@ export function Inbox() {
             <FieldLabel htmlFor="inbox-origin-filter" className="text-xs text-muted-foreground whitespace-nowrap">
               Kaynak:
             </FieldLabel>
-            <Select value={origin} onValueChange={(v) => { if (v === 'all' || v === 'inventory' || v === 'commons' || v === 'upload') setOrigin(v); }}>
+            <Select value={origin} onValueChange={(v) => { if (v === 'all' || v === 'inventory' || v === 'commons' || v === 'upload' || v === 'community') setOrigin(v); }}>
               <SelectTrigger id="inbox-origin-filter" className="h-8 w-36 text-xs">
                 <SelectValue placeholder="Tümü" />
               </SelectTrigger>
@@ -211,6 +211,7 @@ export function Inbox() {
                   <SelectItem value="inventory">Envanter</SelectItem>
                   <SelectItem value="commons">Commons</SelectItem>
                   <SelectItem value="upload">Yüklenen</SelectItem>
+                  <SelectItem value="community">Ziyaretçi</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -499,6 +500,7 @@ function UnlinkedPhotoCard({
           <div className="flex flex-wrap items-center gap-1.5">
             {photo.origin === 'commons' ? <Badge variant="secondary">Commons</Badge> : null}
             {photo.origin === 'upload' ? <Badge variant="secondary">Yüklendi</Badge> : null}
+            {photo.origin === 'community' ? <Badge variant="secondary">Ziyaretçi</Badge> : null}
             <Badge variant="outline">{KIND_LABEL[photo.kind]}</Badge>
           </div>
           {photo.origin === 'inventory' ? (
@@ -509,7 +511,7 @@ function UnlinkedPhotoCard({
           ) : null}
         </div>
 
-        {photo.origin === 'commons' || photo.origin === 'upload' ? (
+        {photo.origin === 'commons' || photo.origin === 'upload' || photo.origin === 'community' ? (
           <div className="flex flex-col gap-1 text-xs text-muted-foreground">
             <span className="truncate" title={[photo.author || 'Yazar belirtilmemiş', photo.license].filter(Boolean).join(' · ')}>
               {[photo.author || 'Yazar belirtilmemiş', photo.license].filter(Boolean).join(' · ')}
@@ -700,6 +702,7 @@ function DraftLinkedPhotoCard({
           <div className="flex flex-wrap items-center gap-1.5">
             <Badge variant="warning">Taslak</Badge>
             {photo.origin === 'commons' ? <Badge variant="secondary">Commons</Badge> : null}
+            {photo.origin === 'community' ? <Badge variant="secondary">Ziyaretçi</Badge> : null}
             {photo.origin === 'upload' ? <Badge variant="secondary">Yüklendi</Badge> : null}
             <Badge variant="outline">{KIND_LABEL[photo.kind]}</Badge>
           </div>

@@ -5,6 +5,7 @@ import { z } from 'zod';
 
 import { PILOT_AREA } from './nav';
 import { supabase } from './supabase';
+import { uuid } from './uuid';
 
 const KEY = 'sezi.reports.v1';
 const DEVICE_KEY = 'sezi.device.v1';
@@ -26,13 +27,6 @@ let cache: LocalReport[] | null = null;
 const listeners = new Set<() => void>();
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-/** Sunucudaki kayıt kimliği istemcide üretilir (anonim kullanıcı eklediği satırı geri okuyamaz). */
-function uuid(): string {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
-    const r = (Math.random() * 16) | 0;
-    return (c === 'x' ? r : (r & 0x3) | 0x8).toString(16);
-  });
-}
 
 /** Cihaz kimliği: yalnızca kötüye kullanım sınırı için (saatte 10 bildirim); kişisel bilgi taşımaz. */
 function deviceId(): string {

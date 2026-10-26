@@ -14,7 +14,7 @@ import { browserSupabase } from "./supabase-browser";
  * Tercihlerden (`accounts`, yalnız sahibi) ayrıdır; `public` profili girişli herkes görebilir.
  * Satır ilk girişte istemci tarafından açılır (RLS). Fotoğraf özel `avatars` kovasından imzalı URL ile okunur.
  */
-const COLUMNS = "user_id, display_name, username, avatar_path, avatar_tone, visibility";
+const COLUMNS = "user_id, display_name, username, avatar_path, avatar_tone, visibility, findable, photo_default";
 export const IDENTITY_KEY = "sezi.web.identity.v1";
 const AVATAR_SIZE = 512;
 
@@ -203,7 +203,7 @@ export function useIdentity(): IdentityController {
   }, [user]);
 
   const updateRow = useCallback(
-    async (patch: Record<string, string | null>, nextAvatarUrl?: string | null) => {
+    async (patch: Record<string, string | boolean | null>, nextAvatarUrl?: string | null) => {
       if (!uid) return;
       const { data, error } = await browserSupabase().from("profiles").update(patch).eq("user_id", uid).select(COLUMNS).single();
       if (error) throw error;

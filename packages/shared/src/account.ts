@@ -25,16 +25,21 @@ export const Username = z
   .toLowerCase()
   .regex(new RegExp(`^[a-z0-9_]{${USERNAME_MIN},${USERNAME_MAX}}$`));
 
+export const Visibility = z.enum(["private", "friends", "public"]);
+export type Visibility = z.infer<typeof Visibility>;
+
 export const IdentitySchema = z.object({
   user_id: z.string(),
   display_name: z.string(),
   username: z.string().nullable(),
   avatar_path: z.string().nullable(),
   avatar_tone: z.enum(AVATAR_TONES),
-  visibility: z.enum(["private", "public"]),
+  visibility: Visibility,
+  findable: z.boolean(),
+  photo_default: Visibility,
 });
 export type Identity = z.infer<typeof IdentitySchema>;
-export type IdentityPatch = Partial<Pick<Identity, "display_name" | "username" | "avatar_tone" | "visibility">>;
+export type IdentityPatch = Partial<Pick<Identity, "display_name" | "username" | "avatar_tone" | "visibility" | "findable" | "photo_default">>;
 
 export const KNOWN_AUTH_ERRORS = [
   "invalid_credentials",

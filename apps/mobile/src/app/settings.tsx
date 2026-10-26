@@ -10,13 +10,15 @@ import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
+import { usePassport } from '@/lib/passport';
 import { NARRATION_WAIT_MS, say } from '@/lib/voice/speech';
 
 export default function SettingsScreen() {
   const t = useSweetTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
-  const { settings, update, visited, clearVisited } = useSettings();
+  const { settings, update } = useSettings();
+  const { count, clear } = usePassport();
   const { profile, resetProfile } = useProfile();
   const confirm = (title: string, action: () => void) =>
     Alert.alert(title, `${tr('settings.confirm')} ${tr('settings.confirmBody')}`, [
@@ -98,9 +100,13 @@ export default function SettingsScreen() {
       <Card padded={false}>
         <ListRow
           first
-          title={tr('settings.clearVisited')}
-          subtitle={tr('settings.visitedCount', { n: visited.length })}
-          onPress={() => confirm(tr('settings.clearVisited'), clearVisited)}
+          title={tr('settings.clearPassport')}
+          subtitle={tr('settings.visitedCount', { n: count })}
+          onPress={() =>
+            confirm(tr('settings.clearPassport'), () => {
+              void clear().catch(() => Alert.alert(tr('account.err.generic')));
+            })
+          }
         />
         <ListRow title={tr('settings.resetProfile')} subtitle={tr('settings.resetProfileSub')} onPress={() => confirm(tr('settings.resetProfile'), resetProfile)} danger />
       </Card>

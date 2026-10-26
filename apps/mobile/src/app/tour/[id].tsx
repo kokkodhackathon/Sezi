@@ -17,7 +17,7 @@ import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
 import { defaultStart, planner, useNavVersion, walkingSpeed } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
-import { useSettings } from '@/lib/settings';
+import { usePassport } from '@/lib/passport';
 import { useTours } from '@/lib/tours';
 import { photoUrl, useWorks } from '@/lib/works';
 
@@ -26,7 +26,7 @@ export default function TourDetail() {
   const t = useSweetTheme();
   const { t: tr, lang } = useT();
   const { profile } = useProfile();
-  const { visited } = useSettings();
+  const { visits, has } = usePassport();
   const navVersion = useNavVersion();
   const header = useFloatingHeaderScroll();
   const insets = useSafeAreaInsets();
@@ -55,14 +55,14 @@ export default function TourDetail() {
       result.push({
         key: stop.slug, kind: 'stop', index: index + 1, title: loc(stop.name, lang),
         subtitle: [tr('tours.leg', { m: Math.round(stop.legM) }), stairs].filter(Boolean).join(' · '),
-        photo: work ? coverOf(work) : null, done: visited.includes(stop.slug),
+        photo: work ? coverOf(work) : null, done: has(stop.slug),
         onPress: () => router.push({ pathname: '/work/[slug]', params: { slug: stop.slug } }),
       });
       from = planner.landmarkNodeForWork(stop.slug)?.location ?? from;
     });
     return result;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [plan, profile, bySlug, visited, lang, tr, navVersion]);
+  }, [plan, profile, bySlug, visits, has, lang, tr, navVersion]);
   const title = tour ? loc(tour.title, lang) : tr('tours.title');
   const coverWork = plan?.stops.map((stop) => bySlug.get(stop.slug)).find((work) => work && coverOf(work));
   const cover = coverWork ? coverOf(coverWork) : null;

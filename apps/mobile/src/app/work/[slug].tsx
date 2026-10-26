@@ -1,5 +1,6 @@
 import { coverOf, hasLocation, inventorySource, isAttributed, loc, splitReadAlong, toneForType, type SweetTheme, type WorkRow } from '@sezi/shared';
 import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import Animated from 'react-native-reanimated';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
@@ -13,10 +14,10 @@ import { PhotoViewer } from '@/components/photo-viewer';
 import { formatPhotoCredit, PhotoSourceTag, PhotoSourceThumbTag } from '@/components/photo-source';
 import { ReadAlongText } from '@/components/read-along-text';
 import { ReadMore } from '@/components/read-more';
-import { Badge, Button, Card, Chip, EmptyState, ListRow } from '@/components/ui';
+import { Badge, Button, Card, Chip, EmptyState, ListRow, Note } from '@/components/ui';
 import { WorkFacts } from '@/components/work-facts';
 import { WorkVisit } from '@/components/work-visit';
-import { ExternalIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
+import { ExternalIcon, PinIcon, PlayIcon, StopIcon, TurnIcon } from '@/design/icons';
 import { FadeInItem, outline, SoftPressable, sweetShadow } from '@/design/sweet/components';
 import { radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
@@ -26,6 +27,10 @@ import { useT } from '@/lib/i18n';
 import { hasRouteTo, planRoute } from '@/lib/nav';
 import { useProfile } from '@/lib/profile';
 import { useSettings } from '@/lib/settings';
+import { useAccount } from '@/lib/account';
+import { checkInHere } from '@/lib/checkin';
+import { usePassport } from '@/lib/passport';
+import { usePhotoUrls, useWorkCommunityPhotos } from '@/lib/photos';
 import { AUDIO_BASE } from '@/lib/supabase';
 import { createClipPlayer } from '@/lib/voice/clip-player';
 import { useReadAlong } from '@/lib/voice/read-along';
@@ -65,7 +70,7 @@ export default function WorkDetail() {
 /** Eşli okunabilen bölümler. */
 type ReadKey = 'summary' | 'history' | 'architecture';
 /** Bölümler arası hızlı geçiş hedefleri (sayfadaki sırayla). */
-type SectionKey = ReadKey | 'facts' | 'visit' | 'photos' | 'location' | 'sources';
+type SectionKey = ReadKey | 'facts' | 'visit' | 'photos' | 'community' | 'location' | 'sources';
 
 /**
  * Eser sayfası: fotoğraf ve ad, iki eylem (dinle, yol tarifi), bölümlere hızlı geçiş, sonra kısa özet, bilgi kartı,
@@ -82,7 +87,42 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
   const reduced = useReducedMotion();
   const { t: tr, lang } = useT();
   const { profile } = useProfile();
-  const { visited, settings } = useSettings();
+  const { settings } = useSettings();
+  const { has, record } = usePassport();
+  const { user } = useAccount();
+  const community = useWorkCommunityPhotos(work.slug);
+  const communityPaths = useMemo(
+    () => (community.data ?? []).map((photo) => photo.thumb_path),
+    [community.data],
+  );
+  const communityUrls = usePhotoUrls(communityPaths);
+  const [checking, setChecking] = useState(false);
+  const [checkinNote, setCheckinNote] = useState<string | null>(null);
+  const checkHere = async () => {
+    setChecking(true);
+    setCheckinNote(null);
+    try {
+      const result = await checkInHere(work);
+      if (result.ok) {
+        record(work.slug, 'checkin', null);
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        AccessibilityInfo.announceForAccessibility(tr('checkin.done'));
+      } else {
+        void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        setCheckinNote(
+          result.reason === 'far'
+            ? tr('checkin.far', { m: Math.round(result.distanceM ?? 0) })
+            : result.reason === 'permission'
+              ? tr('checkin.permission')
+              : result.reason === 'imprecise_place' || result.reason === 'no_location'
+                ? tr('checkin.imprecise')
+                : tr('checkin.weak'),
+        );
+      }
+    } finally {
+      setChecking(false);
+    }
+  };
   const reader = useReadAlong({ lang, rate: settings.speechRate });
   const name = loc(work.name, lang);
   const kind = loc(work.type_name, lang);
@@ -179,6 +219,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
     { key: 'facts' as const, label: tr('work.facts') },
     { key: 'visit' as const, label: tr('work.visit') },
     work.photos.length > 1 ? { key: 'photos' as const, label: tr('work.photos') } : null,
+    community.data?.length ? { key: 'community' as const, label: tr('work.community') } : null,
     { key: 'history' as const, label: tr('work.history') },
     architecture ? { key: 'architecture' as const, label: tr('work.architecture') } : null,
     { key: 'location' as const, label: tr('design.location') },
@@ -248,13 +289,34 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
         )}
 
         <View ref={bodyRef} style={s.body} onLayout={(e) => (bodyY.current = e.nativeEvent.layout.y)}>
-          {ref || work.unesco || visited.includes(work.slug) ? (
+          {ref || work.unesco || has(work.slug) ? (
             <FadeInItem index={0} style={s.badges}>
               {ref ? <Badge label={ref} /> : null}
               {work.unesco ? <Badge label={tr('work.unesco')} tone="accent" /> : null}
-              {visited.includes(work.slug) ? <Badge label={tr('work.visited')} tone="primary" /> : null}
+              {has(work.slug) ? <Badge label={tr('work.visited')} tone="primary" /> : null}
             </FadeInItem>
           ) : null}
+          <View style={{ gap: space.sm }}>
+            {!has(work.slug) && work.location_precision === 'exact' && hasLocation(work) ? (
+              <Button
+                variant="secondary"
+                label={tr('checkin.here')}
+                disabled={checking}
+                icon={(color) => <PinIcon color={color} />}
+                onPress={() => {
+                  void checkHere();
+                }}
+              />
+            ) : null}
+            {checkinNote ? <Note text={checkinNote} /> : null}
+            {user && !community.data?.length ? (
+              <Button
+                variant="outline"
+                label={tr('photos.add')}
+                onPress={() => router.push({ pathname: '/photos/new', params: { work: work.slug } })}
+              />
+            ) : null}
+          </View>
 
           <FadeInItem index={1} style={s.actions}>
             {canHear ? (
@@ -324,6 +386,44 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
                     <Image source={{ uri: photoUrl(p, 'thumb') }} style={[s.thumb, outline(t)]} contentFit="cover" accessible={false} />
                     <PhotoSourceThumbTag photo={p} />
                   </SoftPressable>
+                ))}
+              </ScrollView>
+            </Section>
+          ) : null}
+
+          {community.data?.length ? (
+            <Section
+              title={tr('work.community')}
+              t={t}
+              onLayout={place_('community')}
+              headerRef={headerRef('community')}
+              action={
+                user ? (
+                  <Button
+                    variant="outline"
+                    label={tr('photos.add')}
+                    onPress={() => router.push({ pathname: '/photos/new', params: { work: work.slug } })}
+                  />
+                ) : undefined
+              }>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={{ gap: space.sm, paddingHorizontal: space.xl }}
+                style={{ marginHorizontal: -space.xl }}>
+                {community.data.map((photo) => (
+                  <View key={photo.id} style={{ width: 132, gap: space.xs }}>
+                    <Image
+                      source={{ uri: communityUrls.data?.[photo.thumb_path] }}
+                      style={[s.thumb, outline(t)]}
+                      contentFit="cover"
+                      accessible
+                      accessibilityLabel={photo.alt_text}
+                    />
+                    <Text style={[type.meta, { color: t.textMuted }]}>
+                      {tr('photos.credit', { name: photo.credit_name ?? '' })}
+                    </Text>
+                  </View>
                 ))}
               </ScrollView>
             </Section>
@@ -434,18 +534,21 @@ function Section({
   children,
   onLayout,
   headerRef,
+  action,
 }: {
   title: string;
   t: SweetTheme;
   children: ReactNode;
   onLayout?: (y: number) => void;
   headerRef?: (node: Text | null) => void;
+  action?: ReactNode;
 }) {
   return (
     <View style={{ gap: space.md }} onLayout={onLayout ? (e) => onLayout(e.nativeEvent.layout.y) : undefined}>
       <Text ref={headerRef} style={[type.heading, { color: t.text }]} accessibilityRole="header">
         {title}
       </Text>
+      {action}
       {children}
     </View>
   );

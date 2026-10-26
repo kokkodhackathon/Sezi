@@ -1,6 +1,6 @@
 # Sezi nasıl çalışır?
 
-Bu belge Sezi'nin parçalarını şemalarla anlatır: veri nereden gelir, rota nasıl bulunur, telefon yürürken ne yapar, ses nereden çalar. Kod ayrıntısı için [ARCHITECTURE.md](ARCHITECTURE.md). Son güncelleme: 24 Ekim 2026.
+Bu belge Sezi'nin parçalarını şemalarla anlatır: veri nereden gelir, rota nasıl bulunur, telefon yürürken ne yapar, ses nereden çalar. Kod ayrıntısı için [ARCHITECTURE.md](ARCHITECTURE.md). Son güncelleme: 26 Ekim 2026.
 
 ---
 
@@ -210,6 +210,27 @@ Uygulamanın okuduğu ana pencereler:
 | `segment_overrides` | Onaylanmış "bu yol kapalı / merdivenli" bildirimleri |
 
 Uygulamanın hiç göremediği tablolar: veri hattının önerileri (`location_candidates`, `text_drafts`) yalnız admin içindir. İsteğe bağlı hesabın tercihlerini (`accounts`) yalnız sahibi okur.
+
+### Pasaport, fotoğraflar ve arkadaşlar
+
+Hesap açan kullanıcının paylaştığı her şey **varsayılan olarak yalnız kendisine** görünür. Görünürlüğü kullanıcı Gizlilik ekranında seçer: Yalnız ben / Arkadaşlar / Herkes.
+
+```mermaid
+flowchart LR
+  VAR["📍 Gerçek GPS ile varış<br/>ya da 60 m içinde 'Buradayım'"] --> DAMGA["🎫 Damga (visits)<br/>eser + gün, konum yok"]
+  SIM["🧪 Simülasyon"] -. damga vermez .-> DAMGA
+  DAMGA --> BAS["🏅 Başarımlar<br/>cihazda hesaplanır"]
+  FOTO["📷 Fotoğraf (user_photos)"] -->|Herkes| ONAY{"Admin onayı"}
+  ONAY -->|yayınla| ESER["Eser sayfası<br/>Ziyaretçi fotoğrafları"]
+  FOTO -->|Sezi arşivine öner| ARSIV{"Admin: arşive al"}
+  ARSIV --> MEDIA["media taslağı<br/>CC BY 4.0, yükleyenin adı"]
+```
+
+- **Damga** yalnız eser ve gün olarak kaydedilir; konumun kendisi sunucuya gitmez. Hesapsız kullanıcının damgaları cihazda kalır, hesap açınca hesaba taşınır.
+- **Arkadaşlık** karşılıklıdır: istek gider, karşı taraf kabul eder. Kullanıcı adıyla aranabilmek için kişinin "bulunabilirim" anahtarını açması gerekir. Engellenen kişi isteği gönderemez, profili göremez; varsa arkadaşlık silinir.
+- **Kim neyi görür:** kişinin pasaportunu, başarımlarını ve katkılarını profil görünürlüğü belirler; her fotoğrafın ayrıca kendi görünürlüğü vardır. Bu kuralları veritabanı uygular (RLS), uygulama değil.
+- **Katkı sayaçları** (onaylanan bildirim, yayındaki ve arşive alınan fotoğraf, arkadaş) tetikleyicilerle sayılır; kullanıcı bunları yazamaz.
+- Hesap silinince fotoğraflar, damgalar ve arkadaşlıklar da silinir. Sezi arşivine alınmış kopya, verilen izin gereği kalır.
 
 ---
 

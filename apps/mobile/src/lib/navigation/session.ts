@@ -112,7 +112,7 @@ export interface NavConfig {
   playback: 'auto' | 'tap';
   /** Geliştirici simülasyon modu: başlangıç GPS değilse yürüyüş sanaldır. */
   sim: boolean;
-  onArrive: (slug: string) => void;
+  onArrive: (slug: string, walkedM: number) => void;
 }
 
 const TICK_MS = 200;
@@ -156,6 +156,7 @@ let state: NavState = {
 };
 
 let cfg: NavConfig | null = null;
+let walkedBefore = 0;
 let walker: Walker | null = null;
 let walkerDone = false;
 /** Sanal yürüyüşçünün gürültüsüz konumu: yeniden rota buradan başlar. */
@@ -504,6 +505,7 @@ function reroute(kind: 'offroute' | 'blocked', blocked: string[], from: LngLat) 
   }
   if (walker) walker = walkerOnLine(walker, next.plan.geometry.line);
   walkerDone = false;
+  walkedBefore += state.distance;
   emit({ plan: next.plan, blocked, distance: 0, track: initialTrack, stepIndex: -1, reroutes: state.reroutes + 1, detouring: false });
   const m = Math.round(totalOf(next.plan));
   raise(kind, kind === 'offroute' ? TEXT[lang].offroute(m) : TEXT[lang].blocked(m));
@@ -529,7 +531,9 @@ function arrive() {
   cancelEarcons();
   if (canHear()) playEarcon(state.tour.length > 0 ? 'waypoint' : 'arrive');
   if (slug) {
-    cfg.onArrive(slug);
+    if (state.source !== 'sim') {
+      cfg.onArrive(slug, Math.round(walkedBefore + (plan ? totalOf(plan) : 0)));
+    }
     // Varılan eser sonraki duraklara giderken yeniden açılmaz.
     shownWorks.add(WORK_POINT_PREFIX + slug);
   }
@@ -555,6 +559,7 @@ async function begin() {
     location: n.landmarkAt ?? n.location,
   }));
   walkerDone = false;
+  walkedBefore = 0;
   const plan = state.plan;
   emit({ phase: 'active', source: sim ? 'sim' : 'gps', ...tracking(), position: plan?.geometry.line[0] ?? state.here, cueCount: state.cueCount });
   // Başlangıç: ekran yürüyüş görünümüne geçer (görsel), titreşim ve ses birlikte.
@@ -590,6 +595,7 @@ export const navigation = {
   /** Ekran açılınca: hedef ve tur. Başlangıç seçimi korunur. */
   open(dest: string | null, tour: string[] = []) {
     navigation.stop();
+    walkedBefore = 0;
     shownWorks = new Set();
     emit({ dest, tour });
     replanPreview();
@@ -714,6 +720,7 @@ export const navigation = {
     stopAudio();
     const from = state.source === 'sim' ? (truth ?? state.position) : state.here;
     const start: StartChoice = state.source === 'sim' && from ? { kind: 'pick', location: from } : { kind: 'here' };
+    walkedBefore = 0;
     emit({ phase: 'plan', dest, tour, start, ...tracking() });
     replanPreview();
     await begin();

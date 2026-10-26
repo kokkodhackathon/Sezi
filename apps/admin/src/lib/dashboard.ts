@@ -103,6 +103,7 @@ export interface Dashboard {
   texts: { published: number; pending: number; rejected: number };
   candidates: { pending: number; worksPending: number; accepted: number };
   reports: { pending: number };
+  community: { pending: number };
   points: number;
   needsReview: number;
   pilot: { name: string; works: PilotWork[]; tours: TourStats[] };
@@ -118,7 +119,7 @@ export function useDashboard() {
   return useQuery({
     queryKey: ['dashboard'],
     queryFn: async (): Promise<Dashboard> => {
-      const [cities, works, media, drafts, candidates, reportsPending, points, tourRows] = await Promise.all([
+      const [cities, works, media, drafts, candidates, reportsPending, points, tourRows, communityReview, communityArchive] = await Promise.all([
         fetchAll<CityRaw>('cities', 'id, slug, name, sort_order, is_active, inventory_works'),
         fetchAll<WorkRaw>('works', 'id, slug, name, city_id, status, location_precision, needs_review'),
         fetchAll<MediaRaw>('media', 'work_id, status'),
@@ -127,6 +128,8 @@ export function useDashboard() {
         countWhere('a11y_reports', 'status', 'pending'),
         countWhere('nav_points', 'status', 'verified'),
         fetchAll<TourRaw>('tours', 'slug, title, stops, status, sort_order'),
+        countWhere('user_photos', 'review', 'pending'),
+        countWhere('user_photos', 'archive', 'suggested'),
       ]);
 
       const photoWorks = new Set(media.filter((m) => m.status === 'verified' && m.work_id).map((m) => m.work_id));
@@ -209,6 +212,7 @@ export function useDashboard() {
           accepted: candidates.filter((c) => c.status === 'accepted').length,
         },
         reports: { pending: reportsPending },
+        community: { pending: communityReview + communityArchive },
         points,
         needsReview: works.filter((w) => w.needs_review && w.status !== 'archived').length,
         pilot: { name: area.name, works: pilotWorks, tours },

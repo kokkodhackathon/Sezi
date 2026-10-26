@@ -9,6 +9,8 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { fontAssets, font } from '@/design/type';
 import { useIsDark, useSweetTheme } from '@/hooks/use-sweet-theme';
 import { AccountProvider } from '@/lib/account';
+import { PassportProvider } from '@/lib/passport';
+import { AchievementWatcher } from '@/components/achievement-watcher';
 import { useT } from '@/lib/i18n';
 import { ProfileProvider, useProfile } from '@/lib/profile';
 import { SettingsProvider } from '@/lib/settings';
@@ -40,7 +42,9 @@ export default function RootLayout() {
       <ProfileProvider>
         <SettingsProvider>
           <AccountProvider>
-            <AppStack />
+            <PassportProvider>
+              <AppStack />
+            </PassportProvider>
           </AccountProvider>
         </SettingsProvider>
       </ProfileProvider>
@@ -88,6 +92,14 @@ function AppStack() {
           <Stack.Screen name="search" options={{ title: tr('search.title'), animation: reducedMotion ? 'none' : 'fade_from_bottom' }} />
           <Stack.Screen name="report/new" options={{ title: tr('report.title'), presentation: 'modal' }} />
           <Stack.Screen name="reports" options={{ title: tr('reports.title') }} />
+          <Stack.Screen name="passport" options={{ title: tr('passport.title') }} />
+          <Stack.Screen name="achievements" options={{ title: tr('ach.title') }} />
+          <Stack.Screen name="photos/index" options={{ title: tr('photos.title') }} />
+          <Stack.Screen name="photos/new" options={{ title: tr('photos.add'), presentation: 'modal' }} />
+          <Stack.Screen name="photos/[id]" options={{ title: tr('photos.title') }} />
+          <Stack.Screen name="friends" options={{ title: tr('friends.title') }} />
+          <Stack.Screen name="person/[id]" options={{ title: tr('person.title') }} />
+          <Stack.Screen name="privacy" options={{ title: tr('privacy.title') }} />
           {/* Hesap isteğe bağlı: açılışta sorulmaz, Profil → Hesap'tan açılır. */}
           <Stack.Screen name="account/index" options={{ title: tr('account.title') }} />
           <Stack.Screen name="account/sign-in" options={{ title: tr('account.signIn') }} />
@@ -104,6 +116,7 @@ function AppStack() {
         </Stack.Protected>
         <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: profile !== null }} />
       </Stack>
+      <AchievementWatcher />
     </ThemeProvider>
   );
 }

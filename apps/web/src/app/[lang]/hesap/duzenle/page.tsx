@@ -17,7 +17,6 @@ import { toast } from "sonner";
 
 import { Avatar, AVATAR_TONE_CLASS } from "@/components/account/avatar";
 import { AccountField, FormError } from "@/components/account/form-error";
-import { ChoiceGroup } from "@/components/choice-group";
 import { PageContainer } from "@/components/page";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -85,7 +84,6 @@ function Editor({
   const [name, setName] = useState(identity.display_name);
   const [username, setUsername] = useState(identity.username ?? "");
   const [tone, setTone] = useState(identity.avatar_tone);
-  const [visibility, setVisibility] = useState(identity.visibility);
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -136,7 +134,6 @@ function Editor({
         display_name: n.data,
         username: uname ? (u.data ?? null) : null,
         avatar_tone: tone,
-        visibility,
       });
       toast.success(t("account.profileSaved"));
       router.push(href(lang, "/hesap"));
@@ -248,15 +245,6 @@ function Editor({
               </p>
             </div>
 
-            <ChoiceGroup
-              legend={t("account.visibility")}
-              value={visibility}
-              onChange={setVisibility}
-              choices={[
-                { value: "private", label: t("account.visPrivate"), description: t("account.visPrivateHelp") },
-                { value: "public", label: t("account.visPublic"), description: t("account.visPublicHelp") },
-              ]}
-            />
 
             <FormError text={errors.form} />
 

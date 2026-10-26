@@ -11,7 +11,7 @@ import { radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useT } from '@/lib/i18n';
-import { useSettings } from '@/lib/settings';
+import { usePassport } from '@/lib/passport';
 import { useTours } from '@/lib/tours';
 import { useWorks } from '@/lib/works';
 
@@ -20,7 +20,7 @@ export default function ComplexScreen() {
   const t = useSweetTheme();
   const s = useMemo(() => makeStyles(t), [t]);
   const { t: tr, lang } = useT();
-  const { visited } = useSettings();
+  const { has } = usePassport();
   const { data: works, isLoading } = useWorks();
   const parts = useMemo(() => (works ?? []).filter((w) => w.complex_slug === slug), [works, slug]);
   // Külliyenin bir eserinden geçen ilk tur (yoksa düğme görünmez).
@@ -40,7 +40,7 @@ export default function ComplexScreen() {
   for (const w of parts) groups.set(w.type_slug, [...(groups.get(w.type_slug) ?? []), w]);
 
   const mapped = parts.filter(hasLocation);
-  const visitedCount = parts.filter((w) => visited.includes(w.slug)).length;
+  const visitedCount = parts.filter((w) => has(w.slug)).length;
 
   return (
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
@@ -87,7 +87,7 @@ export default function ComplexScreen() {
                   key={w.id}
                   first={i === 0}
                   title={loc(w.name, lang)}
-                  subtitle={visited.includes(w.slug) ? tr('work.visited') : undefined}
+                  subtitle={has(w.slug) ? tr('work.visited') : undefined}
                   leading={
                     <View
                       importantForAccessibility="no-hide-descendants"

@@ -15,6 +15,8 @@ export const tr = {
     "Erişilebilirlik Sezi'de sonradan eklenen bir katman değil, rota motorunun ve arayüzün çekirdeğidir. Rotalar kullanıcının görme, hareket ve işitme profiline göre gerçek yaya grafiği üzerinde ayrı ayrı hesaplanır:",
   "about.a11y.wcag":
     "Web ve mobil arayüzde WCAG 2.2 AA kontrast standardı, az gören kullanıcılar için yüksek kontrast (AAA) modu, ölçeklenebilir yazı boyutu ve en az 48×48 px dokunma hedefleri uygulanır; renk hiçbir zaman tek başına bilgi taşımaz.",
+  "about.privacyBody":
+    "Erişilebilirlik profiliniz cihazda saklanır. Hesap açarsanız pasaportunuz (hangi eseri hangi gün ziyaret ettiğiniz) hesabınızla eşitlenir ve gizlilik ayarınıza göre görünür. Konumunuz hiçbir zaman sunucuya gönderilmez.",
 
   // Ekip ve Hackathon
   "about.team.title": "Ekip: LAHMACUN",
@@ -58,6 +60,8 @@ export const en: Record<keyof typeof tr, string> = {
     "In Sezi, accessibility is not an afterthought layered on top — it is the core of both the routing engine and the user interface. Routes are computed on the real pedestrian graph according to each visitor's vision, mobility and hearing profile:",
   "about.a11y.wcag":
     "Across web and mobile, Sezi enforces WCAG 2.2 AA contrast, a high-contrast (AAA) mode for low-vision users, scalable text sizes and minimum 48×48 px touch targets; colour is never the sole carrier of meaning.",
+  "about.privacyBody":
+    "Your accessibility profile is stored on your device. If you create an account, your passport (which work you visited and on which day) syncs with your account and is visible according to your privacy settings. Your location is never sent to the server.",
 
   // Team and Hackathon
   "about.team.title": "Team: LAHMACUN",

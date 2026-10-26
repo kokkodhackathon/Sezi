@@ -6,7 +6,7 @@ import { AccessibilityInfo, ActivityIndicator, StyleSheet, Text, type TextInput,
 
 import { FormError, FormScreen } from '@/components/account-fields';
 import { Avatar } from '@/components/avatar';
-import { Button, Field, SectionTitle, Segmented } from '@/components/ui';
+import { Button, Field, SectionTitle } from '@/components/ui';
 import { AtIcon, CameraIcon, CheckIcon, PersonIcon } from '@/design/icons';
 import { SoftPressable } from '@/design/sweet/components';
 import { space, type } from '@/design/type';
@@ -17,8 +17,8 @@ import { identityErrorKey, useIdentity } from '@/lib/identity';
 type Errors = Partial<Record<'name' | 'username' | 'photo' | 'form', string>>;
 
 /**
- * Profili düzenle: fotoğraf (galeri ya da kamera, hemen yüklenir), ad, @kullanıcı adı, baş harf rengi ve
- * görünürlük. Fotoğraf dışındakiler "Kaydet" ile tek istekte gider; önizleme yazdıkça güncellenir.
+ * Profili düzenle: fotoğraf (galeri ya da kamera, hemen yüklenir), ad, @kullanıcı adı ve baş harf rengi.
+ * Fotoğraf dışındakiler "Kaydet" ile tek istekte gider; önizleme yazdıkça güncellenir.
  */
 export default function EditProfile() {
   const t = useSweetTheme();
@@ -40,7 +40,6 @@ function Editor({ identity, avatar, save, setAvatar, removeAvatar }: { identity:
   const [name, setName] = useState(identity.display_name);
   const [username, setUsername] = useState(identity.username ?? '');
   const [tone, setTone] = useState(identity.avatar_tone);
-  const [visibility, setVisibility] = useState(identity.visibility);
   const [errors, setErrors] = useState<Errors>({});
   const [busy, setBusy] = useState(false);
   const [photoBusy, setPhotoBusy] = useState(false);
@@ -94,7 +93,7 @@ function Editor({ identity, avatar, save, setAvatar, removeAvatar }: { identity:
     if (!n.success || !usernameOk) return;
     setBusy(true);
     try {
-      await save({ display_name: n.data, username: uname ? (u.data ?? null) : null, avatar_tone: tone, visibility });
+      await save({ display_name: n.data, username: uname ? (u.data ?? null) : null, avatar_tone: tone });
       AccessibilityInfo.announceForAccessibility(tr('account.profileSaved'));
       router.back();
     } catch (e) {
@@ -170,20 +169,6 @@ function Editor({ identity, avatar, save, setAvatar, removeAvatar }: { identity:
           })}
         </View>
         <Text style={[type.meta, { color: t.textMuted }]}>{tr('account.toneHelp', { tone: tr(`account.tone.${tone}`) })}</Text>
-      </View>
-
-      <View style={{ gap: space.md }}>
-        <SectionTitle title={tr('account.visibility')} />
-        <Segmented
-          label={tr('account.visibility')}
-          value={visibility}
-          onChange={setVisibility}
-          options={[
-            { value: 'private', label: tr('account.visPrivate') },
-            { value: 'public', label: tr('account.visPublic') },
-          ]}
-        />
-        <Text style={[type.meta, { color: t.textMuted }]}>{tr(visibility === 'public' ? 'account.visPublicHelp' : 'account.visPrivateHelp')}</Text>
       </View>
 
       <FormError text={errors.form} />

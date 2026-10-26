@@ -6,7 +6,6 @@ import { z } from 'zod';
 /** v2: birincil tema açık tema oldu; eski kayıttan yalnızca konuşma hızı ve il taşınır. */
 const KEY = 'sezi.settings.v2';
 const LEGACY_KEY = 'sezi.settings.v1';
-const VISITED_KEY = 'sezi.visited.v1';
 
 const SettingsSchema = SyncedSettings.extend({
   /** Keşfet ekranında seçili envanter ili. */
@@ -29,10 +28,6 @@ function loadJson<T>(key: string, schema: z.ZodType<T, z.ZodTypeDef, unknown>, f
 interface SettingsContextValue {
   settings: Settings;
   update: (patch: Partial<Settings>) => void;
-  /** Simülasyon veya canlı rehberlikte varılan eserlerin slug'ları. */
-  visited: string[];
-  markVisited: (slug: string) => void;
-  clearVisited: () => void;
 }
 
 const Ctx = createContext<SettingsContextValue | null>(null);
@@ -43,7 +38,6 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     const legacy = loadJson(LEGACY_KEY, SettingsSchema, SettingsSchema.parse({}));
     return SettingsSchema.parse({ speechRate: legacy.speechRate, city: legacy.city });
   });
-  const [visited, setVisited] = useState<string[]>(() => loadJson(VISITED_KEY, z.array(z.string()), []));
 
   const update = useCallback((patch: Partial<Settings>) => {
     setSettings((prev) => {
@@ -53,21 +47,7 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const markVisited = useCallback((slug: string) => {
-    setVisited((prev) => {
-      if (prev.includes(slug)) return prev;
-      const next = [...prev, slug];
-      Storage.setItemSync(VISITED_KEY, JSON.stringify(next));
-      return next;
-    });
-  }, []);
-
-  const clearVisited = useCallback(() => {
-    Storage.removeItemSync(VISITED_KEY);
-    setVisited([]);
-  }, []);
-
-  const value = useMemo(() => ({ settings, update, visited, markVisited, clearVisited }), [settings, update, visited, markVisited, clearVisited]);
+  const value = useMemo(() => ({ settings, update }), [settings, update]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

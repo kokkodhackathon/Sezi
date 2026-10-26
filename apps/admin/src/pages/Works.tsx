@@ -235,6 +235,7 @@ export function Works() {
                     <SelectItem value={ALL}>Tümü</SelectItem>
                     <SelectItem value="inventory">Envanter</SelectItem>
                     <SelectItem value="commons">Commons</SelectItem>
+                    <SelectItem value="community">Ziyaretçi</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>

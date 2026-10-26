@@ -11,11 +11,11 @@ import { privateObject, supabase } from './supabase';
 
 /**
  * Hesabın kimliği (`profiles`): görünen ad, @kullanıcı adı, profil fotoğrafı, baş harf rengi ve görünürlük.
- * Tercihlerden (`accounts`, yalnız sahibi) ayrıdır; `public` profili girişli herkes görebilir. İleride arkadaş
- * ekleme ve kişisel galeri bu satıra bağlanır. Satır ilk girişte istemci tarafından açılır (RLS).
+ * Tercihlerden (`accounts`, yalnız sahibi) ayrıdır; görünürlük ve bulunabilirlik profil erişimini belirler.
+ * Satır ilk girişte istemci tarafından açılır (RLS).
  * İnternetsizken son bilinen hâl cihazdan gelir.
  */
-const COLUMNS = 'user_id, display_name, username, avatar_path, avatar_tone, visibility';
+const COLUMNS = 'user_id, display_name, username, avatar_path, avatar_tone, visibility, findable, photo_default';
 const KEY = IDENTITY_KEY;
 const AVATAR_SIZE = 512;
 
@@ -82,7 +82,7 @@ export function useIdentity() {
   );
 
   const update = useCallback(
-    async (patch: Record<string, string | null>) => {
+    async (patch: Record<string, string | boolean | null>) => {
       if (!uid) return;
       const { data, error } = await supabase.from('profiles').update(patch).eq('user_id', uid).select(COLUMNS).single();
       if (error) throw error;

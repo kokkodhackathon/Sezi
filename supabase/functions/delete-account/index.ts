@@ -1,7 +1,7 @@
 // Kullanıcının kendi hesabını kalıcı olarak siler (mağaza kuralı: uygulama içinden silinebilmeli).
 // Kimlik, isteğin Authorization başlığındaki oturum anahtarıyla Auth sunucusundan doğrulanır; gövde okunmaz.
-// Silinenler: auth.users satırı → accounts, profiles (cascade); bildirim fotoğrafları (reports/<uid>/), profil fotoğrafı (avatars/<uid>/).
-// Kalanlar: erişilebilirlik bildirimleri (user_id boşalır), rota onayları.
+// Silinenler: auth.users → accounts, profiles, visits, friendships, blocks, user_photos, contributions (cascade); reports, avatars ve user-photos kovalarındaki kullanıcı dosyaları.
+// Kalanlar: erişilebilirlik bildirimleri (user_id boşalır), rota onayları; arşive alınmış media kopyaları lisans gereği korunur.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 // Web (sezi.info) tarayıcıdan çağırır. Kimlik çerez değil Bearer anahtarı olduğu için her köken açık olabilir.
@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
   if (error || !data.user) return json(401, { error: 'unauthorized' });
   const uid = data.user.id;
   // Kullanıcının dosyaları: klasör boşalana kadar sayfa sayfa.
-  for (const name of ['reports', 'avatars']) {
+  for (const name of ['reports', 'avatars', 'user-photos']) {
     const bucket = admin.storage.from(name);
     for (;;) {
       const listed = await bucket.list(uid, { limit: 100 });
