@@ -1,15 +1,15 @@
-import { achievements, friendState, hasLocation, loc, passportStats } from '@sezi/shared';
-import { Image } from 'expo-image';
+import { achievements, friendState, hasLocation, passportStats } from '@sezi/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 
 import { FormError, FormScreen } from '@/components/account-fields';
-import { AchievementBadge } from '@/components/achievement-badge';
 import { Avatar } from '@/components/avatar';
-import { Badge, Button, Card, EmptyState, ListRow, Note, SectionTitle } from '@/components/ui';
-import { SoftPressable } from '@/design/sweet/components';
-import { radius, space, type } from '@/design/type';
+import { AchievementGrid, PhotoGrid, StampGrid } from '@/components/social-grids';
+import { EmptyInvite, LockedArt, StatStrip } from '@/components/social-visuals';
+import { Button, EmptyState, SectionTitle } from '@/components/ui';
+import { AwardIcon, BanIcon, CheckIcon, ClockIcon, CloseIcon, MapAreaIcon, StampIcon, UserPlusIcon, UsersIcon } from '@/design/icons';
+import { space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { errorKey, useAccount } from '@/lib/account';
 import { useBlocks, useFriendActions, useFriendships } from '@/lib/friends';
@@ -22,7 +22,7 @@ import { useWorks } from '@/lib/works';
 export default function PersonScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const uid = typeof params.id === 'string' ? params.id : '';
-  const { t: tr, lang } = useT();
+  const { t: tr } = useT();
   const t = useSweetTheme();
   const { user } = useAccount();
   const person = usePerson(uid);
@@ -137,70 +137,68 @@ export default function PersonScreen() {
   const profile = person.data.profile;
   const socialReady =
     !busy && !friendships.isLoading && !blocks.isLoading && !friendships.error && !blocks.error;
+  const bySlug = new Map((catalogue.data ?? []).map((work) => [work.slug, work]));
+  const cities = stats.cities.filter((city) => city.visited > 0).length;
+  const withRelationship = (fn: (id: string) => Promise<unknown>) => () => {
+    if (relationship) void perform(() => fn(relationship.id));
+  };
   return (
     <FormScreen>
+      {/* Kimlik: ortalı avatar, ad, @ad; altında tek ana eylem. */}
       <View style={styles.identity}>
         <Avatar identity={profile} source={person.avatar} size={88} />
-        <View style={{ flex: 1, gap: space.sm }}>
-          <Text accessibilityRole="header" style={[type.title, { color: t.text }]}>
-            {profile.display_name}
-          </Text>
-          {profile.username ? (
-            <Text style={[type.body, { color: t.textMuted }]}>{`@${profile.username}`}</Text>
-          ) : null}
-        </View>
+        <Text accessibilityRole="header" style={[type.title, { color: t.text, textAlign: 'center' }]}>
+          {profile.display_name}
+        </Text>
+        {profile.username ? <Text style={[type.meta, { color: t.textMuted }]}>{`@${profile.username}`}</Text> : null}
       </View>
-      {uid !== user.id ? (
-        <View style={{ gap: space.sm }}>
-          {blocked ? (
+      {uid !== user.id && !blocked ? (
+        <View style={styles.actions}>
+          {state === 'friends' ? (
             <Button
-              variant="outline"
-              label={tr('person.unblock')}
+              variant="secondary"
+              icon={(c) => <UsersIcon color={c} />}
+              label={tr('friends.connected')}
+              hint={tr('friends.remove')}
               disabled={!socialReady}
-              onPress={() => void perform(() => actions.unblock(uid))}
+              onPress={confirmRemove}
+              style={{ flex: 1 }}
             />
-          ) : state === 'friends' ? (
-            <>
-              <Badge label={tr('friends.connected')} tone="primary" />
-              <Button
-                variant="outline"
-                label={tr('friends.remove')}
-                disabled={!socialReady}
-                onPress={confirmRemove}
-              />
-            </>
           ) : state === 'incoming' ? (
             <>
               <Button
+                icon={(c) => <CheckIcon color={c} />}
                 label={tr('friends.accept')}
                 disabled={!socialReady}
-                onPress={() => {
-                  if (relationship) void perform(() => actions.accept(relationship.id));
-                }}
+                onPress={withRelationship(actions.accept)}
+                style={{ flex: 1 }}
               />
               <Button
                 variant="outline"
+                icon={(c) => <CloseIcon color={c} size={20} />}
                 label={tr('friends.reject')}
                 disabled={!socialReady}
-                onPress={() => {
-                  if (relationship) void perform(() => actions.removeFriendship(relationship.id));
-                }}
+                onPress={withRelationship(actions.removeFriendship)}
+                style={{ flex: 1 }}
               />
             </>
           ) : state === 'outgoing' ? (
             <Button
-              variant="outline"
-              label={tr('friends.sent')}
+              variant="secondary"
+              icon={(c) => <ClockIcon color={c} />}
+              label={tr('friends.sentShort')}
+              hint={tr('friends.withdraw')}
               disabled={!socialReady}
-              onPress={() => {
-                if (relationship) void perform(() => actions.removeFriendship(relationship.id));
-              }}
+              onPress={withRelationship(actions.removeFriendship)}
+              style={{ flex: 1 }}
             />
           ) : (
             <Button
+              icon={(c) => <UserPlusIcon color={c} />}
               label={tr('friends.add')}
               disabled={!socialReady}
               onPress={() => void perform(() => actions.sendRequest(uid))}
+              style={{ flex: 1 }}
             />
           )}
         </View>
@@ -213,109 +211,65 @@ export default function PersonScreen() {
       />
       {visible ? (
         <>
-          <SectionTitle title={tr('passport.title')} />
-          <Card>
-            <Text style={[type.title, { color: t.text }]}>{tr('passport.stamps', { n: stats.stamps })}</Text>
-            <Text style={[type.body, { color: t.textMuted }]}>
-              {tr('passport.summary', {
-                cities: stats.cities.filter((city) => city.visited > 0).length,
-                km: (stats.distanceM / 1000).toFixed(1),
-              })}
-            </Text>
-          </Card>
-          <SectionTitle title={tr('ach.title')} />
-          {earned.length ? (
-            earned.map((achievement) => <AchievementBadge key={achievement.id} achievement={achievement} />)
-          ) : (
-            <Note text={tr('person.emptyAchievements')} />
-          )}
-          <SectionTitle title={tr('person.stamps')} />
+          <StatStrip
+            items={[
+              { icon: StampIcon, value: String(stats.stamps), label: tr('stat.stamps') },
+              { icon: MapAreaIcon, value: String(cities), label: tr('stat.cities') },
+              { icon: AwardIcon, value: String(earned.length), label: tr('stat.badges') },
+            ]}
+          />
           {visits.isLoading ? (
             <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('account.loading')} />
           ) : visits.data?.length ? (
-            <Card padded={false}>
-              {visits.data.slice(0, 10).map((visit, index) => {
-                const work = works.find((entry) => entry.slug === visit.work_slug);
-                return (
-                  <ListRow
-                    key={visit.work_slug}
-                    first={index === 0}
-                    title={work ? loc(work.name, lang) : visit.work_slug}
-                    subtitle={`${new Date(visit.first_at).toLocaleDateString(lang)} · ${tr(visit.method === 'checkin' ? 'passport.byCheckin' : 'passport.byRoute')}`}
-                    onPress={() =>
-                      router.push({ pathname: '/work/[slug]', params: { slug: visit.work_slug } })
-                    }
-                  />
-                );
-              })}
-            </Card>
-          ) : (
-            <Note text={tr('person.emptyStamps')} />
-          )}
+            <View style={{ gap: space.lg }}>
+              <SectionTitle title={tr('passport.recent')} />
+              <StampGrid visits={visits.data} works={bySlug} limit={9} />
+            </View>
+          ) : null}
+          {earned.length ? (
+            <View style={{ gap: space.lg }}>
+              <SectionTitle title={tr('ach.title')} />
+              <AchievementGrid list={earned} />
+            </View>
+          ) : null}
           <FormError
             text={visits.error || catalogue.error ? tr(errorKey(visits.error ?? catalogue.error)) : undefined}
           />
-          <SectionTitle title={tr('person.photos')} />
-          {photos.isLoading ? (
-            <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('account.loading')} />
-          ) : photos.data?.length ? (
-            <View style={styles.grid}>
-              {photos.data.map((photo) => (
-                <SoftPressable
-                  key={photo.id}
-                  accessibilityRole="button"
-                  accessibilityLabel={photo.alt_text}
-                  onPress={() => router.push({ pathname: '/photos/[id]', params: { id: photo.id } })}
-                  style={[styles.photo, { backgroundColor: t.soft, borderColor: t.border }]}>
-                  <Image
-                    source={urls.data?.[photo.thumb_path]}
-                    style={StyleSheet.absoluteFill}
-                    contentFit="cover"
-                    accessible={false}
-                  />
-                </SoftPressable>
-              ))}
+          {photos.data?.length ? (
+            <View style={{ gap: space.lg }}>
+              <SectionTitle title={tr('person.photos')} />
+              <PhotoGrid
+                photos={photos.data}
+                urls={urls.data}
+                showStatus={false}
+                onOpen={(photo) => router.push({ pathname: '/photos/[id]', params: { id: photo.id } })}
+              />
             </View>
-          ) : (
-            <Note text={tr('person.emptyPhotos')} />
-          )}
+          ) : null}
           <FormError
             text={photos.error || urls.error ? tr(errorKey(photos.error ?? urls.error)) : undefined}
           />
         </>
       ) : (
-        <Note text={tr('person.private')} />
+        <EmptyInvite art={<LockedArt />} text={tr('person.privateShort')} />
       )}
       {uid !== user.id ? (
-        <Card padded={false}>
-          <ListRow
-            first
-            danger={!blocked}
-            title={tr(blocked ? 'person.unblock' : 'person.block')}
-            onPress={
-              socialReady
-                ? blocked
-                  ? () => void perform(() => actions.unblock(uid))
-                  : confirmBlock
-                : undefined
-            }
+        <View style={{ alignItems: 'center', paddingTop: space.lg }}>
+          <Button
+            variant={blocked ? 'outline' : 'ghost'}
+            compact
+            icon={(c) => <BanIcon color={c} size={18} />}
+            label={tr(blocked ? 'person.unblock' : 'person.block')}
+            disabled={!socialReady}
+            onPress={blocked ? () => void perform(() => actions.unblock(uid)) : confirmBlock}
           />
-        </Card>
+        </View>
       ) : null}
     </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  identity: { flexDirection: 'row', alignItems: 'center', gap: space.lg },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-  photo: {
-    width: '31%',
-    aspectRatio: 1,
-    minWidth: 48,
-    minHeight: 48,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    overflow: 'hidden',
-  },
+  identity: { alignItems: 'center', gap: space.sm, paddingTop: space.sm },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
 });

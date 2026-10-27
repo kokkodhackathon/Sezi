@@ -141,6 +141,17 @@ Roller: `hero` 34 (ana sayfada şehir adı), `screenTitle` 30, `editorial` 28 (e
 - `apps/mobile/src/design/sweet/components.tsx`: `SoftPressable`, `IconBubble` (48 dp gri yuvarlak ikon düğmesi), `TypeTile`, `FadeInItem`, `Skeleton`, `SweetSheet`, `sweetShadow` (yalnız yüzen öğeler), `outline` (yüksek kontrast çerçevesi), `a11yLabel`. Eser kartı `components/photo-card.tsx` içinde (`PhotoCard`, UNESCO yıldızı sol üstte).
 - `apps/mobile/src/design/work-glyph.tsx`: `WorkGlyph` (tür tonunda karo üstünde glif), `WorkGlyphInline`. `design/motif.tsx`: onboarding'deki küçük `CengelMark` (yüksek kontrastta gösterilmez) ve boş durumlardaki `EmptyMotif`.
 
+## Profil ve sosyal: "Pasaport defteri"
+
+Mobil `components/social-visuals.tsx` + `social-grids.tsx`, web `components/account/social-visuals.tsx` (aynı adlar, aynı kurallar).
+- **Damga:** ziyaret edilen eser, tür tonunda kare içinde tür glifi; içte kesikli mühür çizgisi; slug'dan belirlenen hafif eğim (−3°…+3°, `stampTilt`). Ad tek satır altında, tarih ve yöntem (Buradayım / rehberli yürüyüş) ekran okuyucu etiketinde. Son iki dakikada basılan damga bir kez "basılır" (büyükten iner, eğime döner); hareket azaltmada yalnız opacity. Boş pasaportta üç kesikli boş damga yeri.
+- **Başarım karosu:** kazanılanda firuze dolgu + köşede tik, kilitlide soluk dolgu + köşede kilit (şekil farkı renkten bağımsız); düzey > 1 ise "×n". Kilitlide altta ince çubuk ve "1/5". Ayrıntı (gövde cümlesi, tarih ya da ilerleme) dokununca alt panelde / pencerede. Tür → simge eşlemesi iki platformda aynı (`ACHIEVEMENT_ICONS`).
+- **Sayı şeridi:** simge + büyük sayı + tek sözcük (damga / il / km). Açıklama paragrafı yok.
+- **Görünürlük:** kilit (Yalnız ben), iki kişi (Arkadaşlar), küre (Herkes). Seçim simgeli kutucuklarla (radyo grubu; seçili firuze + kalın + tik). Fotoğraf ızgarasında durum köşedeki küçük simgelerle, anlamı etikette.
+- **Boş durum:** küçük çizim (boş damgalar, kamera, iki avatar, kilit) + tek cümle + tek eylem.
+- **Az yazı:** uzun metin yalnız ayrıntı panelinde (ör. CC BY 4.0 izni "İzin ayrıntısı"nda tam hâliyle). Simgeler Lucide'dan (ISC); mobilde `design/icons.tsx` içinde aynı çizim.
+- İç içe düğme yok: eylemli kişi satırında ad bölümü ve ikon düğmeleri ayrı odaklanır (ekran okuyucu iç içe düğmeyi atlar).
+
 ## Rehberlik / CueFlash
 
 Yön işareti ve `display` (Atkinson) talimat ana odağı oluşturur; kalan mesafe, simülasyon açıklaması ve erişilebilir ilerleme çubuğu ayrı bilgidir. İşitme profiline bağlı görsel ipucu dekoratif hareket değildir: normalde ekran kenarında iki parlama; reduce motion'da 1.500 ms sabit çerçeve. Her ses ipucunun görsel ve haptik karşılığı vardır. Simülasyon gerçek GPS yönlendirmesi diye sunulmaz ve yalnız Ayarlar → Geliştirici seçenekleri → Simülasyon modu açıkken görünür.

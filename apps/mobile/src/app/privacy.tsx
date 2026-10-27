@@ -1,11 +1,15 @@
-import { type IdentityPatch, type Visibility } from '@sezi/shared';
+import { type IdentityPatch } from '@sezi/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { FormError, FormScreen } from '@/components/account-fields';
-import { Button, Card, EmptyState, ListRow, Note, SectionTitle, Segmented, ToggleRow } from '@/components/ui';
-import { space } from '@/design/type';
+import { Avatar } from '@/components/avatar';
+import { EmptyInvite, LockedArt, VisibilityChoice } from '@/components/social-visuals';
+import { Button, Card, SectionTitle, ToggleRow } from '@/components/ui';
+import { BanIcon, SearchIcon, ShieldIcon } from '@/design/icons';
+import { outline, SoftPressable } from '@/design/sweet/components';
+import { space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { errorKey, useAccount } from '@/lib/account';
 import { useBlocks, useFriendActions } from '@/lib/friends';
@@ -46,22 +50,13 @@ export default function PrivacyScreen() {
       setBusy(false);
     }
   };
-  // Segmented dar: profil için kısa etiketler; fotoğraf varsayılanı fotoğraf ekranıyla aynı etiketleri kullanır.
-  const options: { value: Visibility; label: string }[] = [
-    { value: 'private', label: tr('account.visPrivate') },
-    { value: 'friends', label: tr('photos.vis.friends') },
-    { value: 'public', label: tr('account.visPublic') },
-  ];
-  const photoOptions: { value: Visibility; label: string }[] = [
-    { value: 'private', label: tr('photos.vis.private') },
-    { value: 'friends', label: tr('photos.vis.friends') },
-    { value: 'public', label: tr('photos.vis.public') },
-  ];
+  const labels = { private: tr('photos.vis.private'), friends: tr('photos.vis.friends'), public: tr('photos.vis.public') };
   if (!user)
     return (
       <FormScreen>
-        <EmptyState
-          title={tr('friends.signIn')}
+        <EmptyInvite
+          art={<LockedArt />}
+          text={tr('friends.signIn')}
           action={<Button label={tr('account.signIn')} onPress={() => router.push('/account/sign-in')} />}
         />
       </FormScreen>
@@ -77,68 +72,102 @@ export default function PrivacyScreen() {
       {/* collapsable={false}: pointerEvents değişimi Fabric'te düzleştirme çökmesine yol açmasın (photo-fields.tsx). */}
       <View
         collapsable={false}
-        style={{ gap: space.md }}
+        style={{ gap: space.xl }}
         pointerEvents={busy ? 'none' : 'auto'}
         accessibilityState={{ busy }}>
-        <SectionTitle title={tr('privacy.visibility')} />
-        <Segmented
-          label={tr('privacy.visibility')}
-          value={identity.visibility}
-          options={options}
-          onChange={(visibility) => void update({ visibility })}
-        />
-        <Note text={tr(`privacy.vis.${identity.visibility}`)} />
+        <View style={{ gap: space.md }}>
+          <SectionTitle title={tr('privacy.who')} />
+          <VisibilityChoice
+            layout="stack"
+            label={tr('privacy.who')}
+            value={identity.visibility}
+            labels={labels}
+            onChange={(visibility) => void update({ visibility })}
+          />
+          <Text style={[type.meta, { color: t.textMuted }]} accessibilityLiveRegion="polite">
+            {tr(`privacy.vis.${identity.visibility}`)}
+          </Text>
+        </View>
         <Card padded={false}>
           <ToggleRow
             first
+            icon={(c) => <SearchIcon color={c} size={22} />}
             title={tr('privacy.findable')}
             subtitle={tr('privacy.findableHelp')}
             value={identity.findable}
             onChange={(findable) => void update({ findable })}
           />
         </Card>
-        <SectionTitle title={tr('privacy.photoDefault')} />
-        <Segmented
-          label={tr('privacy.photoDefault')}
-          value={identity.photo_default}
-          options={photoOptions}
-          onChange={(photo_default) => void update({ photo_default })}
-        />
+        <View style={{ gap: space.md }}>
+          <SectionTitle title={tr('privacy.photoDefault')} />
+          <VisibilityChoice
+            label={tr('privacy.photoDefault')}
+            value={identity.photo_default}
+            labels={labels}
+            onChange={(photo_default) => void update({ photo_default })}
+          />
+        </View>
       </View>
-      <SectionTitle title={tr('privacy.blocked')} />
-      {blocks.isLoading ? (
-        <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('account.loading')} />
-      ) : blocks.data?.length ? (
-        <Card>
-          {blocks.data.map((row) => (
-            <BlockedRow
-              key={row.blocked}
-              uid={row.blocked}
-              busy={busy}
-              onUnblock={() => void removeBlock(row.blocked)}
-            />
-          ))}
-        </Card>
-      ) : (
-        <Note text={tr('privacy.noBlocks')} />
-      )}
+      <View style={{ gap: space.md }}>
+        <SectionTitle title={tr('privacy.blocked')} />
+        {blocks.isLoading ? (
+          <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('account.loading')} />
+        ) : blocks.data?.length ? (
+          <Card padded={false}>
+            {blocks.data.map((row, index) => (
+              <BlockedRow
+                key={row.blocked}
+                uid={row.blocked}
+                first={index === 0}
+                busy={busy}
+                onUnblock={() => void removeBlock(row.blocked)}
+              />
+            ))}
+          </Card>
+        ) : (
+          <Text style={[type.meta, { color: t.textMuted }]}>{tr('privacy.noBlocks')}</Text>
+        )}
+      </View>
       <FormError text={failure ?? (blocks.error ? tr(errorKey(blocks.error)) : undefined)} />
-      <Note text={tr('privacy.location')} />
+      <View style={styles.location} accessible>
+        <ShieldIcon color={t.primaryText} size={20} />
+        <Text style={[type.meta, { color: t.text, flex: 1 }]}>{tr('privacy.location')}</Text>
+      </View>
     </FormScreen>
   );
 }
 
-function BlockedRow({ uid, busy, onUnblock }: { uid: string; busy: boolean; onUnblock: () => void }) {
+/** Engellenen kişi: avatar + ad; sağda "engeli kaldır" ikon düğmesi (etiketinde kişinin adı). */
+function BlockedRow({ uid, first, busy, onUnblock }: { uid: string; first: boolean; busy: boolean; onUnblock: () => void }) {
   const { t: tr } = useT();
+  const t = useSweetTheme();
   const person = usePerson(uid);
+  const profile = person.data?.profile;
+  const name = profile?.display_name ?? tr('person.title');
+  // ListRow kullanılmaz: tıklanamayan satır tek erişilebilir öğe olur ve içindeki düğmeyi gizler.
   return (
-    <View style={{ gap: space.sm }}>
-      <ListRow
-        first
-        title={person.data?.profile.display_name ?? tr('person.title')}
-        subtitle={person.data?.profile.username ? `@${person.data.profile.username}` : undefined}
-      />
-      <Button compact variant="outline" label={tr('person.unblock')} disabled={busy} onPress={onUnblock} />
+    <View style={[styles.row, !first && { borderTopWidth: t.outlined ? 1 : StyleSheet.hairlineWidth, borderTopColor: t.border }]}>
+      <Avatar identity={profile ?? null} source={person.avatar} size={44} />
+      <View style={{ flex: 1, gap: 2 }} accessible accessibilityLabel={[name, profile?.username ? `@${profile.username}` : null].filter(Boolean).join(', ')}>
+        <Text style={[type.itemTitle, { color: t.text }]} numberOfLines={2}>
+          {name}
+        </Text>
+        {profile?.username ? <Text style={[type.meta, { color: t.textMuted }]}>@{profile.username}</Text> : null}
+      </View>
+      <SoftPressable
+        onPress={onUnblock}
+        disabled={busy}
+        accessibilityRole="button"
+        accessibilityLabel={tr('person.unblockName', { name })}
+        style={[styles.unblock, { backgroundColor: t.soft }, outline(t)]}>
+        <BanIcon color={t.text} size={20} />
+      </SoftPressable>
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  location: { flexDirection: 'row', alignItems: 'center', gap: space.sm, paddingVertical: space.sm },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.lg, paddingVertical: space.sm, minHeight: 64 },
+  unblock: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+});

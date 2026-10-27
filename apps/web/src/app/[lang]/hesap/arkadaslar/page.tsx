@@ -1,19 +1,14 @@
 "use client";
 
 import { Username, friendState, type ProfileCard } from "@sezi/shared";
+import { Check, Clock, EyeOff, Search, UserMinus, UserPlus, Users, X } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { Avatar } from "@/components/account/avatar";
-import {
-  AccountField,
-  AccountNote,
-  FormError,
-} from "@/components/account/form-error";
-import {
-  SocialShell,
-  useSocialAccount,
-} from "@/components/account/social-shell";
+import { FormError } from "@/components/account/form-error";
+import { SocialShell, useSocialAccount } from "@/components/account/social-shell";
+import { EmptyInvite, FriendsArt } from "@/components/account/social-visuals";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,14 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { href } from "@/lib/i18n";
@@ -124,204 +112,160 @@ export default function FriendsPage() {
       </span>
     </Link>
   );
-  const renderList = (kind: "friends" | "incoming" | "outgoing") => {
+  const incomingCount = list.data?.rows.filter((row) => row.status === "pending" && row.addressee === user.id).length ?? 0;
+  const iconButton = (label: string, icon: ReactNode, onClick: () => void, primary = false) => (
+    <Button
+      size="icon"
+      variant={primary ? "default" : "secondary"}
+      className="size-12 rounded-full"
+      aria-label={label}
+      disabled={busy}
+      onClick={onClick}
+    >
+      {icon}
+    </Button>
+  );
+  const renderList = (kind: "friends" | "requests") => {
     const items =
       list.data?.people.filter(({ row }) =>
-        kind === "friends"
-          ? row.status === "accepted"
-          : row.status === "pending" &&
-            (kind === "incoming"
-              ? row.addressee === user.id
-              : row.requester === user.id),
+        kind === "friends" ? row.status === "accepted" : row.status === "pending",
       ) ?? [];
-    return items.length ? (
-      <ul className="divide-y">
-        {items.map(({ row, person, id, avatar }) => (
-          <li
-            key={row.id}
-            className="flex flex-wrap items-center justify-between gap-3 py-4"
-          >
-            {renderPerson(person, id, avatar)}
-            <div className="flex flex-wrap gap-2">
-              {kind === "incoming" ? (
-                <Button
-                  className="min-h-12"
-                  disabled={busy}
-                  onClick={() => void act(() => accept(row.id))}
-                >
-                  {t("friends.accept")}
-                </Button>
-              ) : null}
-              <Button
-                className="min-h-12"
-                variant="outline"
-                disabled={busy}
-                onClick={() =>
-                  kind === "friends"
-                    ? setConfirm(row.id)
-                    : void act(() => removeFriendship(row.id))
-                }
-              >
-                {t(
-                  kind === "friends"
-                    ? "friends.remove"
-                    : kind === "incoming"
-                      ? "friends.reject"
-                      : "friends.withdraw",
+    if (!items.length)
+      return kind === "friends" ? (
+        <EmptyInvite art={<FriendsArt />} text={t("friends.emptyInvite")} />
+      ) : (
+        <p className="py-6 text-center text-muted-foreground">{t("friends.noRequests")}</p>
+      );
+    return (
+      <ul className="divide-y rounded-xl border bg-card">
+        {items.map(({ row, person, id, avatar }) => {
+          const name = person?.display_name ?? t("person.notFound");
+          const incoming = row.status === "pending" && row.addressee === user.id;
+          return (
+            <li key={row.id} className="flex items-center gap-3 px-4 py-3">
+              <div className="min-w-0 flex-1">{renderPerson(person, id, avatar)}</div>
+              <div className="flex gap-2">
+                {incoming
+                  ? iconButton(t("friends.acceptName", { name }), <Check aria-hidden />, () => void act(() => accept(row.id)), true)
+                  : null}
+                {iconButton(
+                  t(kind === "friends" ? "friends.remove" : incoming ? "friends.rejectName" : "friends.withdrawName", { name }),
+                  kind === "friends" ? <UserMinus aria-hidden /> : <X aria-hidden />,
+                  () => (kind === "friends" ? setConfirm(row.id) : void act(() => removeFriendship(row.id))),
                 )}
-              </Button>
-            </div>
-          </li>
-        ))}
+              </div>
+            </li>
+          );
+        })}
       </ul>
-    ) : (
-      <Empty>
-        <EmptyHeader>
-          <EmptyTitle>
-            {t(kind === "friends" ? "friends.empty" : "friends.noRequests")}
-          </EmptyTitle>
-        </EmptyHeader>
-      </Empty>
     );
   };
   return (
-    <SocialShell
-      title="friends.title"
-      loading={list.loading}
-      error={list.error ?? results.error}
-    >
-      <div className="flex flex-col gap-8">
+    <SocialShell title="friends.title" loading={list.loading} error={list.error ?? results.error}>
+      <div className="flex flex-col gap-6">
         <FormError text={failed ? t("friends.error") : null} />
-        {!identity?.findable ? (
-          <AccountNote text={t("friends.findableNote")} />
-        ) : null}
-        <Field
-          orientation="horizontal"
-          data-disabled={busy || !identity}
-          className="min-h-12"
-        >
-          <FieldContent>
-            <FieldLabel htmlFor="friends-findable" className="min-h-12">
-              {t("privacy.findable")}
-            </FieldLabel>
-            <FieldDescription>{t("privacy.findableHelp")}</FieldDescription>
-          </FieldContent>
-          <Switch
-            id="friends-findable"
-            checked={identity?.findable ?? false}
-            disabled={busy || !identity}
-            onCheckedChange={(findable) => void act(() => save({ findable }))}
-          />
-        </Field>
-        <section aria-labelledby="friend-search" className="border-t pt-6">
-          <h2 id="friend-search" className="mb-4 text-xl font-bold">
+        <section aria-labelledby="friend-search" className="grid gap-3">
+          <h2 id="friend-search" className="sr-only">
             {t("friends.search")}
           </h2>
           <form
+            role="search"
+            className="flex gap-2"
             onSubmit={(event) => {
               event.preventDefault();
-              if (Username.safeParse(query.trim()).success)
-                setSearch(query.trim());
+              const next = query.trim().replace(/^@/, "");
+              if (Username.safeParse(next).success) setSearch(next);
             }}
           >
-            <FieldGroup>
-              <AccountField
-                className="[&_input]:min-h-12"
-                label={t("friends.searchLabel")}
-                help={t("friends.searchHelp")}
+            <label htmlFor="friend-query" className="sr-only">
+              {t("friends.search")}
+            </label>
+            <div className="relative flex-1">
+              <Search aria-hidden className="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                id="friend-query"
+                className="h-12 rounded-xl border-0 bg-muted pl-12"
+                placeholder={t("friends.searchPlaceholder")}
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 autoComplete="off"
-                minLength={3}
+                aria-describedby="friend-query-help"
               />
-              <Button
-                className="min-h-12"
-                type="submit"
-                disabled={
-                  !Username.safeParse(query.trim()).success || results.loading
-                }
-              >
-                {t("friends.search")}
-              </Button>
-            </FieldGroup>
+            </div>
+            <Button
+              type="submit"
+              className="min-h-12"
+              disabled={!Username.safeParse(query.trim().replace(/^@/, "")).success || results.loading}
+            >
+              {t("friends.searchButton")}
+            </Button>
           </form>
+          <p id="friend-query-help" className="text-sm text-muted-foreground">
+            {t("friends.searchHelp")}
+          </p>
+          {identity && !identity.findable ? (
+            <div className="flex min-h-12 items-center gap-3 rounded-xl bg-muted px-4 py-2 contrast:outline-2 contrast:outline-border">
+              <EyeOff aria-hidden className="size-5 text-muted-foreground" />
+              <label htmlFor="friends-findable" className="flex-1 cursor-pointer font-semibold">
+                {t("friends.notFindable")}
+              </label>
+              <Switch
+                id="friends-findable"
+                checked={identity.findable}
+                disabled={busy}
+                onCheckedChange={(findable) => void act(() => save({ findable }))}
+              />
+            </div>
+          ) : null}
           <div aria-live="polite">
             {search && !results.loading && results.data?.length === 0 ? (
-              <Empty>
-                <EmptyHeader>
-                  <EmptyTitle>{t("friends.noResults")}</EmptyTitle>
-                </EmptyHeader>
-              </Empty>
+              <p className="py-3 text-muted-foreground">{t("friends.noResults")}</p>
             ) : null}
           </div>
-          <ul className="divide-y">
-            {results.data?.map(({ person, avatar }) => {
-              const state = friendState(
-                list.data?.rows ?? [],
-                user.id,
-                person.user_id,
-              );
-              return (
-                <li
-                  key={person.user_id}
-                  className="flex flex-wrap items-center justify-between gap-3 py-4"
-                >
-                  {renderPerson(person, person.user_id, avatar)}
-                  {state === "none" ? (
-                    <Button
-                      className="min-h-12"
-                      disabled={busy}
-                      onClick={() =>
-                        void act(() => sendRequest(person.user_id))
-                      }
-                    >
-                      {t("friends.add")}
-                    </Button>
-                  ) : (
-                    <span className="text-sm text-muted-foreground">
-                      {t(
-                        state === "friends"
-                          ? "friends.connected"
-                          : state === "incoming"
-                            ? "friends.incoming"
-                            : "friends.outgoing",
-                      )}
-                    </span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
+          {results.data?.length ? (
+            <ul className="divide-y rounded-xl border bg-card">
+              {results.data.map(({ person, avatar }) => {
+                const state = friendState(list.data?.rows ?? [], user.id, person.user_id);
+                return (
+                  <li key={person.user_id} className="flex items-center gap-3 px-4 py-3">
+                    <div className="min-w-0 flex-1">{renderPerson(person, person.user_id, avatar)}</div>
+                    {state === "none" ? (
+                      iconButton(t("friends.addName", { name: person.display_name }), <UserPlus aria-hidden />, () =>
+                        void act(() => sendRequest(person.user_id)), true)
+                    ) : (
+                      <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                        {state === "friends" ? <Users aria-hidden className="size-4" /> : <Clock aria-hidden className="size-4" />}
+                        {t(state === "friends" ? "friends.connected" : state === "incoming" ? "friends.requestsTab" : "friends.sentShort")}
+                      </span>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          ) : null}
         </section>
         <Tabs defaultValue="friends">
           <TabsList className="h-auto max-w-full flex-wrap">
-            <TabsTrigger value="friends" className="min-h-12">
+            <TabsTrigger value="friends" className="min-h-12 px-4">
               {t("friends.title")}
             </TabsTrigger>
-            <TabsTrigger value="requests" className="min-h-12">
-              {t("friends.requests", {
-                n:
-                  list.data?.rows.filter(
-                    (row) =>
-                      row.status === "pending" && row.addressee === user.id,
-                  ).length ?? 0,
-              })}
+            <TabsTrigger value="requests" className="min-h-12 gap-2 px-4">
+              {t("friends.requestsTab")}
+              {incomingCount ? (
+                <span
+                  className="grid h-6 min-w-6 place-items-center rounded-full bg-link px-1.5 text-xs font-bold text-background"
+                  aria-label={t("friends.incomingCount", { n: incomingCount })}
+                >
+                  {incomingCount}
+                </span>
+              ) : null}
             </TabsTrigger>
           </TabsList>
-          <TabsContent value="friends">{renderList("friends")}</TabsContent>
-          <TabsContent value="requests" className="flex flex-col gap-6">
-            <section aria-labelledby="incoming-title">
-              <h2 id="incoming-title" className="text-lg font-bold">
-                {t("friends.incoming")}
-              </h2>
-              {renderList("incoming")}
-            </section>
-            <section aria-labelledby="outgoing-title">
-              <h2 id="outgoing-title" className="text-lg font-bold">
-                {t("friends.outgoing")}
-              </h2>
-              {renderList("outgoing")}
-            </section>
+          <TabsContent value="friends" className="pt-4">
+            {renderList("friends")}
+          </TabsContent>
+          <TabsContent value="requests" className="pt-4">
+            {renderList("requests")}
           </TabsContent>
         </Tabs>
       </div>

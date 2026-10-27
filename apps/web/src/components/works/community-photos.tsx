@@ -1,11 +1,9 @@
 "use client";
 
-import type { UserPhoto } from "@sezi/shared";
 import Link from "next/link";
 import { useId, useState } from "react";
 
 import { FormError } from "@/components/account/form-error";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useAccount } from "@/lib/account";
 import { href } from "@/lib/i18n";
@@ -48,25 +46,6 @@ export function PhotoImage({
       className={cn("aspect-square w-full object-cover", className)}
       onError={() => setFailed(src)}
     />
-  );
-}
-
-export function PhotoStatus({ photo }: { photo: UserPhoto }) {
-  const { t } = useT();
-  return (
-    <div className="flex flex-wrap gap-2">
-      <Badge variant="secondary">{t(`photos.${photo.visibility}`)}</Badge>
-      {photo.visibility === "public" ? (
-        <Badge
-          variant={photo.review === "rejected" ? "destructive" : "outline"}
-        >
-          {t(`photos.review.${photo.review}`)}
-        </Badge>
-      ) : null}
-      {photo.archive !== "none" ? (
-        <Badge variant="outline">{t(`photos.archive.${photo.archive}`)}</Badge>
-      ) : null}
-    </div>
   );
 }
 

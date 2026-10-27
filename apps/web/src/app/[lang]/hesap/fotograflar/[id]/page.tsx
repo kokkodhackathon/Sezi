@@ -11,12 +11,12 @@ import { useParams, useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { AccountNote, FormError } from "@/components/account/form-error";
+import { FormError } from "@/components/account/form-error";
 import {
   SocialShell,
   useSocialAccount,
 } from "@/components/account/social-shell";
-import { ChoiceGroup } from "@/components/choice-group";
+import { PhotoOptions } from "@/components/account/photo-options";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,9 +37,9 @@ import {
   FieldGroup,
   FieldLabel,
 } from "@/components/ui/field";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { PhotoImage, PhotoStatus } from "@/components/works/community-photos";
+import { photoStatus, StatusChips } from "@/components/account/social-visuals";
+import { PhotoImage } from "@/components/works/community-photos";
 import { href } from "@/lib/i18n";
 import { useT } from "@/lib/i18n-client";
 import {
@@ -99,7 +99,7 @@ export default function PhotoDetailPage() {
             >
               {data.work ? loc(data.work.name, lang) : data.photo.work_slug}
             </Link>
-            <PhotoStatus photo={data.photo} />
+            <StatusChips items={photoStatus(data.photo, t)} />
             {data.photo.credit_name ? (
               <p className="text-sm text-muted-foreground">
                 {t("photos.credit", { name: data.photo.credit_name })}
@@ -231,37 +231,13 @@ function PhotoEditor({
                 {errors.caption}
               </FieldError>
             </Field>
-            <ChoiceGroup<UserPhoto["visibility"]>
-              legend={t("photos.visibility")}
-              value={visibility}
-              onChange={setVisibility}
-              choices={[
-                { value: "private", label: t("photos.private") },
-                { value: "friends", label: t("photos.friends") },
-                { value: "public", label: t("photos.public") },
-              ]}
+            <PhotoOptions
+              visibility={visibility}
+              onVisibility={setVisibility}
+              suggestArchive={suggestArchive}
+              onSuggestArchive={setSuggestArchive}
+              accepted={photo.archive === "accepted"}
             />
-            {visibility === "public" ? (
-              <AccountNote text={t("photos.publicNote")} />
-            ) : null}
-            <Field
-              orientation="horizontal"
-              className="min-h-12"
-              data-disabled={photo.archive === "accepted"}
-            >
-              <FieldLabel htmlFor="photo-edit-archive">
-                {t("photos.archiveSuggest")}
-              </FieldLabel>
-              <Switch
-                id="photo-edit-archive"
-                checked={suggestArchive}
-                onCheckedChange={setSuggestArchive}
-                disabled={photo.archive === "accepted"}
-              />
-            </Field>
-            {suggestArchive ? (
-              <AccountNote text={t("photos.archiveNote")} />
-            ) : null}
             <FormError text={errors.form} />
             <Button type="submit" className="min-h-12" disabled={busy}>
               {t(busy ? "photos.saving" : "photos.save")}

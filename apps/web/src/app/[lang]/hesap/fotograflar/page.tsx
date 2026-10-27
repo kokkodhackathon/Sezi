@@ -1,23 +1,15 @@
 "use client";
 
 import { loc } from "@sezi/shared";
+import { Camera, X } from "lucide-react";
 import Link from "next/link";
 import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-import {
-  SocialShell,
-  useSocialAccount,
-} from "@/components/account/social-shell";
+import { SocialShell, useSocialAccount } from "@/components/account/social-shell";
+import { EmptyInvite, EmptyPhotoArt, photoStatus, StatusDots, TypeGlyph } from "@/components/account/social-visuals";
 import { Button } from "@/components/ui/button";
-import {
-  Empty,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyTitle,
-} from "@/components/ui/empty";
-import { Field, FieldLabel } from "@/components/ui/field";
-import { PhotoImage, PhotoStatus } from "@/components/works/community-photos";
+import { PhotoImage } from "@/components/works/community-photos";
 import { href } from "@/lib/i18n";
 import { useT } from "@/lib/i18n-client";
 import { getPhotos, getWorks, photoUrls } from "@/lib/social";
@@ -47,79 +39,67 @@ function PhotoArchive() {
   }, [user?.id, workSlug]);
   const data = result.data;
   if (!ready || !user) return null;
+  const filtered = workSlug ? data?.works.find((work) => work.slug === workSlug) : undefined;
+  const addHref = href(lang, `/hesap/fotograflar/yeni${workSlug ? `?eser=${encodeURIComponent(workSlug)}` : ""}`);
+  const clearFilter = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.delete("eser");
+    window.history.replaceState(null, "", url);
+  };
   return (
-    <SocialShell
-      title="photos.title"
-      error={result.error}
-      loading={result.loading}
-    >
-      <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <Field className="max-w-sm">
-          <FieldLabel htmlFor="photo-work-filter">
-            {t("photos.work")}
-          </FieldLabel>
-          <select
-            id="photo-work-filter"
-            value={workSlug}
-            className="min-h-12 rounded-md border bg-background px-3 text-sm"
-            onChange={(event) => {
-              const url = new URL(window.location.href);
-              if (event.target.value)
-                url.searchParams.set("eser", event.target.value);
-              else url.searchParams.delete("eser");
-              window.history.replaceState(null, "", url);
-            }}
+    <SocialShell title="photos.title" error={result.error} loading={result.loading}>
+      {filtered ? (
+        <div>
+          <button
+            type="button"
+            onClick={clearFilter}
+            aria-label={t("photos.clearFilter", { name: loc(filtered.name, lang) })}
+            className="inline-flex min-h-12 items-center gap-2 rounded-full bg-muted px-4 font-semibold outline-none hover:bg-border/60 focus-visible:ring-3 focus-visible:ring-ring"
           >
-            <option value="">{t("photos.allWorks")}</option>
-            {data?.works.map((work) => (
-              <option key={work.slug} value={work.slug}>
-                {loc(work.name, lang)}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Button asChild className="min-h-12">
-          <Link
-            href={href(
-              lang,
-              `/hesap/fotograflar/yeni${workSlug ? `?eser=${encodeURIComponent(workSlug)}` : ""}`,
-            )}
-          >
-            {t("photos.add")}
-          </Link>
-        </Button>
-      </div>
-      {data?.photos.length === 0 ? (
-        <Empty>
-          <EmptyHeader>
-            <EmptyTitle>{t("photos.empty")}</EmptyTitle>
-            <EmptyDescription>{t("photos.emptyBody")}</EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+            <TypeGlyph slug={filtered.type_slug} className="size-5" />
+            {loc(filtered.name, lang)}
+            <X aria-hidden className="size-4" />
+          </button>
+        </div>
       ) : null}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {data?.photos.map((photo) => {
-          const work = data.works.find((item) => item.slug === photo.work_slug);
-          return (
+      {data?.photos.length === 0 ? (
+        <EmptyInvite
+          art={<EmptyPhotoArt />}
+          text={t("photos.emptyInvite")}
+          action={
+            <Button asChild className="min-h-12">
+              <Link href={addHref}>{t("photos.add")}</Link>
+            </Button>
+          }
+        />
+      ) : (
+        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+          <li>
             <Link
-              key={photo.id}
-              href={href(lang, `/hesap/fotograflar/${photo.id}`)}
-              className="flex min-w-0 flex-col gap-3 overflow-hidden rounded-lg border bg-card pb-3 focus-visible:outline-2 focus-visible:outline-ring"
+              href={addHref}
+              className="grid aspect-square place-items-center content-center gap-2 rounded-lg border-2 border-dashed border-link text-link outline-none hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring"
             >
-              <PhotoImage
-                src={data.urls[photo.thumb_path]}
-                alt={photo.alt_text}
-              />
-              <div className="flex flex-col gap-2 px-3">
-                <p className="truncate font-semibold">
-                  {work ? loc(work.name, lang) : photo.work_slug}
-                </p>
-                <PhotoStatus photo={photo} />
-              </div>
+              <Camera aria-hidden className="size-8" />
+              <span className="font-semibold">{t("photos.add")}</span>
             </Link>
-          );
-        })}
-      </div>
+          </li>
+          {data?.photos.map((photo) => {
+            const status = photoStatus(photo, t);
+            return (
+              <li key={photo.id}>
+                <Link
+                  href={href(lang, `/hesap/fotograflar/${photo.id}`)}
+                  aria-label={`${photo.alt_text}. ${status.map((item) => item.label).join(", ")}`}
+                  className="relative block aspect-square overflow-hidden rounded-lg bg-muted outline-none focus-visible:ring-3 focus-visible:ring-ring"
+                >
+                  <PhotoImage src={data.urls[photo.thumb_path]} alt="" className="size-full object-cover" />
+                  <StatusDots items={status} />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </SocialShell>
   );
 }

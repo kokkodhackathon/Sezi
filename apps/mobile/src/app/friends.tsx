@@ -1,23 +1,16 @@
 import { Username, type FriendshipRow } from '@sezi/shared';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
-import { useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { useState, type ReactNode } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 
 import { FormError, FormScreen } from '@/components/account-fields';
 import { Avatar } from '@/components/avatar';
-import {
-  Button,
-  Card,
-  EmptyState,
-  Field,
-  ListRow,
-  Note,
-  SectionTitle,
-  Segmented,
-  ToggleRow,
-} from '@/components/ui';
-import { space } from '@/design/type';
+import { EmptyInvite, FriendsArt } from '@/components/social-visuals';
+import { Button, Card, Field, ListRow, Segmented, ToggleRow } from '@/components/ui';
+import { CheckIcon, CloseIcon, EyeIcon, SearchIcon } from '@/design/icons';
+import { outline, SoftPressable } from '@/design/sweet/components';
+import { space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { errorKey, useAccount } from '@/lib/account';
 import { useFriendActions, useFriendships } from '@/lib/friends';
@@ -62,73 +55,86 @@ export default function FriendsScreen() {
   if (!user)
     return (
       <FormScreen>
-        <EmptyState
-          title={tr('friends.signIn')}
+        <EmptyInvite
+          art={<FriendsArt />}
+          text={tr('friends.signIn')}
           action={<Button label={tr('account.signIn')} onPress={() => router.push('/account/sign-in')} />}
         />
       </FormScreen>
     );
-  const requestRow = (row: FriendshipRow, received: boolean) => (
-    <View key={row.id} style={{ gap: space.sm }}>
-      <FriendRow uid={received ? row.requester : row.addressee} />
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: space.sm }}>
-        {received ? (
-          <Button
-            compact
-            label={tr('friends.accept')}
-            disabled={busy}
-            onPress={() => void perform(() => actions.accept(row.id))}
-          />
-        ) : null}
-        <Button
-          compact
-          variant="outline"
-          label={tr(received ? 'friends.reject' : 'friends.withdraw')}
-          disabled={busy}
-          onPress={() => void perform(() => actions.removeFriendship(row.id))}
-        />
-      </View>
-    </View>
+  const iconAction = (label: string, icon: (color: string) => ReactNode, onPress: () => void, primary = false) => (
+    <SoftPressable
+      onPress={onPress}
+      disabled={busy}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled: busy }}
+      style={[styles.action, { backgroundColor: primary && !t.outlined ? t.primary.fill : t.soft }, outline(t)]}>
+      {icon(primary && !t.outlined ? t.primary.ink : t.text)}
+    </SoftPressable>
   );
+  const requestRow = (row: FriendshipRow, received: boolean, first: boolean) => {
+    const uid = received ? row.requester : row.addressee;
+    return (
+      <FriendRow
+        key={row.id}
+        uid={uid}
+        first={first}
+        trailing={(name) => (
+          <View style={{ flexDirection: 'row', gap: space.sm }}>
+            {received
+              ? iconAction(
+                  tr('friends.acceptName', { name }),
+                  (c) => <CheckIcon color={c} />,
+                  () => void perform(() => actions.accept(row.id)),
+                  true,
+                )
+              : null}
+            {iconAction(
+              tr(received ? 'friends.rejectName' : 'friends.withdrawName', { name }),
+              (c) => <CloseIcon color={c} size={20} />,
+              () => void perform(() => actions.removeFriendship(row.id)),
+            )}
+          </View>
+        )}
+      />
+    );
+  };
   return (
     <FormScreen>
-      {identity && !identity.findable ? (
-        <Card>
-          <Note text={tr('friends.findableNote')} />
-          <ToggleRow
-            first
-            title={tr('privacy.findable')}
-            value={identity.findable}
-            onChange={(findable) => void perform(() => save({ findable }))}
-          />
-        </Card>
-      ) : null}
-      <Field
-        label={tr('friends.search')}
-        help={tr('friends.searchHelp')}
-        value={search}
-        onChangeText={(value) => setSearch(value.toLowerCase().trim())}
-        autoCapitalize="none"
-        autoCorrect={false}
-        maxLength={20}
-      />
+      <View style={{ gap: space.sm }}>
+        <Field
+          label={tr('friends.search')}
+          placeholder={tr('friends.searchPlaceholder')}
+          help={tr('friends.searchHelp')}
+          value={search}
+          onChangeText={(value) => setSearch(value.replace(/^@/, '').toLowerCase().trim())}
+          autoCapitalize="none"
+          autoCorrect={false}
+          maxLength={21}
+          icon={(c) => <SearchIcon color={c} size={20} />}
+        />
+        {identity && !identity.findable ? (
+          <Card padded={false}>
+            <ToggleRow
+              first
+              icon={(c) => <EyeIcon color={c} off />}
+              title={tr('friends.notFindable')}
+              value={identity.findable}
+              onChange={(findable) => void perform(() => save({ findable }))}
+            />
+          </Card>
+        ) : null}
+      </View>
       {results.isFetching ? (
         <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('account.loading')} />
       ) : null}
       {parsed.success && results.data ? (
         <Card padded={false}>
           {matches.length ? (
-            matches.map((person, index) => (
-              <ListRow
-                key={person.user_id}
-                first={index === 0}
-                title={person.display_name}
-                subtitle={person.username ? `@${person.username}` : undefined}
-                onPress={() => router.push({ pathname: '/person/[id]', params: { id: person.user_id } })}
-              />
-            ))
+            matches.map((person, index) => <FriendRow key={person.user_id} uid={person.user_id} first={index === 0} />)
           ) : (
-            <EmptyState title={tr('friends.noResults')} />
+            <Text style={[type.body, { color: t.textMuted, padding: space.lg }]}>{tr('friends.noResults')}</Text>
           )}
         </Card>
       ) : null}
@@ -138,7 +144,7 @@ export default function FriendsScreen() {
         onChange={setTab}
         options={[
           { value: 'friends', label: tr('friends.title') },
-          { value: 'requests', label: tr('friends.requests', { n: incoming.length }) },
+          { value: 'requests', label: incoming.length ? tr('friends.requests', { n: incoming.length }) : tr('friends.requestsTab') },
         ]}
       />
       {friendships.isLoading ? (
@@ -146,29 +152,20 @@ export default function FriendsScreen() {
       ) : tab === 'friends' ? (
         friends.length ? (
           <Card padded={false}>
-            {friends.map((row) => (
-              <FriendRow key={row.id} uid={row.requester === user.id ? row.addressee : row.requester} />
+            {friends.map((row, index) => (
+              <FriendRow key={row.id} first={index === 0} uid={row.requester === user.id ? row.addressee : row.requester} />
             ))}
           </Card>
         ) : (
-          <EmptyState title={tr('friends.empty')} />
+          <EmptyInvite art={<FriendsArt />} text={tr('friends.emptyInvite')} />
         )
+      ) : incoming.length || outgoing.length ? (
+        <Card padded={false}>
+          {incoming.map((row, index) => requestRow(row, true, index === 0))}
+          {outgoing.map((row, index) => requestRow(row, false, !incoming.length && index === 0))}
+        </Card>
       ) : (
-        <>
-          {!incoming.length && !outgoing.length ? <EmptyState title={tr('friends.noRequests')} /> : null}
-          {incoming.length ? (
-            <>
-              <SectionTitle title={tr('friends.incoming')} />
-              <Card>{incoming.map((row) => requestRow(row, true))}</Card>
-            </>
-          ) : null}
-          {outgoing.length ? (
-            <>
-              <SectionTitle title={tr('friends.outgoing')} />
-              <Card>{outgoing.map((row) => requestRow(row, false))}</Card>
-            </>
-          ) : null}
-        </>
+        <Text style={[type.body, { color: t.textMuted, textAlign: 'center' }]}>{tr('friends.noRequests')}</Text>
       )}
       <FormError
         text={
@@ -180,17 +177,49 @@ export default function FriendsScreen() {
   );
 }
 
-function FriendRow({ uid }: { uid: string }) {
+/**
+ * Kişi satırı: avatar, ad, @ad. Eylem varsa (kabul/ret) satırın kendisi düğme olmaz: ad bölümü kişi
+ * sayfasını açar, ikon düğmeleri yanında ayrı odaklanır (iç içe düğme ekran okuyucuda kaybolur).
+ */
+function FriendRow({ uid, first, trailing }: { uid: string; first?: boolean; trailing?: (name: string) => ReactNode }) {
   const { t: tr } = useT();
+  const t = useSweetTheme();
   const person = usePerson(uid);
   const profile = person.data?.profile;
+  const name = profile?.display_name ?? tr('person.notFound');
+  const open = () => router.push({ pathname: '/person/[id]', params: { id: uid } });
+  if (!trailing)
+    return (
+      <ListRow
+        first={first}
+        title={name}
+        subtitle={profile?.username ? `@${profile.username}` : undefined}
+        leading={<Avatar identity={profile ?? null} source={person.avatar} size={48} />}
+        onPress={open}
+      />
+    );
   return (
-    <ListRow
-      first
-      title={profile?.display_name ?? tr('person.notFound')}
-      subtitle={profile?.username ? `@${profile.username}` : undefined}
-      leading={<Avatar identity={profile ?? null} source={person.avatar} size={48} />}
-      onPress={() => router.push({ pathname: '/person/[id]', params: { id: uid } })}
-    />
+    <View style={[styles.row, !first && { borderTopWidth: t.outlined ? 1 : StyleSheet.hairlineWidth, borderTopColor: t.border }]}>
+      <SoftPressable
+        onPress={open}
+        accessibilityRole="button"
+        accessibilityLabel={[name, profile?.username ? `@${profile.username}` : null].filter(Boolean).join(', ')}
+        style={styles.person}>
+        <Avatar identity={profile ?? null} source={person.avatar} size={48} />
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={[type.itemTitle, { color: t.text }]} numberOfLines={2}>
+            {name}
+          </Text>
+          {profile?.username ? <Text style={[type.meta, { color: t.textMuted }]}>@{profile.username}</Text> : null}
+        </View>
+      </SoftPressable>
+      {trailing(name)}
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  action: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', gap: space.md, paddingHorizontal: space.lg, paddingVertical: space.sm, minHeight: 72 },
+  person: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: space.md, minHeight: 56 },
+});

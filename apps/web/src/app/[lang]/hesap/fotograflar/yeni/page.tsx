@@ -6,17 +6,19 @@ import {
   PHOTO_CAPTION_MAX,
   type UserPhoto,
 } from "@sezi/shared";
+import { ImagePlus, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { AccountNote, FormError } from "@/components/account/form-error";
+import { FormError } from "@/components/account/form-error";
+import { Stamp, TypeGlyph } from "@/components/account/social-visuals";
 import {
   SocialShell,
   useSocialAccount,
 } from "@/components/account/social-shell";
-import { ChoiceGroup } from "@/components/choice-group";
+import { PhotoOptions } from "@/components/account/photo-options";
 import { Button } from "@/components/ui/button";
 import {
   Field,
@@ -26,7 +28,6 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { PhotoImage } from "@/components/works/community-photos";
 import { href } from "@/lib/i18n";
@@ -132,87 +133,100 @@ function NewPhoto() {
       >
         <fieldset disabled={busy} className="min-w-0">
           <FieldGroup>
-            <Field data-invalid={!!errors.work}>
-              <FieldLabel htmlFor="photo-work-search">
-                {t("photos.work")}
-              </FieldLabel>
-              {selectedWork ? (
-                <p className="font-semibold">{loc(selectedWork.name, lang)}</p>
-              ) : null}
-              <Input
-                id="photo-work-search"
-                className="min-h-12"
-                type="search"
-                placeholder={t("photos.searchWork")}
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                aria-invalid={!!errors.work}
-                aria-describedby={errors.work ? "photo-work-error" : undefined}
-              />
-              <div
-                className="flex max-h-60 flex-col gap-1 overflow-y-auto"
-                role="group"
-                aria-label={t("photos.chooseWork")}
-              >
-                {matches.map((work) => (
-                  <Button
-                    key={work.slug}
-                    type="button"
-                    variant={workSlug === work.slug ? "secondary" : "ghost"}
-                    className="min-h-12 justify-start whitespace-normal text-left"
-                    aria-pressed={workSlug === work.slug}
-                    onClick={() => setWorkSlug(work.slug)}
-                  >
-                    {loc(work.name, lang)}{" "}
-                    <span className="text-muted-foreground">
-                      ({work.city_slug})
-                    </span>
-                  </Button>
-                ))}
-                {!works.loading && matches.length === 0 ? (
-                  <p className="p-3 text-sm text-muted-foreground">
-                    {t("photos.noWorks")}
-                  </p>
-                ) : null}
-              </div>
-              {errors.work ? (
-                <FieldError id="photo-work-error">{errors.work}</FieldError>
-              ) : null}
-            </Field>
+            {/* 1. Fotoğraf: seçilmemişse kesikli alan; tüm alan dosya seçiciyi açar. */}
             <Field data-invalid={!!errors.file}>
-              <FieldLabel htmlFor="photo-file">{t("photos.file")}</FieldLabel>
-              <Input
-                id="photo-file"
-                className="min-h-12"
-                type="file"
-                accept="image/*"
-                aria-invalid={!!errors.file}
-                aria-describedby="photo-file-help photo-file-error"
-                onChange={(event) => {
-                  const chosen = event.target.files?.[0];
-                  setFile(
-                    chosen?.type.startsWith("image/") ? chosen : undefined,
-                  );
-                  setErrors((previous) => ({
-                    ...previous,
-                    file:
-                      chosen && !chosen.type.startsWith("image/")
-                        ? t("photos.err.file")
-                        : undefined,
-                  }));
-                }}
-              />
-              <FieldDescription id="photo-file-help">
-                {t("photos.fileHelp")}
-              </FieldDescription>
-              <FieldError id="photo-file-error">{errors.file}</FieldError>
-              {preview ? (
-                <PhotoImage
-                  src={preview}
-                  alt={alt}
-                  className="max-h-96 rounded-lg object-contain"
+              <FieldLabel htmlFor="photo-file" className="sr-only">
+                {t("photos.file")}
+              </FieldLabel>
+              <label
+                htmlFor="photo-file"
+                className="relative grid min-h-48 cursor-pointer place-items-center overflow-hidden rounded-xl border-2 border-dashed border-border bg-card text-center has-[:focus-visible]:ring-3 has-[:focus-visible]:ring-ring"
+              >
+                {preview ? (
+                  <PhotoImage src={preview} alt={alt} className="max-h-96 w-full object-contain" />
+                ) : (
+                  <span className="grid justify-items-center gap-3 p-6">
+                    <span aria-hidden className="grid size-16 place-items-center rounded-full bg-highlight text-highlight-foreground">
+                      <ImagePlus className="size-8" />
+                    </span>
+                    <span className="font-heading font-bold">{t("photos.file")}</span>
+                  </span>
+                )}
+                <input
+                  id="photo-file"
+                  type="file"
+                  accept="image/*"
+                  className="sr-only"
+                  aria-invalid={!!errors.file}
+                  aria-describedby="photo-file-help photo-file-error"
+                  onChange={(event) => {
+                    const chosen = event.target.files?.[0];
+                    setFile(chosen?.type.startsWith("image/") ? chosen : undefined);
+                    setErrors((previous) => ({
+                      ...previous,
+                      file: chosen && !chosen.type.startsWith("image/") ? t("photos.err.file") : undefined,
+                    }));
+                  }}
                 />
-              ) : null}
+              </label>
+              <FieldDescription id="photo-file-help">{t("photos.fileHelp")}</FieldDescription>
+              <FieldError id="photo-file-error">{errors.file}</FieldError>
+            </Field>
+            {/* 2. Eser: seçiliyse glifli çip, değilse arama ve sonuçlar. */}
+            <Field data-invalid={!!errors.work}>
+              <FieldLabel htmlFor="photo-work-search">{t("photos.work")}</FieldLabel>
+              {selectedWork ? (
+                <div className="flex min-h-14 items-center gap-3 rounded-xl border bg-card px-3 py-2">
+                  <Stamp slug={selectedWork.slug} typeSlug={selectedWork.type_slug} className="size-11" />
+                  <span className="flex-1 font-semibold">{loc(selectedWork.name, lang)}</span>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="secondary"
+                    className="size-12 rounded-full"
+                    aria-label={t("photos.changeWork")}
+                    onClick={() => setWorkSlug("")}
+                  >
+                    <X aria-hidden />
+                  </Button>
+                </div>
+              ) : (
+                <>
+                  <Input
+                    id="photo-work-search"
+                    className="min-h-12"
+                    type="search"
+                    placeholder={t("photos.searchWork")}
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                    aria-invalid={!!errors.work}
+                    aria-describedby={errors.work ? "photo-work-error" : undefined}
+                  />
+                  {query.trim() ? (
+                    <div className="flex max-h-72 flex-col overflow-y-auto rounded-xl border bg-card" role="group" aria-label={t("photos.chooseWork")}>
+                      {matches.map((work) => (
+                        <Button
+                          key={work.slug}
+                          type="button"
+                          variant="ghost"
+                          className="min-h-12 justify-start gap-3 whitespace-normal rounded-none text-left"
+                          onClick={() => {
+                            setWorkSlug(work.slug);
+                            setQuery("");
+                          }}
+                        >
+                          <TypeGlyph slug={work.type_slug} className="size-5 shrink-0" />
+                          {loc(work.name, lang)}
+                        </Button>
+                      ))}
+                      {!works.loading && matches.length === 0 ? (
+                        <p className="p-3 text-sm text-muted-foreground">{t("photos.noWorks")}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </>
+              )}
+              {errors.work ? <FieldError id="photo-work-error">{errors.work}</FieldError> : null}
             </Field>
             <Field data-invalid={!!errors.alt}>
               <FieldLabel htmlFor="photo-alt">{t("photos.alt")}</FieldLabel>
@@ -244,32 +258,12 @@ function NewPhoto() {
               />
               <FieldError id="photo-caption-error">{errors.caption}</FieldError>
             </Field>
-            <ChoiceGroup<UserPhoto["visibility"]>
-              legend={t("photos.visibility")}
-              value={visibility}
-              onChange={setVisibility}
-              choices={[
-                { value: "private", label: t("photos.private") },
-                { value: "friends", label: t("photos.friends") },
-                { value: "public", label: t("photos.public") },
-              ]}
+            <PhotoOptions
+              visibility={visibility}
+              onVisibility={setVisibility}
+              suggestArchive={suggestArchive}
+              onSuggestArchive={setSuggestArchive}
             />
-            {visibility === "public" ? (
-              <AccountNote text={t("photos.publicNote")} />
-            ) : null}
-            <Field orientation="horizontal" className="min-h-12">
-              <FieldLabel htmlFor="photo-archive">
-                {t("photos.archiveSuggest")}
-              </FieldLabel>
-              <Switch
-                id="photo-archive"
-                checked={suggestArchive}
-                onCheckedChange={setSuggestArchive}
-              />
-            </Field>
-            {suggestArchive ? (
-              <AccountNote text={t("photos.archiveNote")} />
-            ) : null}
             <FormError text={errors.form} />
             <div className="flex flex-wrap gap-3">
               <Button

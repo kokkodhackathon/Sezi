@@ -4,6 +4,7 @@ import { router } from 'expo-router';
 import Storage from 'expo-sqlite/kv-store';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Text, View } from 'react-native';
+import { AchievementIcon, PopIn } from '@/components/social-visuals';
 import { Button } from '@/components/ui';
 import { SweetSheet } from '@/design/sweet/components';
 import { space, type } from '@/design/type';
@@ -79,22 +80,24 @@ export function AchievementWatcher() {
           : tr('ach.title')
       }>
       {first ? (
-        <View style={{ paddingHorizontal: space.xl, gap: space.lg }}>
-          <Text style={[type.body, { color: t.text }]}>
-            {tr('ach.level', { level: first.level, max: first.maxLevel })}
-          </Text>
+        <View style={{ paddingHorizontal: space.xl, gap: space.lg, alignItems: 'center' }}>
+          <PopIn>
+            <AchievementIcon achievement={first} size={104} />
+          </PopIn>
           {celebration!.items.length > 1 ? (
             <Text style={[type.meta, { color: t.textMuted }]}>
               {tr('ach.more', { n: celebration!.items.length - 1 })}
             </Text>
           ) : null}
-          <Button
-            label={tr('ach.see')}
-            onPress={() => {
-              close();
-              router.push('/achievements');
-            }}
-          />
+          <View style={{ alignSelf: 'stretch' }}>
+            <Button
+              label={tr('ach.see')}
+              onPress={() => {
+                close();
+                router.push('/achievements');
+              }}
+            />
+          </View>
         </View>
       ) : null}
     </SweetSheet>

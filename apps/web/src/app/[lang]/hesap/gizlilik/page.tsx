@@ -1,24 +1,15 @@
 "use client";
 
-import type { IdentityPatch, Visibility } from "@sezi/shared";
+import type { IdentityPatch } from "@sezi/shared";
+import { Ban, Search, Shield } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
-import { AccountNote, FormError } from "@/components/account/form-error";
-import {
-  SocialShell,
-  useSocialAccount,
-} from "@/components/account/social-shell";
-import { ChoiceGroup, type Choice } from "@/components/choice-group";
+import { Avatar } from "@/components/account/avatar";
+import { FormError } from "@/components/account/form-error";
+import { SocialShell, useSocialAccount } from "@/components/account/social-shell";
+import { VisibilityChoice } from "@/components/account/social-visuals";
 import { Button } from "@/components/ui/button";
-import { Empty, EmptyHeader, EmptyTitle } from "@/components/ui/empty";
-import {
-  Field,
-  FieldContent,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
 import { Switch } from "@/components/ui/switch";
 import { href } from "@/lib/i18n";
 import { useT } from "@/lib/i18n-client";
@@ -60,117 +51,99 @@ export default function PrivacyPage() {
   const update = (patch: IdentityPatch) => {
     void act(() => save(patch));
   };
-  const choices: Choice<Visibility>[] = [
-    { value: "private", label: t("account.visPrivate") },
-    { value: "friends", label: t("account.visFriends") },
-    { value: "public", label: t("account.visPublic") },
-  ];
-  const photoChoices: Choice<Visibility>[] = [
-    { value: "private", label: t("photos.private") },
-    { value: "friends", label: t("photos.friends") },
-    { value: "public", label: t("photos.public") },
-  ];
+  const labels = { private: t("photos.private"), friends: t("photos.friends"), public: t("photos.public") };
   if (!ready || !user) return null;
   return (
-    <SocialShell
-      title="privacy.title"
-      loading={loading || blocked.loading}
-      error={blocked.error}
-    >
+    <SocialShell title="privacy.title" loading={loading || blocked.loading} error={blocked.error}>
       <div className="flex flex-col gap-8">
         <FormError text={failed ? t("friends.error") : null} />
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="sr-only">
           {saved ? t("privacy.saved") : null}
         </p>
         {identity ? (
-          <fieldset disabled={busy} className="min-w-0">
-            <legend className="sr-only">{t("privacy.title")}</legend>
-            <FieldGroup>
-              <ChoiceGroup
-                legend={t("privacy.visibility")}
-                choices={choices}
+          <>
+            <section aria-labelledby="privacy-who" className="grid gap-3">
+              <h2 id="privacy-who" className="font-heading text-lg font-bold">
+                {t("privacy.who")}
+              </h2>
+              <VisibilityChoice
+                stack
+                label={t("privacy.who")}
                 value={identity.visibility}
+                labels={labels}
+                disabled={busy}
                 onChange={(visibility) => update({ visibility })}
               />
-              <AccountNote
-                text={t(
-                  identity.visibility === "private"
-                    ? "privacy.vis.private"
-                    : identity.visibility === "friends"
-                      ? "privacy.vis.friends"
-                      : "privacy.vis.public",
-                )}
+              <p className="text-sm text-muted-foreground" aria-live="polite">
+                {t(`privacy.vis.${identity.visibility}`)}
+              </p>
+            </section>
+            <div className="flex min-h-16 items-center gap-4 rounded-xl border bg-card px-4 py-3">
+              <Search aria-hidden className="size-5 shrink-0 text-muted-foreground" />
+              <label htmlFor="privacy-findable" className="grid flex-1 cursor-pointer gap-0.5">
+                <span className="font-semibold">{t("privacy.findable")}</span>
+                <span className="text-sm text-muted-foreground">{t("privacy.findableHelp")}</span>
+              </label>
+              <Switch
+                id="privacy-findable"
+                checked={identity.findable}
+                disabled={busy}
+                onCheckedChange={(findable) => update({ findable })}
               />
-              <Field
-                orientation="horizontal"
-                data-disabled={busy}
-                className="min-h-12"
-              >
-                <FieldContent>
-                  <FieldLabel htmlFor="privacy-findable" className="min-h-12">
-                    {t("privacy.findable")}
-                  </FieldLabel>
-                  <FieldDescription>
-                    {t("privacy.findableHelp")}
-                  </FieldDescription>
-                </FieldContent>
-                <Switch
-                  id="privacy-findable"
-                  checked={identity.findable}
-                  disabled={busy}
-                  onCheckedChange={(findable) => update({ findable })}
-                />
-              </Field>
-              <ChoiceGroup
-                legend={t("privacy.photoDefault")}
-                choices={photoChoices}
+            </div>
+            <section aria-labelledby="privacy-photos" className="grid gap-3">
+              <h2 id="privacy-photos" className="font-heading text-lg font-bold">
+                {t("privacy.photoDefault")}
+              </h2>
+              <VisibilityChoice
+                label={t("privacy.photoDefault")}
                 value={identity.photo_default}
+                labels={labels}
+                disabled={busy}
                 onChange={(photo_default) => update({ photo_default })}
               />
-              <p className="text-sm text-muted-foreground">
-                {t("privacy.photoDefaultHelp")}
-              </p>
-            </FieldGroup>
-          </fieldset>
+            </section>
+          </>
         ) : null}
-        <section aria-labelledby="blocked-title" className="border-t pt-6">
-          <h2 id="blocked-title" className="text-xl font-bold">
+        <section aria-labelledby="blocked-title" className="grid gap-3">
+          <h2 id="blocked-title" className="font-heading text-lg font-bold">
             {t("privacy.blocked")}
           </h2>
           {blocked.data?.length ? (
-            <ul className="divide-y">
-              {blocked.data.map(({ id, person }) => (
-                <li
-                  key={id}
-                  className="flex flex-wrap items-center justify-between gap-3 py-3"
-                >
-                  <Link
-                    href={href(lang, `/kisi/${id}`)}
-                    className="min-h-12 content-center font-semibold underline-offset-4 hover:underline"
-                  >
-                    {person?.display_name ?? t("person.notFound")}
-                    {person?.username ? ` (@${person.username})` : null}
-                  </Link>
-                  <Button
-                    className="min-h-12"
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() => void act(() => unblock(id))}
-                  >
-                    {t("person.unblock")}
-                  </Button>
-                </li>
-              ))}
+            <ul className="divide-y rounded-xl border bg-card">
+              {blocked.data.map(({ id, person }) => {
+                const name = person?.display_name ?? t("person.notFound");
+                return (
+                  <li key={id} className="flex items-center gap-3 px-4 py-2">
+                    <Link
+                      href={href(lang, `/kisi/${id}`)}
+                      className="flex min-h-12 flex-1 items-center gap-3 rounded-md font-semibold outline-none focus-visible:ring-3 focus-visible:ring-ring"
+                    >
+                      <Avatar identity={person} size={40} />
+                      <span className="truncate">{name}</span>
+                    </Link>
+                    <Button
+                      size="icon"
+                      variant="secondary"
+                      className="size-12 rounded-full"
+                      aria-label={t("person.unblockName", { name })}
+                      disabled={busy}
+                      onClick={() => void act(() => unblock(id))}
+                    >
+                      <Ban aria-hidden />
+                    </Button>
+                  </li>
+                );
+              })}
             </ul>
           ) : (
-            <Empty>
-              <EmptyHeader>
-                <EmptyTitle>{t("privacy.noBlocks")}</EmptyTitle>
-              </EmptyHeader>
-            </Empty>
+            <p className="text-sm text-muted-foreground">{t("privacy.noBlocks")}</p>
           )}
         </section>
-        <AccountNote text={t("privacy.location")} />
+        <p className="flex items-center gap-2 text-sm">
+          <Shield aria-hidden className="size-5 shrink-0 text-link" />
+          {t("privacy.location")}
+        </p>
       </div>
     </SocialShell>
   );

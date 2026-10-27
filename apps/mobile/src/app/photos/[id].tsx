@@ -8,6 +8,7 @@ import { FormError, FormScreen } from '@/components/account-fields';
 import { PhotoFields, PhotoStatus, type PhotoFieldsValue } from '@/components/photo-fields';
 import { Button, EmptyState, ListRow } from '@/components/ui';
 import { radius, space, type } from '@/design/type';
+import { WorkGlyph } from '@/design/work-glyph';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
 import { useAccount } from '@/lib/account';
 import { useT } from '@/lib/i18n';
@@ -124,8 +125,8 @@ function PhotoDetail({ photo }: { photo: UserPhoto }) {
       ) : null}
       <PhotoStatus photo={photo} />
       <ListRow
+        leading={work.data ? <WorkGlyph slug={work.data.type_slug} size={40} /> : undefined}
         title={work.data ? loc(work.data.name, lang) : photo.work_slug}
-        subtitle={tr('photos.work')}
         onPress={() => router.push({ pathname: '/work/[slug]', params: { slug: photo.work_slug } })}
       />
       {owner ? (

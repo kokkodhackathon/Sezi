@@ -11,11 +11,10 @@ import {
   type PassportWork,
   type Visit,
 } from "@sezi/shared";
-import Link from "next/link";
+import { Footprints, Map as MapIcon, Route, Stamp as StampIcon } from "lucide-react";
 
-import { AccountNote } from "@/components/account/form-error";
+import { EmptyInvite, EmptyPassportArt, StampGrid, StatStrip } from "@/components/account/social-visuals";
 import { ProgressBar } from "@/components/ui/progress-bar";
-import { formatDate, href } from "@/lib/i18n";
 import { useT } from "@/lib/i18n-client";
 import {
   getCities,
@@ -60,102 +59,59 @@ export function usePassportData(uid: string | undefined) {
     };
   }, [uid]);
 }
-export function DiscoveryStats({ stats }: { stats: PassportStats }) {
-  const { t } = useT();
-  return (
-    <dl className="grid grid-cols-3 gap-4 rounded-lg border bg-card p-4">
-      <div>
-        <dt className="text-sm text-muted-foreground">{t("passport.title")}</dt>
-        <dd className="mt-1 font-heading text-xl font-bold">
-          {t("passport.stamps", { n: stats.stamps })}
-        </dd>
-      </div>
-      <div>
-        <dt className="text-sm text-muted-foreground">{t("passport.types")}</dt>
-        <dd className="mt-1 font-heading text-xl font-bold">{stats.types}</dd>
-      </div>
-      <div>
-        <dt className="text-sm text-muted-foreground">
-          {t("passport.distance")}
-        </dt>
-        <dd className="mt-1 font-heading text-xl font-bold">
-          {(stats.distanceM / 1000).toFixed(1)}
-        </dd>
-      </div>
-    </dl>
-  );
-}
-export function StampList({
-  visits,
-  works,
-}: {
-  visits: Visit[];
-  works: PassportWork[];
-}) {
-  const { t, lang } = useT();
-  const bySlug = new Map(works.map((work) => [work.slug, work]));
-  return (
-    <ul className="divide-y rounded-lg border bg-card">
-      {[...visits]
-        .sort((a, b) => b.first_at.localeCompare(a.first_at))
-        .map((visit) => {
-          const work = bySlug.get(visit.work_slug);
-          if (!work) return null;
-          return (
-            <li key={visit.work_slug}>
-              <Link
-                className="flex min-h-12 flex-col justify-center gap-1 p-4 hover:bg-muted"
-                href={href(lang, `/eser/${work.slug}`)}
-              >
-                <span className="font-heading font-bold">
-                  {work.name[lang] ?? work.name.tr}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {formatDate(lang, visit.first_at)} ·{" "}
-                  {t(
-                    visit.method === "checkin"
-                      ? "passport.byCheckin"
-                      : "passport.byRoute",
-                  )}
-                </span>
-              </Link>
-            </li>
-          );
-        })}
-    </ul>
-  );
-}
+/** Pasaport sayfası: sayı şeridi, damga ızgarası, ziyaret edilen illerin ilerlemesi. */
 export function PassportContent({ data }: { data: PassportData }) {
   const { t, lang } = useT();
+  const bySlug = new Map(data.works.map((work) => [work.slug, work]));
+  const visited = data.stats.cities.filter((city) => city.visited > 0);
   return (
     <>
-      <DiscoveryStats stats={data.stats} />
-      <section className="grid gap-4">
-        <h2 className="font-heading text-lg font-bold">
-          {t("passport.cities")}
-        </h2>
-        {data.stats.cities.map((city) => {
-          const name = data.cities.find(
-            (item) => item.slug === city.slug,
-          )?.name;
-          return (
-            <ProgressBar
-              key={city.slug}
-              value={city.visited}
-              max={city.total}
-              label={name ? (name[lang] ?? name.tr) : city.slug}
-            />
-          );
-        })}
-      </section>
-      {data.visits.length ? (
-        <StampList visits={data.visits} works={data.works} />
+      <StatStrip
+        items={[
+          { icon: StampIcon, value: String(data.stats.stamps), label: t("stat.stamps") },
+          { icon: MapIcon, value: String(visited.length), label: t("stat.cities") },
+          {
+            icon: Footprints,
+            value: (data.stats.distanceM / 1000).toLocaleString(lang, { maximumFractionDigits: 1 }),
+            label: t("stat.km"),
+          },
+          ...(data.stats.toursDone.length
+            ? [{ icon: Route, value: String(data.stats.toursDone.length), label: t("stat.tours") }]
+            : []),
+        ]}
+      />
+      {data.stats.stamps ? (
+        <section aria-labelledby="stamps-heading" className="grid gap-4">
+          <h2 id="stamps-heading" className="font-heading text-lg font-bold">
+            {t("passport.recent")}
+          </h2>
+          <StampGrid visits={data.visits} works={bySlug} />
+        </section>
       ) : (
-        <>
-          <AccountNote text={t("passport.empty")} />
-          <AccountNote text={t("passport.webNote")} />
-        </>
+        <EmptyInvite
+          art={<EmptyPassportArt />}
+          text={t("passport.emptyInvite")}
+          action={<p className="text-sm text-muted-foreground">{t("passport.webNote")}</p>}
+        />
       )}
+      {visited.length ? (
+        <section aria-labelledby="cities-heading" className="grid gap-4">
+          <h2 id="cities-heading" className="font-heading text-lg font-bold">
+            {t("passport.cities")}
+          </h2>
+          {visited.map((city) => {
+            const name = data.cities.find((item) => item.slug === city.slug)?.name;
+            return (
+              <ProgressBar
+                key={city.slug}
+                value={city.visited}
+                max={city.total}
+                label={name ? (name[lang] ?? name.tr) : city.slug}
+              />
+            );
+          })}
+        </section>
+      ) : null}
     </>
   );
 }

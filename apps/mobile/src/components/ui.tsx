@@ -86,26 +86,32 @@ export function SectionTitle({ title, action }: { title: string; action?: ReactN
   );
 }
 
-/** Sayısal ilerleme: renk dışında görünür oran ve ekran okuyucu değeri de taşır. */
-export function ProgressBar({ value, max, label }: { value: number; max: number; label: string }) {
+/**
+ * Sayısal ilerleme: renk dışında görünür oran ve ekran okuyucu değeri de taşır.
+ * `compact`: görünür oranı çağıran kendisi yazar (kutucuklarda); çubuk ince olur.
+ */
+export function ProgressBar({ value, max, label, compact }: { value: number; max: number; label: string; compact?: boolean }) {
   const t = useSweetTheme();
   const limit = Math.max(0, max);
   const now = Math.min(limit, Math.max(0, value));
+  const height = compact ? 6 : 8;
   return (
     <View
       style={{ gap: space.sm }}
       accessibilityRole="progressbar"
       accessibilityLabel={label}
       accessibilityValue={{ min: 0, max: limit, now }}>
-      <Text style={[type.meta, { color: t.text }]}>
-        {value} / {max}
-      </Text>
-      <View style={{ height: 8, borderRadius: 4, backgroundColor: t.border, overflow: 'hidden' }}>
+      {compact ? null : (
+        <Text style={[type.meta, { color: t.text }]}>
+          {value} / {max}
+        </Text>
+      )}
+      <View style={{ height, borderRadius: height / 2, backgroundColor: t.border, overflow: 'hidden' }}>
         <View
           style={{
-            height: 8,
+            height,
             width: `${limit ? now / limit * 100 : 0}%`,
-            backgroundColor: t.primary.fill,
+            backgroundColor: t.outlined ? t.text : t.primaryText,
           }}
         />
       </View>
@@ -164,7 +170,22 @@ export function ListRow({
   );
 }
 
-export function ToggleRow({ title, subtitle, value, onChange, first }: { title: string; subtitle?: string; value: boolean; onChange: (v: boolean) => void; first?: boolean }) {
+export function ToggleRow({
+  title,
+  subtitle,
+  value,
+  onChange,
+  first,
+  icon,
+}: {
+  title: string;
+  subtitle?: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+  first?: boolean;
+  /** Solda simge (dekoratif). */
+  icon?: (color: string) => ReactNode;
+}) {
   const t = useSweetTheme();
   return (
     <SoftPressable
@@ -173,6 +194,7 @@ export function ToggleRow({ title, subtitle, value, onChange, first }: { title: 
       accessibilityState={{ checked: value }}
       accessibilityLabel={[title, subtitle].filter(Boolean).join(', ')}
       style={[styles.row, !first && { borderTopWidth: t.outlined ? 1 : StyleSheet.hairlineWidth, borderTopColor: t.border }]}>
+      {icon ? icon(t.text) : null}
       <View style={{ flex: 1, gap: 2 }}>
         <Text style={[type.itemTitle, { color: t.text }]}>{title}</Text>
         {subtitle ? <Text style={[type.meta, { color: t.textMuted }]}>{subtitle}</Text> : null}
@@ -180,7 +202,8 @@ export function ToggleRow({ title, subtitle, value, onChange, first }: { title: 
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ false: t.soft, true: t.primaryText }}
+        // Kapalı iz de zeminden ayrılsın (≥ 3:1): açık/kapalı farkı ayrıca topun yerinde.
+        trackColor={{ false: t.textMuted, true: t.primaryText }}
         thumbColor={t.surface}
         ios_backgroundColor={t.soft}
         importantForAccessibility="no"

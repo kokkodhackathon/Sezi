@@ -242,3 +242,86 @@ export function SensesIcon({ color, size = 22 }: IconProps) {
 export function LanguageIcon({ color, size = 22 }: IconProps) {
   return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}><Circle cx="12" cy="12" r="9" fill="none" stroke={color} strokeWidth={2} /><Path d="M3 12h18M12 3c5 5 5 13 0 18-5-5-5-13 0-18Z" fill="none" stroke={color} strokeWidth={1.6} /></Svg>;
 }
+
+/*
+ * Profil ve sosyal ekranların simgeleri. Çizim verisi Lucide'dan (ISC lisansı,
+ * https://lucide.dev, © Lucide Contributors) uyarlandı; web aynı adlı lucide-react simgelerini kullanır.
+ */
+type Part = { d: string } | { c: [number, number, number] } | { r: [number, number, number, number, number] };
+
+function Lucide({ parts, color, size }: { parts: Part[]; color: string; size: number }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}>
+      {parts.map((p, i) =>
+        'd' in p ? (
+          <Path key={i} d={p.d} stroke={color} strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+        ) : 'c' in p ? (
+          <Circle key={i} cx={p.c[0]} cy={p.c[1]} r={p.c[2]} stroke={color} strokeWidth={2} fill="none" />
+        ) : (
+          <Rect key={i} x={p.r[0]} y={p.r[1]} width={p.r[2]} height={p.r[3]} rx={p.r[4]} stroke={color} strokeWidth={2} fill="none" />
+        ),
+      )}
+    </Svg>
+  );
+}
+
+const lucide = (parts: Part[]) =>
+  function LucideIcon({ color, size = 20 }: IconProps) {
+    return <Lucide parts={parts} color={color} size={size} />;
+  };
+
+export const UsersIcon = lucide([
+  { d: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' },
+  { c: [9, 7, 4] },
+  { d: 'M22 21v-2a4 4 0 0 0-3-3.87' },
+  { d: 'M16 3.13a4 4 0 0 1 0 7.75' },
+]);
+export const GlobeIcon = lucide([{ c: [12, 12, 10] }, { d: 'M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20' }, { d: 'M2 12h20' }]);
+export const StampIcon = lucide([
+  { d: 'M5 22h14' },
+  { d: 'M19.27 13.73A2.5 2.5 0 0 0 17.5 13h-11A2.5 2.5 0 0 0 4 15.5V17a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1.5c0-.66-.26-1.3-.73-1.77Z' },
+  { d: 'M14 13V8.5C14 7 15 7 15 5a3 3 0 0 0-3-3c-1.69 0-3 1-3 3 0 2 1 2 1 3.5V13' },
+]);
+export const AwardIcon = lucide([
+  { d: 'm15.477 12.89 1.515 8.526a.5.5 0 0 1-.81.47l-3.58-2.687a1 1 0 0 0-1.197 0l-3.586 2.686a.5.5 0 0 1-.81-.469l1.514-8.526' },
+  { c: [12, 8, 6] },
+]);
+export const FootprintsIcon = lucide([
+  { d: 'M4 16v-2.38C4 11.5 2.97 10.5 3 8c.03-2.72 1.49-6 4.5-6C9.37 2 10 3.8 10 5.5c0 3.11-2 5.66-2 8.68V16a2 2 0 1 1-4 0Z' },
+  { d: 'M20 20v-2.38c0-2.12 1.03-3.12 1-5.62-.03-2.72-1.49-6-4.5-6C14.63 6 14 7.8 14 9.5c0 3.11 2 5.66 2 8.68V20a2 2 0 1 0 4 0Z' },
+  { d: 'M16 17h4' },
+  { d: 'M4 13h4' },
+]);
+export const ClockIcon = lucide([{ c: [12, 12, 10] }, { d: 'M12 6v6l4 2' }]);
+export const ImageIcon = lucide([{ r: [3, 3, 18, 18, 2] }, { c: [9, 9, 2] }, { d: 'm21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21' }]);
+export const ShieldIcon = lucide([
+  { d: 'M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z' },
+]);
+export const BanIcon = lucide([{ c: [12, 12, 10] }, { d: 'M4.929 4.929 19.07 19.071' }]);
+export const ArchiveIcon = lucide([{ r: [2, 3, 20, 5, 1] }, { d: 'M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8' }, { d: 'M10 12h4' }]);
+export const PlusIcon = lucide([{ d: 'M5 12h14' }, { d: 'M12 5v14' }]);
+export const ShapesIcon = lucide([
+  { d: 'M8.3 10a.7.7 0 0 1-.626-1.079L11.4 3a.7.7 0 0 1 1.198-.043L16.3 8.9a.7.7 0 0 1-.572 1.1Z' },
+  { r: [3, 14, 7, 7, 1] },
+  { c: [17.5, 17.5, 3.5] },
+]);
+export const FlagIcon = lucide([{ d: 'M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z' }, { d: 'M4 22v-7' }]);
+export const LandmarkIcon = lucide([
+  { d: 'M3 22h18' },
+  { d: 'M6 18v-7' },
+  { d: 'M10 18v-7' },
+  { d: 'M14 18v-7' },
+  { d: 'M18 18v-7' },
+  { d: 'M12 2 20 7H4z' },
+]);
+export const UserPlusIcon = lucide([
+  { d: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' },
+  { c: [9, 7, 4] },
+  { d: 'M19 8v6' },
+  { d: 'M22 11h-6' },
+]);
+export const MapAreaIcon = lucide([
+  { d: 'M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z' },
+  { d: 'M15 5.764v15' },
+  { d: 'M9 3.236v15' },
+]);

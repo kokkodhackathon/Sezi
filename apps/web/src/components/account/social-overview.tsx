@@ -1,41 +1,103 @@
 "use client";
 
+import { ChevronRight, Camera, Footprints, Map as MapIcon, Shield, Stamp as StampIcon, Users, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect } from "react";
 
 import { FormError } from "@/components/account/form-error";
 import { usePassportData } from "@/components/account/passport-content";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { ProgressBar } from "@/components/ui/progress-bar";
+import { AchievementIcon, EmptyStamp, sortAchievements, Stamp, StatStrip } from "@/components/account/social-visuals";
+import { Skeleton } from "@/components/ui/skeleton";
 import { errorKey } from "@/lib/account";
 import { href } from "@/lib/i18n";
 import { useT } from "@/lib/i18n-client";
 import { useIdentity } from "@/lib/identity";
 import { getFriendships, getPhotos } from "@/lib/social";
 import { useAsync } from "@/lib/use-async";
+import { cn } from "@/lib/utils";
 
+const cardLink =
+  "group grid gap-4 rounded-xl border bg-card p-4 outline-none hover:border-link focus-visible:ring-3 focus-visible:ring-ring";
+
+/** Hesap sayfası: pasaport kartı (son damgalar + sayılar) ve başarım kartı (son kazanılanlar + en yakın). */
 export function SocialOverview({ uid }: { uid: string }) {
   const { t, lang } = useT();
-  const { identity } = useIdentity();
   const passport = usePassportData(uid);
+  const data = passport.data;
+  if (passport.error) return <FormError text={t(errorKey(passport.error))} />;
+  if (!data) return <Skeleton className="h-64 w-full rounded-xl" />;
+  const bySlug = new Map(data.works.map((work) => [work.slug, work]));
+  const stamps = [...data.visits].filter((visit) => bySlug.has(visit.work_slug)).sort((a, b) => b.first_at.localeCompare(a.first_at));
+  const cities = data.stats.cities.filter((city) => city.visited > 0).length;
+  const { earned, locked } = sortAchievements(data.list);
+  const preview = [...earned.slice(0, 3), ...locked.slice(0, 1)];
+  return (
+    <div className="grid gap-4">
+      <Link
+        href={href(lang, "/hesap/pasaport")}
+        className={cardLink}
+        aria-label={`${t("passport.title")}. ${data.stats.stamps} ${t("stat.stamps")}, ${cities} ${t("stat.cities")}`}
+      >
+        <CardHead title={t("passport.title")} />
+        <div aria-hidden className="flex items-center gap-3">
+          {stamps.length
+            ? stamps.slice(0, 4).map((visit) => (
+                <Stamp key={visit.work_slug} slug={visit.work_slug} typeSlug={bySlug.get(visit.work_slug)!.type_slug} className="size-16" />
+              ))
+            : [0, 1, 2].map((i) => <EmptyStamp key={i} className="size-16" />)}
+          {stamps.length > 4 ? (
+            <span className="grid size-12 place-items-center rounded-full bg-muted font-heading font-bold">+{stamps.length - 4}</span>
+          ) : null}
+        </div>
+        <div aria-hidden>
+          <StatStrip
+            items={[
+              { icon: StampIcon, value: String(data.stats.stamps), label: t("stat.stamps") },
+              { icon: MapIcon, value: String(cities), label: t("stat.cities") },
+              {
+                icon: Footprints,
+                value: (data.stats.distanceM / 1000).toLocaleString(lang, { maximumFractionDigits: 1 }),
+                label: t("stat.km"),
+              },
+            ]}
+          />
+        </div>
+      </Link>
+      <Link
+        href={href(lang, "/hesap/basarimlar")}
+        className={cardLink}
+        aria-label={`${t("ach.title")}. ${t("ach.count", { n: earned.length, total: data.list.length })}`}
+      >
+        <CardHead title={t("ach.title")} trailing={`${earned.length}/${data.list.length}`} />
+        <div aria-hidden className="flex flex-wrap gap-4 pt-1">
+          {preview.map((a) => (
+            <AchievementIcon key={a.id} achievement={a} size="sm" />
+          ))}
+        </div>
+      </Link>
+    </div>
+  );
+}
+
+function CardHead({ title, trailing }: { title: string; trailing?: string }) {
+  return (
+    <div aria-hidden className="flex items-center gap-2">
+      <h2 className="flex-1 font-heading text-lg font-bold">{title}</h2>
+      {trailing ? <span className="text-sm text-muted-foreground">{trailing}</span> : null}
+      <ChevronRight className="size-5 text-muted-foreground transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" />
+    </div>
+  );
+}
+
+/** Topluluk kutucukları: Fotoğraflar, Arkadaşlar (gelen istek sayacı), Gizlilik. */
+export function CommunityTiles({ uid }: { uid: string }) {
+  const { t, lang } = useT();
+  const { identity } = useIdentity();
   const community = useAsync(async () => {
-    const [photos, friendships] = await Promise.all([
-      getPhotos({ uid }),
-      getFriendships(),
-    ]);
+    const [photos, friendships] = await Promise.all([getPhotos({ uid }), getFriendships()]);
     return {
       photos: photos.length,
-      incoming: friendships.filter(
-        (row) => row.status === "pending" && row.addressee === uid,
-      ).length,
+      incoming: friendships.filter((row) => row.status === "pending" && row.addressee === uid).length,
     };
   }, [uid]);
   const reload = community.reload;
@@ -46,125 +108,75 @@ export function SocialOverview({ uid }: { uid: string }) {
     document.addEventListener("visibilitychange", refresh);
     return () => document.removeEventListener("visibilitychange", refresh);
   }, [reload]);
-  const data = passport.data;
-  const closest = data?.list
-    .filter((item) => item.level === 0 && item.nextTarget !== null)
-    .sort(
-      (a, b) =>
-        b.current / (b.nextTarget || 1) - a.current / (a.nextTarget || 1),
-    )[0];
+  const incoming = community.data?.incoming ?? 0;
+  const visibility = identity?.visibility ?? "private";
   return (
-    <>
-      <FormError text={passport.error ? t(errorKey(passport.error)) : null} />
-      {data ? (
-        <>
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("passport.title")}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3">
-              <p className="font-heading text-2xl font-bold">
-                {t("passport.stamps", { n: data.stats.stamps })}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                {t("passport.summary", {
-                  cities: data.stats.cities.filter((city) => city.visited > 0)
-                    .length,
-                  km: (data.stats.distanceM / 1000).toFixed(1),
-                })}
-              </p>
-              <ul className="grid gap-1 text-sm">
-                {data.visits.slice(0, 3).map((visit) => {
-                  const work = data.works.find(
-                    (item) => item.slug === visit.work_slug,
-                  );
-                  return work ? (
-                    <li key={visit.work_slug}>
-                      {work.name[lang] ?? work.name.tr}
-                    </li>
-                  ) : null;
-                })}
-              </ul>
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" asChild className="min-h-12">
-                <Link href={href(lang, "/hesap/pasaport")}>
-                  {t("passport.open")}
-                </Link>
-              </Button>
-            </CardFooter>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>{t("ach.title")}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid gap-3">
-              <p>
-                {t("ach.count", {
-                  n: data.list.filter((item) => item.level > 0).length,
-                  total: data.list.length,
-                })}
-              </p>
-              {closest && closest.nextTarget !== null ? (
-                <ProgressBar
-                  value={closest.current}
-                  max={closest.nextTarget}
-                  label={t(`ach.${closest.kind}.title`, {
-                    name: closest.subject
-                      ? (closest.subject.name[lang] ?? closest.subject.name.tr)
-                      : "",
-                  })}
-                />
-              ) : null}
-            </CardContent>
-            <CardFooter>
-              <Button variant="outline" asChild className="min-h-12">
-                <Link href={href(lang, "/hesap/basarimlar")}>
-                  {t("ach.see")}
-                </Link>
-              </Button>
-            </CardFooter>
-          </Card>
-        </>
-      ) : null}
-      <section className="grid gap-3">
-        <h2 className="font-heading text-lg font-bold">
-          {t("social.community")}
-        </h2>
-        <div className="grid divide-y rounded-lg border bg-card">
-          <Link
-            className="flex min-h-12 items-center justify-between gap-3 px-4"
-            href={href(lang, "/hesap/fotograflar")}
+    <section aria-labelledby="community-heading" className="grid gap-3">
+      <h2 id="community-heading" className="font-heading text-lg font-bold">
+        {t("social.community")}
+      </h2>
+      <ul className="grid grid-cols-3 gap-3">
+        <Tile href={href(lang, "/hesap/fotograflar")} icon={Camera} label={t("photos.short")} count={community.data?.photos || undefined} />
+        <Tile
+          href={href(lang, "/hesap/arkadaslar")}
+          icon={Users}
+          label={t("friends.title")}
+          count={incoming || undefined}
+          countLabel={incoming ? t("friends.incomingCount", { n: incoming }) : undefined}
+          highlight={incoming > 0}
+        />
+        <Tile href={href(lang, "/hesap/gizlilik")} icon={Shield} label={t("privacy.title")} countLabel={t(`photos.${visibility}`)} />
+      </ul>
+    </section>
+  );
+}
+
+function Tile({
+  href: to,
+  icon: Icon,
+  label,
+  count,
+  countLabel,
+  highlight,
+}: {
+  href: string;
+  icon: LucideIcon;
+  label: string;
+  count?: number;
+  countLabel?: string;
+  highlight?: boolean;
+}) {
+  return (
+    <li>
+      <Link
+        href={to}
+        aria-label={[label, countLabel ?? (count ? String(count) : null)].filter(Boolean).join(", ")}
+        className="relative grid min-h-28 justify-items-center content-center gap-2 rounded-xl border bg-card p-3 text-center outline-none hover:border-link focus-visible:ring-3 focus-visible:ring-ring"
+      >
+        <span
+          aria-hidden
+          className={cn(
+            "grid size-12 place-items-center rounded-full contrast:bg-card contrast:outline-2 contrast:outline-border",
+            highlight ? "bg-highlight text-highlight-foreground" : "bg-muted",
+          )}
+        >
+          <Icon className="size-6" />
+        </span>
+        <span aria-hidden className="text-sm font-semibold">
+          {label}
+        </span>
+        {count ? (
+          <span
+            aria-hidden
+            className={cn(
+              "absolute right-2 top-2 grid h-6 min-w-6 place-items-center rounded-full border-2 border-card px-1.5 text-xs font-bold",
+              highlight ? "bg-link text-background" : "bg-muted",
+            )}
           >
-            {t("photos.title")}
-            <Badge variant="secondary">{community.data?.photos ?? 0}</Badge>
-          </Link>
-          <Link
-            className="flex min-h-12 items-center justify-between gap-3 px-4"
-            href={href(lang, "/hesap/arkadaslar")}
-          >
-            {t("friends.title")}
-            {community.data?.incoming ? (
-              <Badge>{community.data.incoming}</Badge>
-            ) : null}
-          </Link>
-          <Link
-            className="flex min-h-12 items-center justify-between gap-3 px-4"
-            href={href(lang, "/hesap/gizlilik")}
-          >
-            {t("privacy.title")}
-            <span className="text-sm text-muted-foreground">
-              {t(
-                identity?.visibility === "public"
-                  ? "account.visPublic"
-                  : identity?.visibility === "friends"
-                    ? "account.visFriends"
-                    : "account.visPrivate",
-              )}
-            </span>
-          </Link>
-        </div>
-      </section>
-    </>
+            {count}
+          </span>
+        ) : null}
+      </Link>
+    </li>
   );
 }
