@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+<defs><rect id="s2" x="36" y="30" width="128" height="140" rx="18"/></defs>
+<use href="#s2" fill="#9C7B4E" stroke="#9C7B4E" stroke-width="16"/>
+<use href="#s2" fill="#E9D6B0" stroke="#E9D6B0" stroke-width="10"/>
+<use href="#s2" fill="#4A9B8F"/>
+<circle cx="56" cy="50" r="2.5" fill="#8CD4C5"/>
+<circle cx="146" cy="58" r="2" fill="#8CD4C5"/>
+<circle cx="136" cy="44" r="1.5" fill="#8CD4C5"/>
+<rect x="98.5" y="50" width="3" height="12" fill="#F5EADB"/>
+<circle cx="100" cy="47" r="3.5" fill="#F5EADB"/>
+<path d="M60 100 A40 40 0 0 1 140 100 Z" fill="#F5EADB"/>
+<rect x="56" y="100" width="88" height="30" fill="#F5EADB"/>
+<path d="M60 130 V117 A6 6 0 0 1 72 117 V130 Z" fill="#4A9B8F"/>
+<path d="M77 130 V117 A6 6 0 0 1 89 117 V130 Z" fill="#4A9B8F"/>
+<path d="M94 130 V117 A6 6 0 0 1 106 117 V130 Z" fill="#C47B62"/>
+<path d="M111 130 V117 A6 6 0 0 1 123 117 V130 Z" fill="#4A9B8F"/>
+<path d="M128 130 V117 A6 6 0 0 1 140 117 V130 Z" fill="#4A9B8F"/>
+<path d="M36 140 H164 V152 A18 18 0 0 1 146 170 H54 A18 18 0 0 1 36 152 Z" fill="#8C4A33"/>
+<circle cx="76" cy="155" r="3.5" fill="#F5EADB"/>
+<circle cx="88" cy="155" r="3.5" fill="#F5EADB"/>
+<circle cx="100" cy="155" r="3.5" fill="#F5EADB"/>
+<circle cx="112" cy="155" r="3.5" fill="#F5EADB"/>
+<circle cx="124" cy="155" r="3.5" fill="#F5EADB"/>
+</svg>

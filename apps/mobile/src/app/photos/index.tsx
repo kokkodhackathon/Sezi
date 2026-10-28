@@ -1,7 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ScrollView, View } from 'react-native';
 
 import { FormError, FormScreen } from '@/components/account-fields';
+import { SeziLoader } from '@/components/sezi-loader';
 import { PhotoGrid } from '@/components/social-grids';
 import { EmptyInvite, EmptyPhotoArt } from '@/components/social-visuals';
 import { Button } from '@/components/ui';
@@ -48,7 +49,7 @@ export default function PhotosScreen() {
           />
         </View>
       ) : null}
-      {photos.isLoading ? <ActivityIndicator color={theme.primaryText} accessibilityLabel={tr('account.loading')} /> : null}
+      {photos.isLoading ? <SeziLoader label={tr('account.loading')} /> : null}
       {!photos.isLoading && !photos.error && !photos.data?.length ? (
         <EmptyInvite art={<EmptyPhotoArt />} text={tr('photos.emptyInvite')} action={<Button label={tr('photos.add')} onPress={add} />} />
       ) : (

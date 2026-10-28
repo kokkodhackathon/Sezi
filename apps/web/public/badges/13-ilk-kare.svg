@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+<defs><rect id="s13" x="48" y="28" width="104" height="144" rx="6"/><clipPath id="c13"><rect x="58" y="38" width="84" height="92"/></clipPath></defs>
+<g transform="rotate(-7 100 100)">
+<use href="#s13" fill="#9C7B4E" stroke="#9C7B4E" stroke-width="16"/>
+<use href="#s13" fill="#E9D6B0" stroke="#E9D6B0" stroke-width="10"/>
+<use href="#s13" fill="#F5EADB"/>
+<rect x="58" y="38" width="84" height="92" fill="#4A9B8F"/>
+<g clip-path="url(#c13)">
+<circle cx="122" cy="62" r="10" fill="#8CD4C5"/>
+<path d="M50 132 V108 Q80 88 104 108 T150 100 V132 Z" fill="#C47B62"/>
+<path d="M50 132 V122 Q76 110 96 124 T150 120 V132 Z" fill="#8C4A33"/>
+</g></g>
+<circle cx="150" cy="150" r="22" fill="#9C7B4E"/>
+<circle cx="150" cy="150" r="20" fill="#E9D6B0"/>
+<circle cx="150" cy="150" r="17" fill="#8CD4C5"/>
+<path d="M143 157 L157 143 M147 143 H157 V153" fill="none" stroke="#5C2918" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

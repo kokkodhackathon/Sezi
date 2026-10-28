@@ -3,9 +3,10 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, View } from 'react-native';
 
 import { FormError, FormScreen } from '@/components/account-fields';
+import { SeziLoader } from '@/components/sezi-loader';
 import { PhotoFields, type PhotoFieldsValue } from '@/components/photo-fields';
 import { Button, EmptyState, Field, ListRow } from '@/components/ui';
 import { CameraIcon, CloseIcon, ImageIcon, SearchIcon } from '@/design/icons';
@@ -24,7 +25,6 @@ export default function NewPhotoScreen() {
   const { user } = useAccount();
   const { identity, loading } = useIdentity();
   const { t: tr } = useT();
-  const theme = useSweetTheme();
   if (!user)
     return (
       <FormScreen>
@@ -38,7 +38,7 @@ export default function NewPhotoScreen() {
   if (loading || !identity)
     return (
       <FormScreen>
-        <ActivityIndicator color={theme.primaryText} accessibilityLabel={tr('account.loading')} />
+        <SeziLoader label={tr('account.loading')} />
       </FormScreen>
     );
   return <Editor initialWork={work} initialVisibility={identity.photo_default} />;
@@ -171,7 +171,7 @@ function Editor({
             icon={(c) => <SearchIcon color={c} size={20} />}
           />
           {works.isLoading ? (
-            <ActivityIndicator color={theme.primaryText} accessibilityLabel={tr('account.loading')} />
+            <SeziLoader label={tr('account.loading')} />
           ) : null}
           <FormError text={works.error ? tr(photoErrorKey(works.error)) : undefined} />
           {works.error ? (

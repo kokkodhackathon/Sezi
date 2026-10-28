@@ -4,10 +4,11 @@ import * as Haptics from 'expo-haptics';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import Animated from 'react-native-reanimated';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Linking, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { AccessibilityInfo, Linking, Pressable, ScrollView, Share, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { FloatingHeader, useFloatingHeaderScroll } from '@/components/floating-header';
+import { SeziLoader } from '@/components/sezi-loader';
 import { PhotoScrim, photoOverlayInk } from '@/components/photo-card';
 import { SeziMap, WorkPin } from '@/components/map';
 import { PhotoViewer } from '@/components/photo-viewer';
@@ -52,7 +53,7 @@ export default function WorkDetail() {
     return (
       <View style={s.center}>
         <FloatingHeader title={tr('work.loading')} scrollY={header.scrollY} coverHeight={header.coverHeight} />
-        <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('work.loading')} />
+        <SeziLoader label={tr('work.loading')} />
       </View>
     );
   }

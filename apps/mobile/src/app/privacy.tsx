@@ -1,9 +1,10 @@
 import { type IdentityPatch } from '@sezi/shared';
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { FormError, FormScreen } from '@/components/account-fields';
+import { SeziLoader } from '@/components/sezi-loader';
 import { Avatar } from '@/components/avatar';
 import { EmptyInvite, LockedArt, VisibilityChoice } from '@/components/social-visuals';
 import { Button, Card, SectionTitle, ToggleRow } from '@/components/ui';
@@ -64,7 +65,7 @@ export default function PrivacyScreen() {
   if (!identity)
     return (
       <FormScreen>
-        <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('account.loading')} />
+        <SeziLoader label={tr('account.loading')} />
       </FormScreen>
     );
   return (
@@ -111,7 +112,7 @@ export default function PrivacyScreen() {
       <View style={{ gap: space.md }}>
         <SectionTitle title={tr('privacy.blocked')} />
         {blocks.isLoading ? (
-          <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('account.loading')} />
+          <SeziLoader label={tr('account.loading')} />
         ) : blocks.data?.length ? (
           <Card padded={false}>
             {blocks.data.map((row, index) => (

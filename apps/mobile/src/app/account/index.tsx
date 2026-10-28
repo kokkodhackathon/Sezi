@@ -1,8 +1,9 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Text, View } from 'react-native';
+import { AccessibilityInfo, Text, View } from 'react-native';
 
 import { FormError, FormScreen } from '@/components/account-fields';
+import { SeziLoader } from '@/components/sezi-loader';
 import { Avatar } from '@/components/avatar';
 import { Button, Card, ListRow, Note } from '@/components/ui';
 import { InfoIcon } from '@/design/icons';
@@ -27,7 +28,7 @@ export default function AccountHome() {
   if (!ready) {
     return (
       <FormScreen>
-        <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('account.loading')} />
+        <SeziLoader label={tr('account.loading')} />
       </FormScreen>
     );
   }

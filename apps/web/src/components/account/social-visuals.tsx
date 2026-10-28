@@ -1,11 +1,12 @@
 "use client";
 
 import {
+  badgeFor,
   glyphSvgBody,
   THRESHOLDS,
   toneForType,
   type Achievement,
-  type AchievementKind,
+  type BadgeId,
   type LocalizedText,
   type UserPhoto,
   type Visibility,
@@ -16,15 +17,8 @@ import {
   Camera,
   Check,
   Clock,
-  Flag,
-  Footprints,
   Globe,
-  Landmark,
   Lock,
-  Map as MapIcon,
-  Route,
-  Shapes,
-  Stamp as StampIcon,
   User,
   Users,
   X,
@@ -166,25 +160,29 @@ export function StatStrip({ items }: { items: { icon: LucideIcon; value: string;
   );
 }
 
-/** Başarım türü → simge (mobilde aynı kavram). */
-export const ACHIEVEMENT_ICONS: Record<AchievementKind, LucideIcon> = {
-  first_stamp: StampIcon,
-  stamps: StampIcon,
-  types: Shapes,
-  cities: MapIcon,
-  walker: Footprints,
-  complex: Landmark,
-  tour: Route,
-  reporter: Flag,
-  photographer: Archive,
-  sharer: Globe,
-  companion: Users,
-};
-
 const subjectName = (a: Achievement, lang: Lang) => (a.subject ? (a.subject.name[lang] ?? a.subject.name.tr) : "");
 
+const BADGE_NAME = {
+  "01-ilk-damga": "badge.01-ilk-damga.name",
+  "02-vakif-kasifi": "badge.02-vakif-kasifi.name",
+  "03-uslup-avcisi": "badge.03-uslup-avcisi.name",
+  "04-sehirler-arasi": "badge.04-sehirler-arasi.name",
+  "05-ilk-kilometre": "badge.05-ilk-kilometre.name",
+  "06-carsi-ehli": "badge.06-carsi-ehli.name",
+  "07-kervan-yolcusu": "badge.07-kervan-yolcusu.name",
+  "08-kuzey-ruzgari": "badge.08-kuzey-ruzgari.name",
+  "09-sessiz-minareler": "badge.09-sessiz-minareler.name",
+  "10-kubbeler-altinda": "badge.10-kubbeler-altinda.name",
+  "11-erisilebilirlik-elcisi": "badge.11-erisilebilirlik-elcisi.name",
+  "12-arsiv-gozu": "badge.12-arsiv-gozu.name",
+  "13-ilk-kare": "badge.13-ilk-kare.name",
+  "14-yol-arkadasi": "badge.14-yol-arkadasi.name",
+} as const satisfies Record<BadgeId, MessageKey>;
+
 export function achievementTitle(a: Achievement, t: Translate, lang: Lang) {
-  return t(`ach.${a.kind}.title`, { name: subjectName(a, lang) });
+  const badge = t(BADGE_NAME[badgeFor(a)]);
+  if ((a.kind === "complex" || a.kind === "tour") && a.subject) return `${badge} · ${subjectName(a, lang)}`;
+  return badge;
 }
 
 export function achievementTarget(a: Achievement) {
@@ -201,20 +199,22 @@ export function achievementLabel(a: Achievement, t: Translate, lang: Lang) {
 /** Başarım karosu: kazanılanda firuze dolgu + köşede tik, kilitlide soluk dolgu + köşede kilit. Dekoratif. */
 export function AchievementIcon({ achievement: a, size = "md" }: { achievement: Achievement; size?: "sm" | "md" | "lg" }) {
   const earned = a.level > 0;
-  const Icon = ACHIEVEMENT_ICONS[a.kind];
+  const badge = badgeFor(a);
   const Mark = earned ? Check : Lock;
   const box = { sm: "size-14 rounded-xl", md: "size-[4.5rem] rounded-2xl", lg: "size-24 rounded-3xl" }[size];
-  const glyph = { sm: "size-6", md: "size-8", lg: "size-11" }[size];
   return (
     <span aria-hidden className="relative inline-block">
       <span
         className={cn(
-          "grid place-items-center contrast:bg-card contrast:text-foreground contrast:outline-2 contrast:outline-border",
+          "grid place-items-center overflow-hidden bg-muted contrast:bg-card contrast:outline-2 contrast:outline-border",
           box,
-          earned ? "bg-highlight text-highlight-foreground" : "bg-muted text-muted-foreground",
         )}
       >
-        <Icon className={glyph} />
+        <img
+          src={`/badges/${badge}.${badge === "08-kuzey-ruzgari" ? "webp" : "svg"}`}
+          alt=""
+          className={cn("size-full object-cover", !earned && "grayscale opacity-50")}
+        />
       </span>
       <span
         className={cn(

@@ -1,10 +1,10 @@
-import { achievementLevels, loc, newlyEarned, type Achievement } from '@sezi/shared';
+import { achievementLevels, newlyEarned, type Achievement } from '@sezi/shared';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import Storage from 'expo-sqlite/kv-store';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Text, View } from 'react-native';
-import { AchievementIcon, PopIn } from '@/components/social-visuals';
+import { AchievementIcon, achievementTitle, PopIn } from '@/components/social-visuals';
 import { Button } from '@/components/ui';
 import { SweetSheet } from '@/design/sweet/components';
 import { space, type } from '@/design/type';
@@ -57,7 +57,7 @@ export function AchievementWatcher() {
       void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       const first = items[0]!;
       AccessibilityInfo.announceForAccessibility(
-        `${tr(`ach.${first.kind}.title`, { name: first.subject ? loc(first.subject.name, lang) : '' })}. ${tr('ach.level', { level: first.level, max: first.maxLevel })}`,
+        `${achievementTitle(first, tr, lang)}. ${tr('ach.level', { level: first.level, max: first.maxLevel })}`,
       );
     };
     void load();
@@ -76,7 +76,7 @@ export function AchievementWatcher() {
       onClose={close}
       title={
         first
-          ? tr(`ach.${first.kind}.title`, { name: first.subject ? loc(first.subject.name, lang) : '' })
+          ? achievementTitle(first, tr, lang)
           : tr('ach.title')
       }>
       {first ? (

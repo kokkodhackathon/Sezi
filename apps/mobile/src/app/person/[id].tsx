@@ -1,9 +1,10 @@
 import { achievements, friendState, hasLocation, passportStats } from '@sezi/shared';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 
 import { FormError, FormScreen } from '@/components/account-fields';
+import { SeziLoader } from '@/components/sezi-loader';
 import { Avatar } from '@/components/avatar';
 import { AchievementGrid, PhotoGrid, StampGrid } from '@/components/social-grids';
 import { EmptyInvite, LockedArt, StatStrip } from '@/components/social-visuals';
@@ -118,7 +119,7 @@ export default function PersonScreen() {
   if (person.isLoading)
     return (
       <FormScreen>
-        <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('account.loading')} />
+        <SeziLoader label={tr('account.loading')} />
       </FormScreen>
     );
   if (person.error)
@@ -219,7 +220,7 @@ export default function PersonScreen() {
             ]}
           />
           {visits.isLoading ? (
-            <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('account.loading')} />
+            <SeziLoader label={tr('account.loading')} />
           ) : visits.data?.length ? (
             <View style={{ gap: space.lg }}>
               <SectionTitle title={tr('passport.recent')} />

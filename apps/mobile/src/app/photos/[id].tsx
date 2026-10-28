@@ -2,9 +2,10 @@ import { loc, type UserPhoto } from '@sezi/shared';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Alert, Text, View } from 'react-native';
+import { AccessibilityInfo, Alert, Text, View } from 'react-native';
 
 import { FormError, FormScreen } from '@/components/account-fields';
+import { SeziLoader } from '@/components/sezi-loader';
 import { PhotoFields, PhotoStatus, type PhotoFieldsValue } from '@/components/photo-fields';
 import { Button, EmptyState, ListRow } from '@/components/ui';
 import { radius, space, type } from '@/design/type';
@@ -19,11 +20,10 @@ export default function PhotoDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const photo = usePhoto(id);
   const { t: tr } = useT();
-  const theme = useSweetTheme();
   if (photo.isLoading)
     return (
       <FormScreen>
-        <ActivityIndicator color={theme.primaryText} accessibilityLabel={tr('account.loading')} />
+        <SeziLoader label={tr('account.loading')} />
       </FormScreen>
     );
   if (photo.error)
@@ -115,7 +115,7 @@ function PhotoDetail({ photo }: { photo: UserPhoto }) {
         }}
       />
       {urls.isLoading ? (
-        <ActivityIndicator color={theme.primaryText} accessibilityLabel={tr('account.loading')} />
+        <SeziLoader label={tr('account.loading')} />
       ) : null}
       {urls.error ? (
         <View style={{ gap: space.sm }}>

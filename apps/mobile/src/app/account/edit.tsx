@@ -2,9 +2,10 @@ import { AVATAR_TONES, DisplayName, NAME_MAX, Username, USERNAME_MAX, USERNAME_M
 import * as ImagePicker from 'expo-image-picker';
 import { router } from 'expo-router';
 import { useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, StyleSheet, Text, type TextInput, View } from 'react-native';
+import { AccessibilityInfo, StyleSheet, Text, type TextInput, View } from 'react-native';
 
 import { FormError, FormScreen } from '@/components/account-fields';
+import { SeziLoader } from '@/components/sezi-loader';
 import { Avatar } from '@/components/avatar';
 import { Button, Field, SectionTitle } from '@/components/ui';
 import { AtIcon, CameraIcon, CheckIcon, PersonIcon } from '@/design/icons';
@@ -21,13 +22,12 @@ type Errors = Partial<Record<'name' | 'username' | 'photo' | 'form', string>>;
  * Fotoğraf dışındakiler "Kaydet" ile tek istekte gider; önizleme yazdıkça güncellenir.
  */
 export default function EditProfile() {
-  const t = useSweetTheme();
   const { t: tr } = useT();
   const { identity, avatar, save, setAvatar, removeAvatar } = useIdentity();
   if (!identity) {
     return (
       <FormScreen>
-        <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('account.loading')} />
+        <SeziLoader label={tr('account.loading')} />
       </FormScreen>
     );
   }
@@ -108,7 +108,7 @@ function Editor({ identity, avatar, save, setAvatar, removeAvatar }: { identity:
     <FormScreen>
       <View style={styles.photo}>
         <Avatar identity={{ display_name: name || identity.display_name, avatar_tone: tone }} source={avatar} size={112} />
-        {photoBusy ? <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('account.photoUploading')} /> : null}
+        {photoBusy ? <SeziLoader size={24} label={tr('account.photoUploading')} /> : null}
         <View style={styles.photoActions}>
           <Button compact variant="secondary" label={tr('account.photoPick')} onPress={() => void pick('library')} disabled={photoBusy} />
           <Button compact variant="secondary" icon={(c) => <CameraIcon color={c} />} label={tr('account.photoTake')} onPress={() => void pick('camera')} disabled={photoBusy} />

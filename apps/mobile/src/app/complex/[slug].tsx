@@ -1,9 +1,10 @@
 import { hasLocation, loc, toneForType, type SweetTheme } from '@sezi/shared';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useMemo } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PointsLayer, SeziMap } from '@/components/map';
+import { SeziLoader } from '@/components/sezi-loader';
 import { Button, Card, Eyebrow, ListRow, SectionTitle } from '@/components/ui';
 import { TurnIcon } from '@/design/icons';
 import { outline } from '@/design/sweet/components';
@@ -29,7 +30,7 @@ export default function ComplexScreen() {
   if (isLoading) {
     return (
       <View style={s.center}>
-        <ActivityIndicator color={t.primaryText} />
+        <SeziLoader />
       </View>
     );
   }

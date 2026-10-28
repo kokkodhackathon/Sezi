@@ -1,5 +1,6 @@
-import { loc, THRESHOLDS, toneForType, type Achievement, type AchievementKind, type UserPhoto, type Visibility } from '@sezi/shared';
+import { badgeFor, loc, THRESHOLDS, toneForType, type Achievement, type BadgeId, type UserPhoto, type Visibility } from '@sezi/shared';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { useEffect, type ComponentType, type ReactNode } from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -11,16 +12,9 @@ import {
   CheckIcon,
   ClockIcon,
   CloseIcon,
-  FlagIcon,
-  FootprintsIcon,
   GlobeIcon,
-  LandmarkIcon,
   LockIcon,
-  MapAreaIcon,
   PersonIcon,
-  RouteIcon,
-  ShapesIcon,
-  StampIcon,
   UsersIcon,
 } from '@/design/icons';
 import { outline, SoftPressable } from '@/design/sweet/components';
@@ -29,7 +23,7 @@ import { radius, space, type } from '@/design/type';
 import { WorkGlyphInline } from '@/design/work-glyph';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
-import { useT, type Lang, type Translate } from '@/lib/i18n';
+import { useT, type Lang, type MessageKey, type Translate } from '@/lib/i18n';
 
 type Icon = ComponentType<{ color: string; size?: number }>;
 
@@ -189,23 +183,45 @@ export function StatStrip({ items }: { items: { icon: Icon; value: string; label
   );
 }
 
-/** Başarım türü → simge; web'de aynı kavramın lucide karşılığı. */
-export const ACHIEVEMENT_ICONS: Record<AchievementKind, Icon> = {
-  first_stamp: StampIcon,
-  stamps: StampIcon,
-  types: ShapesIcon,
-  cities: MapAreaIcon,
-  walker: FootprintsIcon,
-  complex: LandmarkIcon,
-  tour: RouteIcon,
-  reporter: FlagIcon,
-  photographer: ArchiveIcon,
-  sharer: GlobeIcon,
-  companion: UsersIcon,
+const BADGE_NAME = {
+  '01-ilk-damga': 'badge.01-ilk-damga.name',
+  '02-vakif-kasifi': 'badge.02-vakif-kasifi.name',
+  '03-uslup-avcisi': 'badge.03-uslup-avcisi.name',
+  '04-sehirler-arasi': 'badge.04-sehirler-arasi.name',
+  '05-ilk-kilometre': 'badge.05-ilk-kilometre.name',
+  '06-carsi-ehli': 'badge.06-carsi-ehli.name',
+  '07-kervan-yolcusu': 'badge.07-kervan-yolcusu.name',
+  '08-kuzey-ruzgari': 'badge.08-kuzey-ruzgari.name',
+  '09-sessiz-minareler': 'badge.09-sessiz-minareler.name',
+  '10-kubbeler-altinda': 'badge.10-kubbeler-altinda.name',
+  '11-erisilebilirlik-elcisi': 'badge.11-erisilebilirlik-elcisi.name',
+  '12-arsiv-gozu': 'badge.12-arsiv-gozu.name',
+  '13-ilk-kare': 'badge.13-ilk-kare.name',
+  '14-yol-arkadasi': 'badge.14-yol-arkadasi.name',
+} as const satisfies Record<BadgeId, MessageKey>;
+
+/** Statik require: Metro dinamik yolu çözemez. */
+const BADGE_SOURCES: Record<BadgeId, number> = {
+  '01-ilk-damga': require('../../assets/badges/01-ilk-damga.webp'),
+  '02-vakif-kasifi': require('../../assets/badges/02-vakif-kasifi.webp'),
+  '03-uslup-avcisi': require('../../assets/badges/03-uslup-avcisi.webp'),
+  '04-sehirler-arasi': require('../../assets/badges/04-sehirler-arasi.webp'),
+  '05-ilk-kilometre': require('../../assets/badges/05-ilk-kilometre.webp'),
+  '06-carsi-ehli': require('../../assets/badges/06-carsi-ehli.webp'),
+  '07-kervan-yolcusu': require('../../assets/badges/07-kervan-yolcusu.webp'),
+  '08-kuzey-ruzgari': require('../../assets/badges/08-kuzey-ruzgari.webp'),
+  '09-sessiz-minareler': require('../../assets/badges/09-sessiz-minareler.webp'),
+  '10-kubbeler-altinda': require('../../assets/badges/10-kubbeler-altinda.webp'),
+  '11-erisilebilirlik-elcisi': require('../../assets/badges/11-erisilebilirlik-elcisi.webp'),
+  '12-arsiv-gozu': require('../../assets/badges/12-arsiv-gozu.webp'),
+  '13-ilk-kare': require('../../assets/badges/13-ilk-kare.webp'),
+  '14-yol-arkadasi': require('../../assets/badges/14-yol-arkadasi.webp'),
 };
 
 export function achievementTitle(a: Achievement, tr: Translate, lang: Lang) {
-  return tr(`ach.${a.kind}.title`, { name: a.subject ? loc(a.subject.name, lang) : '' });
+  const badge = tr(BADGE_NAME[badgeFor(a)]);
+  if ((a.kind === 'complex' || a.kind === 'tour') && a.subject) return `${badge} · ${loc(a.subject.name, lang)}`;
+  return badge;
 }
 
 export function achievementTarget(a: Achievement) {
@@ -227,14 +243,16 @@ export function achievementLabel(a: Achievement, tr: Translate, lang: Lang) {
 export function AchievementIcon({ achievement: a, size = 72 }: { achievement: Achievement; size?: number }) {
   const t = useSweetTheme();
   const earned = a.level > 0;
-  const I = ACHIEVEMENT_ICONS[a.kind];
-  const fill = t.outlined ? t.surface : earned ? t.primary.fill : t.soft;
-  const ink = t.outlined ? t.text : earned ? t.primary.ink : t.textMuted;
   const Mark = earned ? CheckIcon : LockIcon;
   return (
     <View importantForAccessibility="no-hide-descendants" accessibilityElementsHidden>
-      <View style={[s.tileBox, { width: size, height: size, backgroundColor: fill }, outline(t)]}>
-        <I color={ink} size={size * 0.44} />
+      <View style={[s.tileBox, { width: size, height: size, backgroundColor: t.outlined ? t.surface : t.soft }, outline(t)]}>
+        <Image
+          accessible={false}
+          source={BADGE_SOURCES[badgeFor(a)]}
+          style={{ width: size, height: size, opacity: earned ? 1 : 0.35 }}
+          contentFit="cover"
+        />
       </View>
       <View style={[s.corner, { backgroundColor: earned ? t.primaryText : t.surface, borderColor: earned ? t.surface : t.border }]}>
         <Mark color={earned ? t.background : t.textMuted} size={14} />
@@ -435,7 +453,7 @@ const s = StyleSheet.create({
   stat: { flex: 1, minWidth: 0, alignItems: 'flex-start', gap: 2, padding: space.md, borderRadius: radius.md, borderCurve: 'continuous' },
   statValue: { fontFamily: type.screenTitle.fontFamily, fontSize: 26, lineHeight: 32 },
   tile: { flex: 1, alignItems: 'center', gap: space.sm, minHeight: 96, paddingVertical: space.sm },
-  tileBox: { borderRadius: radius.lg, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
+  tileBox: { borderRadius: radius.lg, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   corner: {
     position: 'absolute',
     right: -4,

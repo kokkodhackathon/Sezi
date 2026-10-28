@@ -1,11 +1,12 @@
 "use client";
 
 import { loc, searchWorks, WorkRowSchema } from "@sezi/shared";
-import { LoaderCircleIcon, SearchIcon } from "lucide-react";
+import { SearchIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { z } from "zod";
 
+import { SeziLoader } from "@/components/sezi-loader";
 import { Button } from "@/components/ui/button";
 import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { href } from "@/lib/i18n";
@@ -85,7 +86,7 @@ export function SiteSearch() {
                   t("search.failed")
                 ) : (
                   <>
-                    <LoaderCircleIcon className="size-4 animate-spin" aria-hidden />
+                    <SeziLoader className="size-4" aria-hidden />
                     {t("search.loading")}
                   </>
                 )}

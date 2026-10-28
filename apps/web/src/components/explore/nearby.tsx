@@ -1,11 +1,12 @@
 "use client";
 
 import { coverOf, distanceM, formatDistance, loc, type LngLat } from "@sezi/shared";
-import { LoaderCircleIcon, LocateFixedIcon } from "lucide-react";
+import { LocateFixedIcon } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { CardCarousel } from "@/components/card-carousel";
+import { SeziLoader } from "@/components/sezi-loader";
 import { Button } from "@/components/ui/button";
 import { WorkThumb } from "@/components/work-thumb";
 import type { ExploreItem } from "@/lib/explore";
@@ -88,7 +89,7 @@ export function Nearby({ items }: { items: ExploreItem[] }) {
             {state.kind === "denied" ? t("home.nearDenied") : state.kind === "error" ? t("home.nearError") : t("home.nearPrompt")}
           </p>
           <Button type="button" onClick={locate} disabled={state.kind === "locating"}>
-            {state.kind === "locating" ? <LoaderCircleIcon className="animate-spin" aria-hidden /> : <LocateFixedIcon aria-hidden />}
+            {state.kind === "locating" ? <SeziLoader className="size-4" aria-hidden /> : <LocateFixedIcon aria-hidden />}
             {state.kind === "locating" ? t("home.nearLocating") : t("home.nearUse")}
           </Button>
         </div>

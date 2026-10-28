@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+<defs><g id="s14"><circle cx="78" cy="100" r="44"/><circle cx="122" cy="100" r="44"/></g><clipPath id="c14"><circle cx="78" cy="100" r="44"/></clipPath></defs>
+<use href="#s14" fill="#9C7B4E" stroke="#9C7B4E" stroke-width="16"/>
+<use href="#s14" fill="#E9D6B0" stroke="#E9D6B0" stroke-width="10"/>
+<circle cx="78" cy="100" r="44" fill="#C47B62"/>
+<circle cx="122" cy="100" r="44" fill="#4A9B8F"/>
+<circle cx="122" cy="100" r="44" fill="#8CD4C5" clip-path="url(#c14)"/>
+<circle cx="54" cy="94" r="3.5" fill="#F5EADB"/>
+<circle cx="68" cy="94" r="3.5" fill="#F5EADB"/>
+<path d="M52 107 Q61 116 70 107" fill="none" stroke="#F5EADB" stroke-width="3.5" stroke-linecap="round"/>
+<circle cx="132" cy="94" r="3.5" fill="#F5EADB"/>
+<circle cx="146" cy="94" r="3.5" fill="#F5EADB"/>
+<path d="M130 107 Q139 116 148 107" fill="none" stroke="#F5EADB" stroke-width="3.5" stroke-linecap="round"/>
+<path d="M100 114 C87 105 88 93 95 94 C98 94.5 100 97 100 100 C100 97 102 94.5 105 94 C112 93 113 105 100 114 Z" fill="#8C4A33"/>
+</svg>

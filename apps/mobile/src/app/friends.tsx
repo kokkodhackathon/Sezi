@@ -2,9 +2,10 @@ import { Username, type FriendshipRow } from '@sezi/shared';
 import { useQuery } from '@tanstack/react-query';
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { FormError, FormScreen } from '@/components/account-fields';
+import { SeziLoader } from '@/components/sezi-loader';
 import { Avatar } from '@/components/avatar';
 import { EmptyInvite, FriendsArt } from '@/components/social-visuals';
 import { Button, Card, Field, ListRow, Segmented, ToggleRow } from '@/components/ui';
@@ -127,7 +128,7 @@ export default function FriendsScreen() {
         ) : null}
       </View>
       {results.isFetching ? (
-        <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('account.loading')} />
+        <SeziLoader label={tr('account.loading')} />
       ) : null}
       {parsed.success && results.data ? (
         <Card padded={false}>
@@ -148,7 +149,7 @@ export default function FriendsScreen() {
         ]}
       />
       {friendships.isLoading ? (
-        <ActivityIndicator color={t.primaryText} accessibilityLabel={tr('account.loading')} />
+        <SeziLoader label={tr('account.loading')} />
       ) : tab === 'friends' ? (
         friends.length ? (
           <Card padded={false}>

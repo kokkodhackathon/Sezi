@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text } from 'react-native';
+import { ScrollView, StyleSheet, Text } from 'react-native';
 
 import { ExhibitionCard } from '@/components/exhibition-card';
+import { SeziLoader } from '@/components/sezi-loader';
 import { Eyebrow } from '@/components/ui';
 import { space, type } from '@/design/type';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
@@ -17,7 +18,7 @@ export default function Exhibitions() {
     <ScrollView style={s.screen} contentContainerStyle={s.body}>
       <Eyebrow text={tr('exh.eyebrow')} />
       <Text style={[type.body, { color: t.text }]}>{tr('about.projectBody')}</Text>
-      {isLoading ? <ActivityIndicator color={t.primaryText} /> : null}
+      {isLoading ? <SeziLoader /> : null}
       {(data ?? []).map((e) => (
         <ExhibitionCard key={e.id} exhibition={e} />
       ))}

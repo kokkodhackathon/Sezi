@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+<defs><path id="s3" d="M48 172 V96 Q48 46 100 24 Q152 46 152 96 V172 Z"/></defs>
+<use href="#s3" fill="#9C7B4E" stroke="#9C7B4E" stroke-width="16"/>
+<use href="#s3" fill="#E9D6B0" stroke="#E9D6B0" stroke-width="10"/>
+<use href="#s3" fill="#C47B62"/>
+<path d="M64 158 V100 Q64 64 100 46 Q136 64 136 100 V158 Z" fill="#8CD4C5"/>
+<circle cx="84" cy="84" r="8" fill="#C47B62"/>
+<rect x="64" y="146" width="72" height="12" fill="#8C4A33"/>
+<path d="M68 146 V134 A14 14 0 0 1 96 134 V146 Z" fill="#8C4A33"/>
+<rect x="81" y="112" width="2" height="9" fill="#8C4A33"/>
+<path d="M78 146 V139 A4 4 0 0 1 86 139 V146 Z" fill="#F5EADB"/>
+<rect x="100" y="116" width="16" height="30" fill="#8C4A33"/>
+<path d="M97 116 L108 96 L119 116 Z" fill="#8C4A33"/>
+<path d="M105 146 V138 A3 3 0 0 1 111 138 V146 Z" fill="#F5EADB"/>
+<rect x="123.5" y="82" width="5" height="64" fill="#8C4A33"/>
+<path d="M122.5 82 L126 70 L129.5 82 Z" fill="#8C4A33"/>
+<rect x="122" y="100" width="8" height="3" fill="#8C4A33"/></svg>

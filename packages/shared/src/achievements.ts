@@ -131,3 +131,71 @@ export function achievementLevels(list: Achievement[]): Record<string, number> {
 export function newlyEarned(prev: Record<string, number>, list: Achievement[]): Achievement[] {
   return list.filter((item) => item.level > (prev[item.id] ?? 0));
 }
+
+/** Çizilen rozet dosyalarının kimliği (`apps/web/public/badges`, `apps/mobile/assets/badges`). */
+export const BADGE_IDS = [
+  "01-ilk-damga",
+  "02-vakif-kasifi",
+  "03-uslup-avcisi",
+  "04-sehirler-arasi",
+  "05-ilk-kilometre",
+  "06-carsi-ehli",
+  "07-kervan-yolcusu",
+  "08-kuzey-ruzgari",
+  "09-sessiz-minareler",
+  "10-kubbeler-altinda",
+  "11-erisilebilirlik-elcisi",
+  "12-arsiv-gozu",
+  "13-ilk-kare",
+  "14-yol-arkadasi",
+] as const;
+
+export type BadgeId = (typeof BADGE_IDS)[number];
+
+const KIND_BADGE = {
+  first_stamp: "01-ilk-damga",
+  stamps: "02-vakif-kasifi",
+  types: "03-uslup-avcisi",
+  cities: "04-sehirler-arasi",
+  walker: "05-ilk-kilometre",
+  reporter: "11-erisilebilirlik-elcisi",
+  photographer: "12-arsiv-gozu",
+  sharer: "13-ilk-kare",
+  companion: "14-yol-arkadasi",
+} as const satisfies Record<Exclude<AchievementKind, "tour" | "complex">, BadgeId>;
+
+/** Tur slug → rozet. Tabloda olmayan turlar kervan yolcusuna düşer. */
+export const TOUR_BADGES: Readonly<Record<string, BadgeId>> = {
+  "carsinin-kalbi": "06-carsi-ehli",
+  "hanlar-yolu": "07-kervan-yolcusu",
+  "kuzey-mahalleleri": "08-kuzey-ruzgari",
+};
+
+/** Cami ağırlıklı külliye slug'ları (kubbeler yerine sessiz minareler). */
+export const MOSQUE_COMPLEX_SLUGS: readonly string[] = [];
+
+const FALLBACK_TOUR: BadgeId = "07-kervan-yolcusu";
+const DEFAULT_COMPLEX: BadgeId = "10-kubbeler-altinda";
+const MOSQUE_BADGE: BadgeId = "09-sessiz-minareler";
+
+function mosqueOnlyName(name: string): boolean {
+  const text = name.toLocaleLowerCase("tr");
+  const mosque = text.includes("cami");
+  const ensemble = text.includes("külliye") || text.includes("han") || text.includes("medrese");
+  return mosque && !ensemble;
+}
+
+/** Başarımın rozeti. Yeni tur için yalnız `TOUR_BADGES` satırı eklenir. */
+export function badgeFor(achievement: Pick<Achievement, "kind" | "subject">): BadgeId {
+  if (achievement.kind === "tour") {
+    const slug = achievement.subject?.slug;
+    return (slug && TOUR_BADGES[slug]) || FALLBACK_TOUR;
+  }
+  if (achievement.kind === "complex") {
+    const slug = achievement.subject?.slug ?? "";
+    if (MOSQUE_COMPLEX_SLUGS.includes(slug)) return MOSQUE_BADGE;
+    if (mosqueOnlyName(achievement.subject?.name.tr ?? "")) return MOSQUE_BADGE;
+    return DEFAULT_COMPLEX;
+  }
+  return KIND_BADGE[achievement.kind];
+}

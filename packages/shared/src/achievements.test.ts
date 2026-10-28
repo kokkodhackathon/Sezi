@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { achievementLevels, achievements, EMPTY_CONTRIBUTIONS, newlyEarned } from "./index";
-import type { PassportWork, Visit } from "./index";
+import { achievementLevels, achievements, badgeFor, EMPTY_CONTRIBUTIONS, newlyEarned } from "./index";
+import type { Achievement, PassportWork, Visit } from "./index";
 
 function work(slug: string, complex: string | null = null, located = true): PassportWork {
   return { slug, name: { tr: slug }, type_slug: slug, city_slug: slug, complex_slug: complex, complex_name: complex ? { tr: complex } : null, located };
@@ -64,6 +64,44 @@ describe("achievements", () => {
       "first_stamp", "stamps", "types", "cities", "walker", "complex:Çarşı", "complex:Şehir", "tour:c", "tour:s", "reporter", "photographer", "sharer", "companion",
     ]);
     expect(list.every((item) => item.level === 0 && item.earnedAt === null)).toBe(true);
+  });
+});
+
+function badgeSubject(kind: Achievement["kind"], slug: string, name = slug): Achievement {
+  return {
+    id: `${kind}:${slug}`, kind, level: 0, maxLevel: 1, current: 0, nextTarget: 1, earnedAt: null,
+    subject: { slug, name: { tr: name } },
+  };
+}
+
+describe("rozet eşlemesi", () => {
+  it("türleri çizilen rozetlere bağlar", () => {
+    const list = achievements({ visits: [], works: [], tours: [], contributions: EMPTY_CONTRIBUTIONS });
+    const byKind = Object.fromEntries(list.map((item) => [item.kind, badgeFor(item)]));
+    expect(byKind).toMatchObject({
+      first_stamp: "01-ilk-damga",
+      stamps: "02-vakif-kasifi",
+      types: "03-uslup-avcisi",
+      cities: "04-sehirler-arasi",
+      walker: "05-ilk-kilometre",
+      reporter: "11-erisilebilirlik-elcisi",
+      photographer: "12-arsiv-gozu",
+      sharer: "13-ilk-kare",
+      companion: "14-yol-arkadasi",
+    });
+  });
+
+  it("tur slug'ını tabloya bağlar; bilinmeyen tur kervana düşer", () => {
+    expect(badgeFor(badgeSubject("tour", "carsinin-kalbi"))).toBe("06-carsi-ehli");
+    expect(badgeFor(badgeSubject("tour", "hanlar-yolu"))).toBe("07-kervan-yolcusu");
+    expect(badgeFor(badgeSubject("tour", "kuzey-mahalleleri"))).toBe("08-kuzey-ruzgari");
+    expect(badgeFor(badgeSubject("tour", "tophane-turbeleri"))).toBe("07-kervan-yolcusu");
+    expect(badgeFor(badgeSubject("tour", "mahalle-camileri", "Sakin mahalle camileri"))).toBe("07-kervan-yolcusu");
+  });
+
+  it("külliyede kubbeleri, yalnız cami adında sessiz minareleri kullanır", () => {
+    expect(badgeFor(badgeSubject("complex", "suleymaniye", "Süleymaniye Külliyesi"))).toBe("10-kubbeler-altinda");
+    expect(badgeFor(badgeSubject("complex", "ulu-cami", "Ulu Cami"))).toBe("09-sessiz-minareler");
   });
 });
 
