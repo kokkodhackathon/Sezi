@@ -2,6 +2,7 @@ import { LogOut, ShieldAlert } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router';
 
+import { BrandMark } from '@/components/brand-mark';
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -73,9 +74,7 @@ function AppSidebar({ email, signOut }: { email: string; signOut: () => Promise<
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild tooltip="Sezi">
               <NavLink to="/">
-                <span className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary font-heading text-base font-extrabold text-primary-foreground">
-                  S
-                </span>
+                <BrandMark className="h-8! w-auto! shrink-0 text-brand-mark group-data-[collapsible=icon]:h-5!" />
                 <span className="flex flex-col leading-tight">
                   <span className="font-heading text-base font-extrabold">Sezi</span>
                   <span className="text-xs text-muted-foreground">Yönetim paneli</span>

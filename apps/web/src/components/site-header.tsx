@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Switch } from "@/components/ui/switch";
 import { Avatar } from "@/components/account/avatar";
 import { BottomNav } from "@/components/bottom-nav";
+import { BrandMark } from "@/components/brand-mark";
 import { SiteSearch } from "@/components/site-search";
 import { useAccount } from "@/lib/account";
 import { setAppearance, TEXT_SIZES, useAppearance } from "@/lib/appearance";
@@ -174,7 +175,8 @@ export function SiteHeader() {
               : "max-w-6xl rounded-none border-transparent",
           )}
         >
-          <Link href={href(lang)} className="mr-2 inline-flex min-h-12 min-w-12 items-center justify-center justify-self-start font-heading text-2xl font-extrabold tracking-tight text-link" aria-label={t("nav.home")}>
+          <Link href={href(lang)} className="mr-2 inline-flex min-h-12 items-center gap-2 justify-self-start font-heading text-2xl font-extrabold tracking-tight text-link" aria-label={t("nav.home")}>
+            <BrandMark className="h-8 text-brand-mark" />
             {t("site.name")}
           </Link>
           <nav ref={navRef} aria-label={t("nav.main")} className="relative hidden items-center gap-1 justify-self-center lg:flex" onMouseLeave={() => setHovered(null)}>

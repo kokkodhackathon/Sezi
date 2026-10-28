@@ -39,6 +39,7 @@
   --color-foreground: var(--foreground);
   --color-background: var(--background);
   --color-link: var(--link);
+  --color-brand-mark: var(--brand-mark);
   --color-highlight: var(--highlight);
   --color-highlight-foreground: var(--highlight-foreground);
   --color-accent-text: var(--accent-text);
@@ -84,6 +85,13 @@
 
 :root {
   --radius: 0.5rem;
+  /* Logodaki koyu kahve. Üst çubuk zemini (#F6F4F0) üzerinde kontrast 10.8:1. */
+  --brand-mark: #562b1d;
+}
+
+/* Yüksek kontrastta işaret düz metin rengini alır. */
+[data-contrast="high"] {
+  --brand-mark: var(--foreground);
 }
 
 /* Yazı büyütme (görünüm menüsü): rem tabanlı her ölçü birlikte büyür. */
