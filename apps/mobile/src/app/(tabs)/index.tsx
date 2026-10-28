@@ -1,12 +1,13 @@
 import { coverOf, loc, toneForType, type WorkRow } from '@sezi/shared';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { FlatList, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { CheckIcon, ChevronIcon, InfoIcon, PlayIcon, SearchIcon } from '@/design/icons';
 import { useTabBarSpace } from '@/components/app-tabs';
+import { useSeziRefresh } from '@/components/sezi-refresh';
 import { Button } from '@/components/ui';
 import { CityMap } from '@/components/city-map';
 import { PhotoCard, WorkPreviewSheet } from '@/components/photo-card';
@@ -36,7 +37,7 @@ export default function Explore() {
   const active = (cities ?? []).filter((c) => c.is_active);
   const citySlug = active.some((c) => c.slug === settings.city) ? settings.city : (active[0]?.slug ?? settings.city);
   const city = active.find((c) => c.slug === citySlug);
-  const { data: works, isLoading, error, refetch, isRefetching } = useWorks(citySlug);
+  const { data: works, isLoading, error, refetch } = useWorks(citySlug);
   const { data: allWorks } = useWorks();
   const [kind, setKind] = useState<string | null>(null);
   const [sheet, setSheet] = useState(false);
@@ -61,10 +62,8 @@ export default function Explore() {
   const tileH = Math.round(tileW * 5 / 4);
 
   const open = (slug: string) => router.push({ pathname: '/work/[slug]', params: { slug } });
-  const reload = () => {
-    void refetch();
-    void reloadCities();
-  };
+  const reload = useCallback(() => Promise.all([refetch(), reloadCities()]), [refetch, reloadCities]);
+  const { refreshControl, overlay } = useSeziRefresh(reload);
   const chooseCity = (slug: string) => {
     update({ city: slug });
     setKind(null);
@@ -220,14 +219,14 @@ export default function Explore() {
         ListEmptyComponent={empty}
         contentContainerStyle={[s.list, { paddingBottom: tabSpace }]}
         initialNumToRender={6}
-        // Aşağı çekip yenile: admin panelinde onaylanan içerik hemen gelir.
-        refreshing={isRefetching}
-        onRefresh={reload}
+        // Aşağı çekip yenile: sistem dairesi gizli, illüstrasyon üstte.
+        refreshControl={refreshControl}
         renderItem={({ item, index }) => {
           const card = <PhotoCard work={item} width={tileW} onPress={() => open(item.slug)} onLongPress={() => setPreview(item)} />;
           return index < 6 ? <FadeInItem index={index}>{card}</FadeInItem> : card;
         }}
       />
+      {overlay}
 
       <SweetSheet visible={sheet} onClose={() => setSheet(false)} title={tr('design.chooseCity')}>
         <ScrollView contentContainerStyle={s.sheetBody}>
