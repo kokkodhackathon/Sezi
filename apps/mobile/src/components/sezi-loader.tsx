@@ -44,7 +44,7 @@ export function SeziLoader({ size = 48, label }: { size?: number; label?: string
     transform: [{ rotate: `${rotation.value}deg` }],
   }));
 
-  const text = label ?? tr('account.loading');
+  const text = label ?? tr('common.loading');
 
   return (
     <View accessibilityRole="progressbar" accessibilityLabel={text} style={{ width: size, height: size }}>

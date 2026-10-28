@@ -1,6 +1,7 @@
 /** Turlar, arama, Sezi'ye Sor, bildirim, ayarlar ve diğer ekranların metinleri. */
 export const trApp = {
   'common.retry': 'Yeniden dene',
+  'common.loading': 'Yükleniyor',
   'ach.earnedStatus': 'Kazanıldı',
   'profile.community': 'Topluluk',
   'passport.title': 'Vakıf Pasaportu',
@@ -824,6 +825,7 @@ export const enApp: Record<AppMessageKey, string> = {
   'person.photos': 'Photos',
   'privacy.title': 'Privacy',
   'common.retry': 'Try again',
+  'common.loading': 'Loading',
   'ach.earnedStatus': 'Earned',
   'privacy.visibility': 'Profile visibility',
   'privacy.vis.private': 'Only you see your passport.',

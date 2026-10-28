@@ -22,7 +22,7 @@ export function SeziLoader({ className, label, "aria-label": ariaLabel, "aria-hi
   }, []);
 
   const hidden = ariaHidden === true || ariaHidden === "true";
-  const announced = label ?? (typeof ariaLabel === "string" ? ariaLabel : t("account.loading"));
+  const announced = label ?? (typeof ariaLabel === "string" ? ariaLabel : t("common.loading"));
 
   return (
     <span
