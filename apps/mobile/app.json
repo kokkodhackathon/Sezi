@@ -8,12 +8,11 @@
     "scheme": "sezi",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
       "bundleIdentifier": "com.lahmacun.sezi"
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#F7F1E3",
+        "backgroundColor": "#F6F4F0",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
@@ -30,9 +29,13 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F7F1E3",
+          "backgroundColor": "#F6F4F0",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 240,
+          "dark": {
+            "backgroundColor": "#111014",
+            "image": "./assets/images/splash-icon-dark.png"
+          }
         }
       ],
       [

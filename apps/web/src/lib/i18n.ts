@@ -8,7 +8,7 @@ export const LANGS = ["tr", "en"] as const;
 export type Lang = (typeof LANGS)[number];
 export type { MessageKey };
 
-export const isLang = (v: string | undefined): v is Lang => v === "tr" || v === "en";
+export const isLang = (v: string | null | undefined): v is Lang => v === "tr" || v === "en";
 
 export type Vars = Record<string, string | number>;
 

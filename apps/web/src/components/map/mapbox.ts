@@ -46,6 +46,8 @@ export function createMap(container: HTMLElement, center: [number, number], zoom
     pitch: mapPitch(look),
     pitchWithRotate: look.pitched,
     cooperativeGestures: true,
+    // Etiket solması haritayı yüzlerce milisaniye meşgul eder; rota katmanı solmadan da okunur.
+    fadeDuration: 0,
   });
   if (!look.pitched) m.touchPitch.disable();
   m.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");

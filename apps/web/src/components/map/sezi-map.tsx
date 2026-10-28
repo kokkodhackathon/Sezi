@@ -104,6 +104,12 @@ const ICON_SCALE = 0.95;
 const ICON_SCALE_SELECTED = 1.2;
 const iconName = (slug: string) => `type-${glyphType(slug)}`;
 const ROUTE_WIDTH = 7;
+/**
+ * Akan çizgi boya aralığı. Tasarım adımı 60 ms ve her boya tüm haritayı yeniden çizer;
+ * saniye altı aralık ana iş parçacığını doldurur. Bir boyada birkaç adım atlanır, akış yine görünür.
+ */
+const FLOW_STEPS_PER_TICK = 8;
+const FLOW_TICK_MS = ROUTE_FLOW_STEP_MS * 40;
 
 /** Yön oku: çizginin içine sığan yüzey renginde şerit (çizgi 7 px, ok 5 px yüksek). */
 async function addRouteArrow(m: MapboxMap, th: SweetTheme) {
@@ -213,6 +219,10 @@ export default function SeziMap(props: SeziMapProps) {
   const ready = useRef(false);
   const latest = useRef(props);
   const fitted = useRef<string | null>(null);
+  /** Aynı rota verisiyle `setData` döngüsünü keser. */
+  const dataKey = useRef("");
+  /** Rota parçası varken akan çizgi boyanır. */
+  const flowWanted = useRef(false);
   latest.current = props;
   const theme = contrast ? sweetThemes.highContrast : sweetThemes.light;
   const themeRef = useRef(theme);
@@ -231,6 +241,17 @@ export default function SeziMap(props: SeziMapProps) {
     const p = latest.current;
     const th = themeRef.current;
     const lines = p.lines ?? [];
+    const stamp = JSON.stringify([
+      lines,
+      p.route ?? null,
+      p.highlight ?? null,
+      p.bounds ?? null,
+      p.fitPadding ?? null,
+      p.markers ?? [],
+      p.onMapClick ? 1 : 0,
+    ]);
+    if (stamp === dataKey.current) return;
+    dataKey.current = stamp;
     for (let i = 0; i < MAX_LINES; i++) {
       const l = lines[i];
       setData(m, `line-${i}`, fc(l ? [lineFeature(l.coords)] : []));
@@ -242,6 +263,7 @@ export default function SeziMap(props: SeziMapProps) {
       }
     }
     const drawing = routeLineParts(p.route?.pieces ?? []);
+    flowWanted.current = drawing.runs.length > 0;
     const feature = (part: (typeof drawing.parts)[number]) => {
       const offset = laneOffsetPx(part.lane, ROUTE_WIDTH);
       return lineFeature(part.coords, { leg: part.leg, progress: part.progress, offset, arrowOffset: [0, offset], opacity: p.route?.activeLeg == null || part.leg === p.route.activeLeg ? 1 : 0.3 });
@@ -296,6 +318,7 @@ export default function SeziMap(props: SeziMapProps) {
     const look = lookRef.current;
     const m = createMap(box.current, latest.current.center, latest.current.zoom ?? 15, look);
     let flowTimer: number | undefined;
+    let flowWatch: IntersectionObserver | undefined;
     map.current = m;
     m.on("load", async () => {
       await Promise.all([addTypeIcons(m, th), addRouteArrow(m, th)]);
@@ -325,11 +348,25 @@ export default function SeziMap(props: SeziMapProps) {
       addRouteLayers(m, th);
       if (!reducedMotion && !th.outlined) {
         let step = 0;
-        m.setPaintProperty("route-flow", "line-opacity", 0.45);
-        flowTimer = window.setInterval(() => {
-          step = (step + 1) % ROUTE_FLOW_DASHES.length;
-          m.setPaintProperty("route-flow", "line-dasharray", [...ROUTE_FLOW_DASHES[step]!]);
-        }, ROUTE_FLOW_STEP_MS);
+        let onScreen = true;
+        // Sekme gizliyken ya da harita ekran dışındayken boyama: her adım haritanın tamamını yeniden çizer.
+        flowWatch = new IntersectionObserver((entries) => {
+          onScreen = entries.some((entry) => entry.isIntersecting);
+        });
+        flowWatch.observe(m.getContainer());
+        // İlk karolar inmeden çizgiyi oynatma. Ondan önce her boya haritayı yeniden kilitler.
+        m.once("idle", () => {
+          if (map.current !== m) return;
+          m.setPaintProperty("route-flow", "line-opacity", 0.45);
+          flowTimer = window.setInterval(() => {
+            if (document.hidden || !onScreen || !flowWanted.current) return;
+            if (!m.loaded() || m.isMoving() || map.current !== m) return;
+            step = (step + FLOW_STEPS_PER_TICK) % ROUTE_FLOW_DASHES.length;
+            const dash = ROUTE_FLOW_DASHES[step];
+            if (!dash) return;
+            m.setPaintProperty("route-flow", "line-dasharray", [...dash]);
+          }, FLOW_TICK_MS);
+        });
       }
       m.addSource("highlight", { type: "geojson", data: fc([]) });
       m.addLayer({ id: "highlight", type: "line", slot: "top", source: "highlight", paint: { "line-color": th.accentText, "line-width": 8 }, layout: { "line-cap": "round" } });
@@ -401,10 +438,12 @@ export default function SeziMap(props: SeziMapProps) {
       sync();
     });
     return () => {
+      map.current = null;
       clearInterval(flowTimer);
+      flowWatch?.disconnect();
       ready.current = false;
       fitted.current = null;
-      map.current = null;
+      dataKey.current = "";
       m.remove();
     };
     // Tema, sade harita ya da eğik bakış değişince harita yeniden kurulur (taban harita ayarları ve katman renkleri).

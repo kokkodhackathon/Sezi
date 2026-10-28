@@ -51,6 +51,7 @@ export function WorkThumb({
           fill
           sizes={sizes}
           priority={priority}
+          fetchPriority={priority ? "high" : "auto"}
           onLoad={() => setLoaded(true)}
           className={cn("object-cover transition-[opacity,transform] duration-500 ease-out", loaded ? "opacity-100" : "opacity-0", imageClassName)}
         />

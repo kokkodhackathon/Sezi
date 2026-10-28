@@ -81,8 +81,10 @@ export function PhotoGallery({
                 src={photoUrl(currentPhoto, "full")}
                 alt={currentAlt}
                 fill
-                priority
-                sizes="(min-width: 1024px) 1152px, 100vw"
+                priority={selectedPhotoIndex === 0}
+                fetchPriority={selectedPhotoIndex === 0 ? "high" : "auto"}
+                quality={selectedPhotoIndex === 0 ? 50 : 75}
+                sizes="(min-width: 896px) 864px, calc(100vw - 2rem)"
                 className="object-cover"
               />
               <span

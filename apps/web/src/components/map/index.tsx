@@ -13,3 +13,5 @@ export const SeziMap = dynamic<SeziMapProps>(() => import("./sezi-map"), {
   ssr: false,
   loading: () => <Skeleton className="h-full min-h-64 w-full rounded-lg" />,
 });
+
+export { LazySeziMap } from "./lazy-map";

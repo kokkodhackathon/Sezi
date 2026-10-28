@@ -12,7 +12,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { SeziMap } from "@/components/map";
+import { LazySeziMap } from "@/components/map";
 import { PageContainer } from "@/components/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -84,18 +84,20 @@ export async function generateMetadata({
         en: `/en/eser/${work.slug}`,
       },
     },
-    openGraph: {
-      title: name,
-      description,
-      images: cover
-        ? [
-            {
-              url: photoUrl(cover, "full"),
-              alt: loc(cover.alt, lang) || name,
-            },
-          ]
-        : undefined,
-    },
+    ...(cover
+      ? {
+          openGraph: {
+            title: name,
+            description,
+            images: [
+              {
+                url: photoUrl(cover, "full"),
+                alt: loc(cover.alt, lang) || name,
+              },
+            ],
+          },
+        }
+      : {}),
   };
 }
 
@@ -340,7 +342,7 @@ export default async function WorkDetailPage({
           <h2 id="eser-harita-heading" className="font-heading text-lg font-bold">
             {t(lang, "works.detail.mapTitle")}
           </h2>
-          <SeziMap
+          <LazySeziMap
             label={`${name} — ${t(lang, "works.detail.mapTitle")}`}
             center={[work.lng, work.lat]}
             zoom={work.location_precision === "exact" ? 16.5 : 15}
