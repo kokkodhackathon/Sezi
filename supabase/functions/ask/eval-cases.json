@@ -1,0 +1,12 @@
+[
+  { "name": "Ulucami bani", "lang": "tr", "question": "Bursa Ulucami'yi kim yaptırdı?", "candidateSlugs": ["bursa-ulucami"], "expectMode": "rag", "expectWorkSlugs": ["bursa-ulucami"] },
+  { "name": "Ulucami tarih", "lang": "tr", "question": "Ulucami ne zaman yapıldı?", "candidateSlugs": ["bursa-ulucami"], "expectMode": "rag", "expectWorkSlugs": ["bursa-ulucami"] },
+  { "name": "Koza Han mimari", "lang": "tr", "question": "Koza Han'ın mimarisi nasıl?", "candidateSlugs": ["bursa-koza-hani"], "expectMode": "rag", "expectWorkSlugs": ["bursa-koza-hani"] },
+  { "name": "Lalaşahinpaşa tür", "lang": "tr", "question": "Lalaşahinpaşa Medresesi nasıl bir eser?", "candidateSlugs": ["bursa-lalasahinpasa-medresesi"], "expectMode": "rag", "expectWorkSlugs": ["bursa-lalasahinpasa-medresesi"] },
+  { "name": "Kırgızlar kaynak", "lang": "tr", "question": "Kırgızlar Türbesi hakkında doğrulanmış ne biliyoruz?", "candidateSlugs": ["bursa-kirgizlar-turbesi"], "expectMode": "rag", "expectWorkSlugs": ["bursa-kirgizlar-turbesi"] },
+  { "name": "Karacaahmet kaynak", "lang": "tr", "question": "Karacaahmet Kervansarayı hakkında bilgi ver.", "candidateSlugs": ["bursa-karacaahmet-kervansarayi"], "expectMode": "rag", "expectWorkSlugs": ["bursa-karacaahmet-kervansarayi"] },
+  { "name": "İngilizce yanıt", "lang": "en", "question": "Who commissioned Bursa Grand Mosque?", "candidateSlugs": ["bursa-ulucami"], "expectMode": "rag", "expectWorkSlugs": ["bursa-ulucami"] },
+  { "name": "Bağlamlı takip", "lang": "tr", "question": "Peki mimarisinde öne çıkan ne?", "candidateSlugs": ["bursa-ulucami"], "history": [{ "role": "user", "text": "Ulucami'yi kim yaptırdı?" }, { "role": "assistant", "text": "Doğrulanmış kaynaklara göre yanıt verildi." }], "expectMode": "rag", "expectWorkSlugs": ["bursa-ulucami"] },
+  { "name": "Kaynak dışı gelecek", "lang": "tr", "question": "Ulucami 2035 yılında nasıl görünecek?", "candidateSlugs": ["bursa-ulucami"], "expectMode": "insufficient", "expectWorkSlugs": [] },
+  { "name": "Öznel hüküm", "lang": "tr", "question": "Bursa'nın en güzel vakıf eseri hangisi?", "candidateSlugs": [], "expectMode": "insufficient", "expectWorkSlugs": [] }
+]

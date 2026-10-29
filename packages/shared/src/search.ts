@@ -3,8 +3,8 @@ import type { WorkRow } from "./works";
 export type SearchableWork = Pick<WorkRow, "name" | "type_name" | "type_slug" | "district" | "city_name">;
 
 /**
- * Kayıt araması: LLM (RAG) gelene kadar yerel eşleştirmeyle yanıt verir.
- * Yalnızca doğrulanmış eserlerin adı, türü, ilçesi ve ili aranır; metin üretilmez.
+ * Kayıt araması: Sezi'ye Sor için RAG adaylarını cihazda daraltır; servis yoksa yerel sonuçları gösterir.
+ * Yalnızca doğrulanmış eserlerin adı, türü, ilçesi ve ili aranır; burada metin üretilmez.
  */
 export function normalize(s: string): string {
   return s

@@ -1,10 +1,10 @@
 # HANDOFF — oturum devri
 
-Son güncelleme: 17 Ekim 2026 (Ediz + Claude oturumu). Yeni oturum önce [AGENTS.md](AGENTS.md)'yi, sonra bu dosyayı okur.
+Son güncelleme: 29 Ekim 2026. Yeni oturum önce [AGENTS.md](AGENTS.md)'yi, sonra bu dosyayı okur.
 
 ## Şu an neredeyiz
 
-- **Dal:** `main`, remote `origin` (`https://github.com/kokkodhackathon/Sezi`). 16–17 Ekim commit'leri push edilmedi.
+- **Dal:** `codex/seziye-sor` (Sezi'ye Sor geliştirmesi), taban `main` / `origin/main` (`https://github.com/kokkodhackathon/Sezi`). Henüz push/PR yok.
 - **Testler:** `pnpm test` → 56 test geçiyor. `pnpm typecheck` ve `expo lint` temiz.
 - **Navigasyon yeniden tasarımı (17 Ekim, ROADMAP #21):**
   - Noktalar tek tabloda: `nav_points` (roller `start`, `landmark`, `story`, `arrival`), admin → **Noktalar**. `data/lynch` silindi; 12 nokta veritabanında.
@@ -13,6 +13,7 @@ Son güncelleme: 17 Ekim 2026 (Ediz + Claude oturumu). Yeni oturum önce [AGENTS
   - Harita Mapbox'a geçirildi (17 Ekim): mobil `@rnmapbox/maps` (yalnız `components/map`), admin `mapbox-gl` (`lib/mapbox.ts`), Mapbox Standard stil. Token `.env`'lerde.
   - Admin → **Rota testi** (17 Ekim): uygulamanın rota planlayıcısı ve simülasyonu panelde. Planlayıcı, yürüyüşçü ve takip adımı `packages/shared`'a taşındı (`planner.ts`, `walker.ts`, `follow.ts`); mobil ve admin aynı kodu kullanır.
 - **Cihazda denenmemiş:** gerçek telefonda yeni navigasyon ekranı, sahada GPS, admin bağlantısı (bildirim → onay → rota).
+- **Sezi'ye Sor (29 Ekim, ROADMAP #11, dalda):** DeepSeek `deepseek-flash` sağlayıcısı `LLMProvider` arkasında; API anahtarı yalnız Edge Function secret'ı. PostgreSQL tam metin araması doğrulanmış eser metnini `doc_chunks` parçalarından bulur, model yalnız bu bağlamla cevap verir ve kaynak kimlikleri sunucuda doğrulanır. Mobil kaynak numarası/kitap sayfası gösterir; servis yoksa yerel kayıt aramasına düşer. Kişisel veri aktarım notu ekranda. `20261029150000` ve bölüm çeşitliliği düzeltmesi `20261029170000` canlıya uygulandı; `ask` fonksiyonu ve `DEEPSEEK_API_KEY` yayında. `eval.mjs` 10/10 geçti. Başlangıç ekranı iOS Simulator'da görüldü. Bekleyen: cevap/kaynak kartlarının cihazda dokunma denetimi.
 
 ## Okunabilir rota (ROADMAP #20) — plan ve durum
 

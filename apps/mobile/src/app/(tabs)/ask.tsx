@@ -1,7 +1,7 @@
-import { loc, searchWorks, type SweetTheme, type WorkRow } from '@sezi/shared';
+import { loc, searchWorks, type AskCitation, type AskHistoryMessage, type SweetTheme, type WorkRow } from '@sezi/shared';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, FlatList, KeyboardAvoidingView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, FlatList, KeyboardAvoidingView, Linking, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -15,10 +15,18 @@ import { radius, space, type } from '@/design/type';
 import { WorkGlyph } from '@/design/work-glyph';
 import { useReducedMotion } from '@/hooks/use-reduced-motion';
 import { useSweetTheme } from '@/hooks/use-sweet-theme';
+import { askSezi } from '@/lib/ask';
 import { useT } from '@/lib/i18n';
 import { useWorks } from '@/lib/works';
 
-type Message = { id: number; role: 'user' | 'sezi'; text: string; works?: WorkRow[] };
+type Message = {
+  id: number;
+  role: 'user' | 'sezi';
+  text: string;
+  works?: WorkRow[];
+  citations?: AskCitation[];
+  mode?: 'rag' | 'insufficient' | 'local';
+};
 
 export default function Ask() {
   const reducedMotion = useReducedMotion();
@@ -34,10 +42,10 @@ export default function Ask() {
   const animatedIds = useRef(new Set<number>());
   const [waiting, setWaiting] = useState(false);
   const pending = useRef(false);
-  const job = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  useEffect(() => () => clearTimeout(job.current), []);
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
 
-  const ask = (question: string) => {
+  const ask = async (question: string) => {
     const q = question.trim();
     if (!q || pending.current) return;
     pending.current = true;
@@ -46,21 +54,36 @@ export default function Ask() {
     setWaiting(true);
     setInput('');
     AccessibilityInfo.announceForAccessibility(tr('ask.waiting'));
-    // Arama işi sıraya alınır; gösterge için yapay bekleme eklenmez.
-    job.current = setTimeout(() => {
+    const history: AskHistoryMessage[] = messages.slice(-6).map((m) => ({ role: m.role === 'user' ? 'user' : 'assistant', text: m.text }));
+    const previousWorkSlugs = [...messages].reverse().find((m) => m.role === 'sezi' && m.works?.length)?.works?.map((w) => w.slug) ?? [];
+    let answer: Message;
+    try {
+      const result = await askSezi(q, lang, works ?? [], history, previousWorkSlugs);
+      answer = {
+        id: nextId.current++,
+        role: 'sezi',
+        text: result.response.answer,
+        works: result.works,
+        citations: result.response.citations,
+        mode: result.response.mode,
+      };
+    } catch {
+      // İnternet, Edge Function ya da LLM kullanılamıyorsa doğrulanmış kayıtların cihazdaki yerel araması çalışır.
       const found = searchWorks(q, works ?? []).slice(0, 10);
-      const answer: Message = {
+      answer = {
         id: nextId.current++,
         role: 'sezi',
         text: found.length ? tr('ask.found', { n: found.length }) : tr('ask.notFound'),
         works: found,
+        mode: 'local',
       };
+    }
+    if (mounted.current) {
       setMessages((m) => [...m, answer]);
       setWaiting(false);
-      pending.current = false;
-      job.current = undefined;
       AccessibilityInfo.announceForAccessibility(answer.text);
-    }, 0);
+    }
+    pending.current = false;
   };
 
   const suggestions = [tr('ask.suggest1'), tr('ask.suggest2'), tr('ask.suggest3')];
@@ -127,6 +150,37 @@ export default function Ask() {
       <View style={[s.answer, outline(t)]} accessibilityLiveRegion="polite">
         <Eyebrow text={tr('ask.sezi')} />
         <Text style={[type.body, { color: t.text }]}>{msg.text}</Text>
+        {msg.mode === 'local' ? <Note text={tr('ask.localFallback')} icon={<InfoIcon color={t.textMuted} />} /> : null}
+        {msg.citations?.length ? (
+          <View style={s.citations}>
+            <Eyebrow text={tr('ask.sources')} />
+            {msg.citations.map((citation) => {
+              const detail = [
+                citation.sourcePublisher,
+                citation.sourceYear,
+                citation.sourceVolume ? tr('ask.volume', { n: citation.sourceVolume }) : null,
+                citation.sourcePage ? tr('ask.page', { page: citation.sourcePage }) : null,
+              ].filter(Boolean).join(' · ');
+              const body = (
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text style={[type.meta, { color: t.text }]}>[{citation.index}] {citation.workName}</Text>
+                  <Text style={[type.meta, { color: t.textMuted }]}>{citation.sourceTitle}{detail ? ` · ${detail}` : ''}</Text>
+                </View>
+              );
+              return citation.sourceUrl ? (
+                <SoftPressable
+                  key={citation.index}
+                  onPress={() => void Linking.openURL(citation.sourceUrl!)}
+                  accessibilityRole="link"
+                  accessibilityLabel={`[${citation.index}] ${citation.workName}, ${citation.sourceTitle}${detail ? `, ${detail}` : ''}`}
+                  accessibilityHint={tr('ask.sourceOpen')}
+                  style={s.citation}>
+                  {body}<ChevronIcon color={t.textMuted} />
+                </SoftPressable>
+              ) : <View key={citation.index} style={s.citation}>{body}</View>;
+            })}
+          </View>
+        ) : null}
         {msg.works?.map((w) => {
           const name = loc(w.name, lang);
           return (
@@ -224,6 +278,14 @@ const makeStyles = (t: SweetTheme) =>
       minHeight: 64,
       borderTopWidth: t.outlined ? 1 : StyleSheet.hairlineWidth,
       borderTopColor: t.border,
+    },
+    citations: { gap: space.xs, paddingTop: space.xs },
+    citation: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.sm,
+      minHeight: 52,
+      paddingVertical: space.xs,
     },
     composer: {
       flexDirection: 'row',

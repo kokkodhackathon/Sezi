@@ -3,12 +3,12 @@ import Storage from 'expo-sqlite/kv-store';
 import { useSyncExternalStore } from 'react';
 import { z } from 'zod';
 
+import { deviceId } from './device';
 import { PILOT_AREA } from './nav';
 import { supabase } from './supabase';
 import { uuid } from './uuid';
 
 const KEY = 'sezi.reports.v1';
-const DEVICE_KEY = 'sezi.device.v1';
 
 /**
  * Erişilebilirlik bildirimleri önce cihazda kuyruğa alınır ("queued"); bağlantı olunca sunucuya gider ("pending").
@@ -27,16 +27,6 @@ let cache: LocalReport[] | null = null;
 const listeners = new Set<() => void>();
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-
-/** Cihaz kimliği: yalnızca kötüye kullanım sınırı için (saatte 10 bildirim); kişisel bilgi taşımaz. */
-function deviceId(): string {
-  let id = Storage.getItemSync(DEVICE_KEY);
-  if (!id) {
-    id = uuid();
-    Storage.setItemSync(DEVICE_KEY, id);
-  }
-  return id;
-}
 
 function read(): LocalReport[] {
   if (cache) return cache;

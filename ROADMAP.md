@@ -50,7 +50,7 @@ Son güncelleme: 15 Ekim 2026. Görevi bitiren, durum sütununu günceller. Anl�
 | 8 | P0 | Demo senaryosu ve provası; yedek video | Hepsi | Uçak modunda baştan sona 5 dakikalık akış | ⬜ |
 | 9 | P1 | Erişilebilirlik bildirimi gönderimi: oturum kalıcı, kuyruktaki bildirim `a11y_reports` tablosuna gider, admin onaylayınca segment `blocked` / ağırlık güncellenir | Ediz | Merdiven bildirimi onaylanınca rota o segmentten kaçınır (test) | ✅ Hesapsız gönderim (RLS), admin onayı → segment_overrides → uygulama rotası |
 | 10 | P1 | Gerçek GPS modu: konuma göre başlangıç, canlı takip, pusula ile panlama | Eda | Sahada konum en yakın kenara eşleniyor; sapmada uyarı | ⏳ Yürüyüş ekranında (#21) GPS takibi, konumdan rota ve sapmada yeniden rota var; sahada denenmedi |
-| 11 | P1 | Sezi'ye Sor (RAG): `LLMProvider` arayüzü, `doc_chunks` embedding'leri, alıntılı cevap, kaynak yoksa "bilmiyorum" | Ediz | 10 soruluk test seti: kaynaklıya alıntılı cevap, kaynaksıza red | ⏸ sağlayıcı kararı |
+| 11 | P1 | Sezi'ye Sor (RAG): sağlayıcıdan bağımsız `LLMProvider`, doğrulanmış `doc_chunks`, alıntılı cevap, kaynak yoksa "bilmiyorum" | Ediz | 10 soruluk test seti: kaynaklıya alıntılı cevap, kaynaksıza red | ⏳ 29 Ekim: DeepSeek `deepseek-flash`, PostgreSQL tam metin araması + istemcide aday eser; Edge Function'da anahtar, JSON yanıt ve kaynak doğrulama; saatlik/günlük maliyet sınırı; mobilde kaynak listesi, veri aktarımı notu ve çevrimdışı yerel arama yayında. Migration'lar ve `ask` fonksiyonu deploy edildi, 2.775 doğrulanmış parça üretildi, canlı değerlendirme 10/10 geçti. Başlangıç ekranı iOS Simulator'da görüldü. Bekleyen: cevap/kaynak kartlarının cihazda dokunma denetimi |
 | 12 | P1 | TalkBack denetimi: onboarding → Keşfet → eser → tur → rehberlik | Eda + İnci | Ekrana bakmadan tamamlanıyor; bulgular düzeltilmiş | ⬜ |
 | 13 | P1 | CI (GitHub Actions): `pnpm typecheck` + `pnpm test` her push'ta; pipeline için pytest (`type_of`, `tr_title`) | Ediz | Kırmızı/yeşil rozet; tür sınıflandırma testleri | ⬜ |
 | 14 | P1 | Sergi–eser bağlantıları (`work_exhibitions`), külliye bağlantıları (Bursa külliyeleri `complexes`) | Zehra | Eser detayında "Sergilendiği yerler" görünür | ⬜ |
@@ -84,7 +84,6 @@ Durum işaretleri: ⬜ başlamadı · ⏳ sürüyor · ⏸ bekliyor · ✅ bitti
 
 | Konu | Seçenekler | Ne zaman |
 |---|---|---|
-| LLM ve embedding sağlayıcısı | Sade özet önerisi için Gemini (`gemini-3.8-flash`, 24 Ekim). Sezi'ye Sor (RAG) için karar açık; kod sağlayıcıdan bağımsız yazılacak | Hafta 2 sonu; karar çıkmazsa Ask yerel arama olarak kalır |
 | Resmî veri formatı | Organizasyon "envanter dokümanları + yüksek çözünürlüklü fotoğraf" paylaşacak | Gelince pipeline'a adaptör yazılır |
 | Kütahya, İzmir, Manisa | `cities` tablosunda pasif; veri gelince aktif edilir | Final sonrası |
 | Hesaplılara özel özellikler | Kişisel galeri ve arkadaş ekleme düşünülüyor; altyapı hazır: `profiles` (açık/gizli, @kullanıcı adı), `useIdentity()` | Hesap telefonda doğrulanınca |

@@ -437,3 +437,8 @@ verify_jwt = false
 # Sade özet önerisi (Gemini): yetkiyi fonksiyon içinde RLS denetler (admin'in anahtarıyla text_drafts okunur/yazılır).
 [functions.summarize]
 verify_jwt = false
+
+# Sezi'ye Sor hesapsız da çalışır. Mobil publishable anahtar JWT değildir; fonksiyon isteği sınırlar,
+# ham cihaz/IP saklamadan kota uygular ve yalnız doğrulanmış parçaları service role ile okur.
+[functions.ask]
+verify_jwt = false

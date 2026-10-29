@@ -24,5 +24,6 @@ export * from "./glyphs";
 export * from "./pilot-buildings";
 export * from "./summary-check";
 export * from "./route-lines";
+export * from "./ask";
 export * from "./passport";
 export * from "./achievements";
