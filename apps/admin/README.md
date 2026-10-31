@@ -25,7 +25,7 @@ Kullanıcı çıkış yapıp yeniden girince rol oturuma yazılır.
 
 | Sayfa | Ne yapar | Uygulamaya etkisi |
 |---|---|---|
-| Pano | Açılış sayfası. İllere göre kapsam (kitaptaki eser sayısı, yayında, kesin konum, fotoğraflı, metinli), fotoğraf durumu, pilot alan ve tur kapsamı (fotoğraf / metin / kesin konum), sırada bekleyen işler. Sayılar her açılışta canlı tablolardan (`lib/dashboard.ts`); menüdeki bekleyen sayıları da buradan | – |
+| Pano | Açılış sayfası. Dört sayı (yayındaki, fotoğraflı, metinli, kesin konumlu eser; oran çubuğu ve kısa not); illere göre kitapta / yayında / fotoğraflı / metinli grafiği; bekleyen işler (inceleme bekleyen eserler dahil; tıklayınca ilgili sayfa); kapalı başlayan il tablosu (taslak, kesin / yaklaşık / konumsuz, toplam satırı); son 30 günün günlük ziyaret ve kayıt grafiği; kullanıcı sayıları; fotoğraf durumu (halka, fotoğraf kutusuna bağlantı); tur kapsamı. Grafikler shadcn charts. İçerik sayıları canlı tablolardan (`lib/dashboard.ts`), kullanıcı sayıları `admin-users` `stats` eyleminden; menüdeki bekleyen sayıları da buradan | – |
 | Eserler | Arama; il, tür, durum, konum, fotoğraf, inceleme süzgeçleri (adres parametreleri: `?city=bursa&review=1` …) | – |
 | Eser düzenleme | TR/EN alanlar, tür, ilçe, durum; haritada konum; fotoğraf onayı ve kapak | `verified` eser ve fotoğraflar uygulamada görünür (aşağı çekip yenileyince) |
 | Yeni eser | Kimlik bilgileriyle taslak açar; benzer adlı eser uyarısı | Yayımlanınca görünür |
@@ -33,6 +33,9 @@ Kullanıcı çıkış yapıp yeniden girince rol oturuma yazılır.
 | Eser metinleri | Kitaptan çıkarılan TR/EN adres ve tarihçe taslakları; kitap sayfasıyla karşılaştırıp düzeltme | "Esere yayınla" eserin adres/tarihçe/mimari alanına yazar; uygulamada eser sayfasında görünür |
 | Fotoğraf kutusu | Kitapta eşleşmeyen arşiv fotoğraflarını klasör ipucuyla esere bağlar | "Bağla ve yayımla" ile eserin galerisine girer |
 | Bildirimler | Erişilebilirlik bildirimlerini haritada gösterir; onay / ret | Onay `segment_overrides` tablosuna yazılır; uygulama rotada o yol parçasından kaçınır |
+| Kullanıcılar | Hesap listesi (ad, @kullanıcı adı, e-posta, kayıt, son giriş, ziyaret/fotoğraf/bildirim sayıları); yönetici yap / kaldır, askıya al / kaldır, hesabı sil (onaylı); satıra tıklayınca katkılar ve son ziyaretler. Kendi hesabınıza işlem yapılamaz | Edge function `admin-users` üzerinden; rol değişikliği kişinin bir sonraki oturum yenilemesinde geçer, askıdaki hesap giriş yapamaz |
 | İller | İl ekleme, yayına alma | Yalnızca yayındaki iller uygulamanın il seçicisinde |
+
+1280 px altında sol menü çekmeceye geçer (üstteki menü düğmesi); sayfa hiçbir genişlikte yana kaymaz, geniş tablolar kendi çerçevesinde kayar.
 
 Pilot alan grafiği mobil uygulamanın dosyasından okunur (`apps/mobile/assets/pilot/*-nav.json`), kopya tutulmaz.

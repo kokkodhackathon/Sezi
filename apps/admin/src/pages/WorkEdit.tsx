@@ -347,31 +347,11 @@ function Editor({ slug, data }: { slug: string; data: WorkDetail }) {
                 Geri al
               </Button>
             ) : null}
-            {data.work.status !== 'verified' ? (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => save.mutate({ ...form, status: 'verified', needs_review: false })}
-                disabled={save.isPending || nameTrInvalid}>
-                <Check data-icon="inline-start" />
-                Doğrula ve yayımla
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => save.mutate({ ...form, status: 'draft' })}
-                disabled={save.isPending || nameTrInvalid}>
-                Taslağa al
-              </Button>
-            )}
-            <Button type="button" onClick={() => save.mutate(form)} disabled={save.isPending || nameTrInvalid}>
-              {save.isPending ? <Spinner data-icon="inline-start" /> : null}
-              {save.isPending ? 'Kaydediliyor…' : 'Kaydet'}
-            </Button>
           </>
         }
       />
+
+
 
       {save.error ? (
         <Alert variant="destructive">
@@ -381,7 +361,7 @@ function Editor({ slug, data }: { slug: string; data: WorkDetail }) {
         </Alert>
       ) : null}
 
-      <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(340px,2fr)]">
+      <div className="grid items-start gap-6 pb-24 xl:grid-cols-[minmax(0,3fr)_minmax(340px,2fr)]">
         <div className="flex flex-col gap-6">
           <Card>
             <CardHeader>
@@ -867,6 +847,37 @@ function Editor({ slug, data }: { slug: string; data: WorkDetail }) {
           </Card>
         </div>
       </div>
+      <div className="sticky bottom-0 z-20 -mx-4 border-t bg-background px-4 py-3 sm:-mx-6 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground" aria-live="polite">
+            {isDirty ? 'Kaydedilmemiş değişiklik var' : ''}
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            {data.work.status !== 'verified' ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => save.mutate({ ...form, status: 'verified', needs_review: false })}
+                disabled={save.isPending || nameTrInvalid}>
+                <Check data-icon="inline-start" />
+                Doğrula ve yayımla
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => save.mutate({ ...form, status: 'draft' })}
+                disabled={save.isPending || nameTrInvalid}>
+                Taslağa al
+              </Button>
+            )}
+            <Button type="button" onClick={() => save.mutate(form)} disabled={save.isPending || nameTrInvalid}>
+              {save.isPending ? <Spinner data-icon="inline-start" /> : null}
+              {save.isPending ? 'Kaydediliyor…' : 'Kaydet'}
+            </Button>
+          </div>
+        </div>
+      </div>
     </>
   );
 }
@@ -905,7 +916,7 @@ function Pair({
               <Textarea
                 id={id}
                 value={value[l]}
-                rows={5}
+                className="max-h-64 min-h-32 resize-y overflow-y-auto field-sizing-fixed"
                 aria-invalid={isInvalid || undefined}
                 onChange={(e) => onChange(l, e.target.value)}
               />

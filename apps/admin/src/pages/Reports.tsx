@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { cn } from 'cn';
 import { Check, CircleAlert, ExternalLink, Flag, MapPin, RotateCcw, Route, X, ZoomIn } from 'lucide-react';
 import { useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 
 import { PageHeader } from '@/components/page-header';
@@ -59,6 +59,9 @@ const STATUS_BADGE: Record<ReportStatus, { label: string; variant: 'warning' | '
   approved: { label: 'Onaylandı', variant: 'success' },
   rejected: { label: 'Reddedildi', variant: 'outline' },
 };
+function isReportStatus(value: string | null): value is ReportStatus {
+  return value === 'pending' || value === 'approved' || value === 'rejected';
+}
 
 const fmt = (iso: string) =>
   new Date(iso).toLocaleString('tr-TR', {
@@ -73,11 +76,22 @@ const fmt = (iso: string) =>
  * uygulama rota hesaplarken bu yol parçasından kaçınır (ya da onu merdivenli/dar sayar).
  */
 export function Reports() {
-  const [tab, setTab] = useState<ReportStatus>('pending');
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selected, setSelected] = useState<string | null>(null);
   const [previewPhoto, setPreviewPhoto] = useState<{ url: string; title: string; subtitle: string } | null>(null);
+  const tabParam = searchParams.get('tab');
+  const tab = isReportStatus(tabParam) ? tabParam : 'pending';
   const { data, isLoading, error, refetch } = useReports(tab);
+  const { data: approvedHistory } = useReports('approved', 5, tab === 'pending');
+  const { data: rejectedHistory } = useReports('rejected', 5, tab === 'pending');
   const qc = useQueryClient();
+
+  const changeTab = (next: ReportStatus) => {
+    const params = new URLSearchParams(searchParams);
+    params.set('tab', next);
+    setSearchParams(params, { replace: true });
+    setSelected(null);
+  };
 
   const review = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: ReportStatus }) => {
@@ -105,6 +119,9 @@ export function Reports() {
   const current = rows.find((r) => r.id === selected) ?? rows[0];
   const area = current?.area ? PILOT_AREAS[current.area] : undefined;
   const activeTabMeta = TABS.find((t) => t.key === tab) ?? TABS[0]!;
+  const recentDecisions = [...(approvedHistory ?? []), ...(rejectedHistory ?? [])]
+    .sort((a, b) => Date.parse(b.reviewed_at ?? b.created_at) - Date.parse(a.reviewed_at ?? a.created_at))
+    .slice(0, 5);
 
   return (
     <>
@@ -112,9 +129,8 @@ export function Reports() {
 
       <Tabs
         value={tab}
-        onValueChange={(v) => {
-          setTab(v as ReportStatus);
-          setSelected(null);
+        onValueChange={(value) => {
+          if (isReportStatus(value)) changeTab(value);
         }}
       >
         <TabsList aria-label="Bildirim durumu">
@@ -154,7 +170,7 @@ export function Reports() {
           <Skeleton className="h-[420px] w-full rounded-xl" />
         </div>
       ) : rows.length === 0 ? (
-        <Empty className="border bg-card">
+        <Empty className="min-h-0 flex-none border bg-card py-4">
           <EmptyHeader>
             <EmptyMedia variant="icon">
               <Flag />
@@ -211,6 +227,33 @@ export function Reports() {
           </div>
         </div>
       )}
+      {tab === 'pending' && rows.length === 0 && recentDecisions.length > 0 ? (
+        <section aria-labelledby="recent-reports-heading" className="flex flex-col gap-3">
+          <h2 id="recent-reports-heading" className="text-sm font-semibold">Son sonuçlanan bildirimler</h2>
+          <ul className="divide-y rounded-xl border bg-card px-4">
+            {recentDecisions.map((report) => (
+              <li key={report.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                <div className="min-w-0">
+                  <p className="font-medium">
+                    {report.area ? `${PILOT_AREAS[report.area]?.name.tr ?? report.area} · ` : ''}
+                    {report.segment_key ?? 'Yol parçası belirtilmemiş'}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{fmt(report.reviewed_at ?? report.created_at)}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-3">
+                  <Badge variant={STATUS_BADGE[report.status].variant}>{STATUS_BADGE[report.status].label}</Badge>
+                  <Link
+                    to={`/bildirimler?tab=${report.status}`}
+                    className="inline-flex min-h-12 items-center text-sm text-primary underline underline-offset-4"
+                  >
+                    Bildirimleri gör
+                  </Link>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <Dialog open={previewPhoto !== null} onOpenChange={(open) => !open && setPreviewPhoto(null)}>
         <DialogContent className="sm:max-w-3xl">

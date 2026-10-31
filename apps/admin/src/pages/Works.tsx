@@ -22,6 +22,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { mediaUrl, PAGE_SIZE, PRECISION_LABEL, tr, useLookups, useWorkList, type Precision, type WorkFilters } from '@/lib/data';
+import { glyphSvgBody } from '@sezi/shared';
 
 const KEYS: (keyof WorkFilters)[] = ['q', 'city', 'type', 'status', 'precision', 'review', 'photo', 'origin'];
 const ALL = '__all__';
@@ -363,7 +364,7 @@ export function Works() {
                   const inv = w.sources.find((s) => s.kind === 'inventory');
                   const photo = w.photos[0];
                   const typeLabel = tr(w.type_name);
-                  const initial = typeLabel.trim().slice(0, 1).toLocaleUpperCase('tr-TR');
+                  const typeGlyph = glyphSvgBody(w.type_slug, 'currentColor');
                   const detailHref = `/eserler/${w.slug}`;
                   return (
                     <TableRow
@@ -390,10 +391,8 @@ export function Works() {
                             loading="lazy"
                           />
                         ) : (
-                          <div
-                            className="flex h-10 w-13 items-center justify-center rounded-md border border-border bg-muted font-heading text-xs font-bold text-muted-foreground"
-                            aria-hidden>
-                            {initial || <Landmark className="size-4" />}
+                          <div className="flex h-10 w-13 items-center justify-center rounded-md border border-border bg-muted text-muted-foreground" aria-hidden>
+                            <svg className="size-5" viewBox="0 0 24 24" fill="none" dangerouslySetInnerHTML={{ __html: typeGlyph }} />
                           </div>
                         )}
                       </TableCell>

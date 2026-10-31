@@ -467,7 +467,7 @@ function UnlinkedPhotoCard({
   const busy = assign.isPending;
 
   return (
-    <Card className="flex flex-col justify-between">
+    <Card className="flex h-full flex-col justify-between">
       <CardHeader className="gap-2">
         <button
           type="button"
@@ -566,26 +566,28 @@ function UnlinkedPhotoCard({
         </FieldGroup>
       </CardContent>
 
-      <CardFooter className="flex flex-wrap gap-x-2 gap-y-4">
-        <Button
-          size="sm"
-          className="flex-1"
-          disabled={!selectedWork || busy}
-          onClick={() => selectedWork && assign.mutate({ work: selectedWork, publish: true })}
-        >
-          {assign.isPending && assign.variables?.publish ? <Spinner data-icon="inline-start" /> : <Check data-icon="inline-start" />}
-          Onayla ve yayımla
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!selectedWork || busy}
-          onClick={() => selectedWork && assign.mutate({ work: selectedWork, publish: false })}
-        >
-          {assign.isPending && !assign.variables?.publish ? <Spinner data-icon="inline-start" /> : <Link2 data-icon="inline-start" />}
-          Taslak bağla
-        </Button>
-      </CardFooter>
+      {selectedWork ? (
+        <CardFooter className="flex flex-wrap gap-x-2 gap-y-4">
+          <Button
+            size="sm"
+            className="flex-1"
+            disabled={busy}
+            onClick={() => assign.mutate({ work: selectedWork, publish: true })}
+          >
+            {assign.isPending && assign.variables?.publish ? <Spinner data-icon="inline-start" /> : <Check data-icon="inline-start" />}
+            Onayla ve yayımla
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={() => assign.mutate({ work: selectedWork, publish: false })}
+          >
+            {assign.isPending && !assign.variables?.publish ? <Spinner data-icon="inline-start" /> : <Link2 data-icon="inline-start" />}
+            Taslak bağla
+          </Button>
+        </CardFooter>
+      ) : null}
     </Card>
   );
 }

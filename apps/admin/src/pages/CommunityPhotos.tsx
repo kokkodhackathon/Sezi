@@ -198,7 +198,7 @@ function PhotoPreview({ photo }: { photo: Photo }) {
       return row.signedUrl;
     },
   });
-  if (urls.isPending) return <Skeleton className="h-64 w-full" />;
+  if (urls.isPending) return <Skeleton className="h-full w-full" />;
   if (urls.error) {
     return (
       <Alert variant="destructive">
@@ -216,7 +216,7 @@ function PhotoPreview({ photo }: { photo: Photo }) {
     <img
       src={urls.data}
       alt={photo.alt_text}
-      className="max-h-96 w-full rounded-lg bg-muted object-contain"
+      className="h-full w-full rounded-lg bg-muted object-contain"
     />
   );
 }
@@ -296,7 +296,7 @@ export function CommunityPhotos() {
           {photos.isPending ? (
             <Skeleton className="h-96 w-full rounded-xl" />
           ) : !photos.error && !photos.data?.length ? (
-            <Empty className="border bg-card">
+            <Empty className="min-h-0 flex-none border bg-card py-4">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <Camera />
@@ -312,64 +312,68 @@ export function CommunityPhotos() {
               </EmptyHeader>
             </Empty>
           ) : null}
-          <div className="grid items-start gap-6 lg:grid-cols-2">
+          <div className="flex flex-col gap-6">
             {photos.data?.map((photo) => (
-              <Card key={photo.id}>
-                <CardHeader>
-                  <CardTitle>
-                    <Link
-                      to={`/eserler/${photo.work.slug}`}
-                      className="inline-flex min-h-12 items-center underline"
-                    >
-                      {photo.work.name.tr}
-                    </Link>
-                  </CardTitle>
-                  <CardDescription>
-                    {photo.profile.display_name}
-                    {photo.profile.username ? ` · @${photo.profile.username}` : ''}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4">
+              <Card key={photo.id} className="md:flex-row md:gap-0 md:py-0">
+                <div className="aspect-[4/3] w-full shrink-0 bg-muted md:w-[280px]">
                   <PhotoPreview photo={photo} />
-                  <div>
-                    <p className="text-sm font-medium">Alt metin</p>
-                    <p className="break-words text-sm">{photo.alt_text}</p>
-                  </div>
-                  {photo.caption ? (
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col">
+                  <CardHeader>
+                    <CardTitle>
+                      <Link
+                        to={`/eserler/${photo.work.slug}`}
+                        className="inline-flex min-h-12 items-center underline"
+                      >
+                        {photo.work.name.tr}
+                      </Link>
+                    </CardTitle>
+                    <CardDescription>
+                      {photo.profile.display_name}
+                      {photo.profile.username ? ` · @${photo.profile.username}` : ''}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-4">
                     <div>
-                      <p className="text-sm font-medium">Açıklama</p>
-                      <p className="break-words text-sm">{photo.caption}</p>
+                      <p className="text-sm font-medium">Alt metin</p>
+                      <p className="break-words text-sm">{photo.alt_text}</p>
                     </div>
-                  ) : null}
-                  <Badge variant="outline">
-                    {tab === 'review' ? 'Yayın onayı bekliyor' : 'Arşive önerildi'}
-                  </Badge>
-                </CardContent>
-                <CardFooter className="flex flex-wrap gap-3">
-                  <Button
-                    className="min-h-12"
-                    disabled={moderation.isPending}
-                    onClick={() => moderation.mutate({
-                      photo,
-                      kind: tab === 'review' ? 'approve' : 'accept',
-                    })}
-                  >
-                    {moderation.isPending && moderation.variables.photo.id === photo.id
-                      ? 'İşleniyor…'
-                      : tab === 'review' ? 'Yayınla' : 'Arşive al'}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    className="min-h-12"
-                    disabled={moderation.isPending}
-                    onClick={() => moderation.mutate({
-                      photo,
-                      kind: tab === 'review' ? 'reject' : 'decline',
-                    })}
-                  >
-                    {tab === 'review' ? 'Reddet' : 'Geri çevir'}
-                  </Button>
-                </CardFooter>
+                    {photo.caption ? (
+                      <div>
+                        <p className="text-sm font-medium">Açıklama</p>
+                        <p className="break-words text-sm">{photo.caption}</p>
+                      </div>
+                    ) : null}
+                    <Badge variant="outline">
+                      {tab === 'review' ? 'Yayın onayı bekliyor' : 'Arşive önerildi'}
+                    </Badge>
+                  </CardContent>
+                  <CardFooter className="flex flex-wrap gap-3">
+                    <Button
+                      className="min-h-12"
+                      disabled={moderation.isPending}
+                      onClick={() => moderation.mutate({
+                        photo,
+                        kind: tab === 'review' ? 'approve' : 'accept',
+                      })}
+                    >
+                      {moderation.isPending && moderation.variables.photo.id === photo.id
+                        ? 'İşleniyor…'
+                        : tab === 'review' ? 'Yayınla' : 'Arşive al'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="min-h-12"
+                      disabled={moderation.isPending}
+                      onClick={() => moderation.mutate({
+                        photo,
+                        kind: tab === 'review' ? 'reject' : 'decline',
+                      })}
+                    >
+                      {tab === 'review' ? 'Reddet' : 'Geri çevir'}
+                    </Button>
+                  </CardFooter>
+                </div>
               </Card>
             ))}
           </div>

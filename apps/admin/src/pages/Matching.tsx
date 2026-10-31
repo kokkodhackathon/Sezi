@@ -13,7 +13,7 @@ import {
   TriangleAlert,
   X,
 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 
@@ -98,6 +98,11 @@ export function Matching() {
     for (const s of states.values()) c[s]++;
     return c;
   }, [states]);
+  useEffect(() => {
+    if (params.has('state') || isLoading || error || !data || counts.pending > 0) return;
+    const nextState = STATES.find((candidateState) => counts[candidateState] > 0);
+    if (nextState) set({ state: nextState, work: null });
+  }, [counts, data, error, isLoading, params]);
 
   const list = useMemo(() => {
     const needle = q.trim().toLocaleLowerCase('tr');
@@ -113,6 +118,10 @@ export function Matching() {
 
   const work = data?.works.find((w) => w.slug === slug) ?? list[0] ?? null;
   const candidates = useMemo(() => (work ? (data?.byWork.get(work.id) ?? []) : []), [data, work]);
+  const selectedRowRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    selectedRowRef.current?.scrollIntoView({ block: 'nearest' });
+  }, [work?.id]);
   const [selected, setSelected] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
@@ -202,6 +211,7 @@ export function Matching() {
   const typeName = (slug: string | null | undefined) => (slug ? tr(lookups?.types.find((t) => t.slug === slug)?.name) || slug : '?');
   const current: [number, number] | null = work && work.lng !== null && work.lat !== null ? [work.lng, work.lat] : null;
   const workIndex = work ? list.findIndex((w) => w.id === work.id) : -1;
+  const nextNonEmptyState = STATES.find((candidateState) => candidateState !== state && counts[candidateState] > 0);
 
   return (
     <>
@@ -228,6 +238,9 @@ export function Matching() {
         }
       />
 
+        <p className="text-xs text-muted-foreground">
+          Menü rozeti tüm illerde aday durumu bekleyen eserleri sayar; sekmeler seçili ildeki kuyruğu gösterir.
+        </p>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
           <Tabs value={state} onValueChange={(v) => set({ state: v, work: null })}>
@@ -304,7 +317,7 @@ export function Matching() {
 
       {data ? (
         <div className="grid items-start gap-4 lg:grid-cols-[260px_minmax(0,1fr)] xl:grid-cols-[280px_minmax(0,1fr)_360px]">
-          <Card className="py-3 lg:sticky lg:top-4">
+          <Card className="flex flex-col py-3 lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:overflow-hidden">
             <CardHeader className="border-b px-3 pb-2.5">
               <CardTitle className="text-sm">{STATE_LABEL[state]} eserler</CardTitle>
               <CardDescription className="num text-xs">
@@ -333,7 +346,7 @@ export function Matching() {
                 </Button>
               </CardAction>
             </CardHeader>
-            <CardContent className="px-2">
+            <CardContent className="min-h-0 px-2 lg:flex-1">
               {list.length === 0 ? (
                 <Empty className="py-8">
                   <EmptyHeader>
@@ -342,7 +355,7 @@ export function Matching() {
                   </EmptyHeader>
                 </Empty>
               ) : (
-                <ScrollArea className="h-[calc(100vh-280px)] min-h-[380px]">
+                <ScrollArea className="h-[calc(100vh-280px)] min-h-[380px] lg:h-full lg:min-h-0">
                   <ul aria-label={`${STATE_LABEL[state]} eserler`} className="flex flex-col gap-1 pr-2">
                     {list.map((w) => {
                       const cs = data.byWork.get(w.id) ?? [];
@@ -352,6 +365,7 @@ export function Matching() {
                       return (
                         <li key={w.id}>
                           <button
+                            ref={isSelected ? selectedRowRef : undefined}
                             type="button"
                             aria-current={isSelected}
                             onClick={() => set({ work: w.slug })}
@@ -557,16 +571,17 @@ export function Matching() {
               </aside>
             </>
           ) : (
-            <Card className="lg:col-span-1 xl:col-span-2">
-              <CardContent>
-                <Empty className="py-12">
-                  <EmptyHeader>
-                    <EmptyTitle>İncelenecek eser seçin</EmptyTitle>
-                    <EmptyDescription>Soldaki kuyruktan bir eser seçerek konum adaylarını harita üzerinde karşılaştırabilirsiniz.</EmptyDescription>
-                  </EmptyHeader>
-                </Empty>
-              </CardContent>
-            </Card>
+            <div className="flex flex-wrap items-center gap-2 py-4 text-sm text-muted-foreground lg:col-span-1 xl:col-span-2">
+              <span>Bu sekmede incelenecek eser yok.</span>
+              {nextNonEmptyState ? (
+                <Link
+                  className="font-semibold text-primary underline-offset-4 hover:underline"
+                  to={`/eslestirme?${new URLSearchParams({ city, state: nextNonEmptyState })}`}
+                >
+                  {STATE_LABEL[nextNonEmptyState]} sekmesine geç
+                </Link>
+              ) : null}
+            </div>
           )}
         </div>
       ) : null}
@@ -689,7 +704,8 @@ function CandidateCard({
           {type && (type.work || type.candidate) ? (
             <li>
               <Badge variant={type.ok === false ? 'warning' : type.ok ? 'success' : 'secondary'}>
-                {type.ok === false ? '✗' : type.ok ? '✓' : '–'} Tür: {typeName(type.candidate)}
+                {type.ok === false ? <X aria-hidden className="mr-1 inline size-3.5" /> : type.ok ? <Check aria-hidden className="mr-1 inline size-3.5" /> : null}
+                Tür: {typeName(type.candidate)}
                 {type.ok === false ? ` (eser: ${typeName(type.work)})` : ''}
               </Badge>
             </li>
@@ -697,24 +713,33 @@ function CandidateCard({
           {district ? (
             <li>
               <Badge variant={district.inside === false ? 'warning' : district.inside ? 'success' : 'secondary'}>
-                {district.inside === false
-                  ? `✗ ${district.name} ilçesinin dışında`
-                  : district.inside
-                    ? `✓ ${district.name} içinde`
-                    : '– İlçe sınırı bulunamadı'}
+                {district.inside === false ? (
+                  <>
+                    <X aria-hidden className="mr-1 inline size-3.5" />
+                    {district.name} ilçesinin dışında
+                  </>
+                ) : district.inside ? (
+                  <>
+                    <Check aria-hidden className="mr-1 inline size-3.5" />
+                    {district.name} içinde
+                  </>
+                ) : (
+                  '– İlçe sınırı bulunamadı'
+                )}
               </Badge>
             </li>
           ) : null}
           {r.agree && r.agree.length > 0 ? (
             <li>
               <Badge variant="success">
-                ✓ Uyuşan kaynak: {r.agree.map((s) => SOURCE_LABEL[s as keyof typeof SOURCE_LABEL] ?? s).join(', ')}
+                <Check aria-hidden className="mr-1 inline size-3.5" />
+                Uyuşan kaynak: {r.agree.map((s) => SOURCE_LABEL[s as keyof typeof SOURCE_LABEL] ?? s).join(', ')}
               </Badge>
             </li>
           ) : null}
           {r.curated ? (
             <li>
-              <Badge variant="success">✓ Masa başı OSM doğrulaması</Badge>
+              <Badge variant="success"><Check aria-hidden className="mr-1 inline size-3.5" />Masa başı OSM doğrulaması</Badge>
             </li>
           ) : null}
           {r.current ? (
@@ -724,7 +749,7 @@ function CandidateCard({
           ) : null}
           {r.unverified ? (
             <li>
-              <Badge variant="warning">✗ Güven puanı ölçülmemiş</Badge>
+              <Badge variant="warning"><X aria-hidden className="mr-1 inline size-3.5" />Güven puanı ölçülmemiş</Badge>
             </li>
           ) : null}
           <li>
@@ -776,9 +801,7 @@ function CandidateCard({
           </>
         ) : (
           <>
-            <Badge variant={c.status === 'accepted' ? 'success' : 'outline'}>
-              {c.status === 'accepted' ? '✓ Kabul edildi' : 'Reddedildi'}
-            </Badge>
+              {c.status === 'accepted' ? <><Check aria-hidden className="mr-1 inline size-3.5" />Kabul edildi</> : 'Reddedildi'}
             <Button
               variant="ghost"
               size="sm"

@@ -6,9 +6,8 @@ import { supabase } from './supabase';
 
 /**
  * Pano: veri kapsamı ve bekleyen işler. Her şey admin oturumuyla canlı tablolardan sayılır (RLS admine her satırı açar);
- * ayrı bir istatistik tablosu ya da önbellek yok, sayılar her açılışta günceldir.
+ * Konum eşleştirme rozeti: `location_candidates.status = pending` olan farklı eserlerin sayısıdır.
  */
-
 interface CityRaw {
   id: string;
   slug: string;
@@ -106,6 +105,7 @@ export interface Dashboard {
   community: { pending: number };
   points: number;
   needsReview: number;
+  workNames: Map<string, string>;
   pilot: { name: string; works: PilotWork[]; tours: TourStats[] };
 }
 
@@ -187,6 +187,7 @@ export function useDashboard() {
 
       const pendingCand = candidates.filter((c) => c.status === 'pending');
       return {
+        workNames: new Map(works.map((work) => [work.slug, work.name.tr ?? work.slug])),
         cities: cityStats,
         totals: {
           verified: live.length,
@@ -218,5 +219,6 @@ export function useDashboard() {
         pilot: { name: area.name, works: pilotWorks, tours },
       };
     },
+    staleTime: 60_000,
   });
 }

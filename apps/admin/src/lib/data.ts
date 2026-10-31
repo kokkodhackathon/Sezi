@@ -381,16 +381,17 @@ export interface ReportRow {
   reviewed_at: string | null;
 }
 
-export function useReports(status: ReportStatus) {
+export function useReports(status: ReportStatus, limit = 200, enabled = true) {
   return useQuery({
-    queryKey: ['reports', status],
+    queryKey: ['reports', status, limit],
+    enabled,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('a11y_reports')
         .select('id, area, segment_key, work_slug, type, note, status, created_at, reviewed_at')
         .eq('status', status)
-        .order('created_at', { ascending: false })
-        .limit(200);
+        .order('reviewed_at', { ascending: false, nullsFirst: false })
+        .limit(limit);
       if (error) throw error;
       return (data ?? []) as ReportRow[];
     },

@@ -48,9 +48,10 @@ export function Layout() {
   if (!isAdmin) return <NotAdmin email={session.user.email ?? ''} signOut={signOut} />;
   return (
     <TooltipProvider>
+      {/* 1280px altında menü çekmeceye taşınır; etiketler dar rayda gizlenmez. */}
       <SidebarProvider>
         <AppSidebar email={session.user.email ?? ''} signOut={signOut} />
-        <SidebarInset>
+        <SidebarInset className="min-w-0">
           <TopBar />
           <main className="flex min-w-0 flex-1 flex-col gap-6 px-6 pt-6 pb-16 lg:px-10">
             <Outlet />
@@ -136,7 +137,7 @@ function TopBar() {
   const item = navFor(pathname);
   const group = NAV.find((g) => g.items.some((i) => i.to === item?.to));
   return (
-    <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-2 border-b bg-background/90 px-4 backdrop-blur lg:px-6">
+    <header className="sticky top-0 z-10 flex h-14 min-w-0 shrink-0 items-center gap-2 border-b bg-background px-4 lg:px-6">
       <SidebarTrigger aria-label="Menüyü aç/kapat" />
       <Separator orientation="vertical" className="mr-2 data-[orientation=vertical]:h-4" />
       <Breadcrumb>

@@ -132,7 +132,7 @@ export function Cities() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-16">Sıra</TableHead>
+                  <TableHead className="w-16 text-right">Sıra</TableHead>
                   <TableHead>İl</TableHead>
                   <TableHead>Bölge</TableHead>
                   <TableHead>Envanter durumu</TableHead>
@@ -150,7 +150,7 @@ export function Cities() {
 
                   return (
                     <TableRow key={c.id}>
-                      <TableCell className="num text-muted-foreground">{c.sort_order}</TableCell>
+                      <TableCell className="num text-right text-muted-foreground">{c.sort_order}</TableCell>
                       <TableCell>
                         <div className="flex flex-col">
                           <span className="font-medium text-foreground">{tr(c.name)}</span>

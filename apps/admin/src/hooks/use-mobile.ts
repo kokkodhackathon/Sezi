@@ -1,6 +1,7 @@
 import * as React from "react"
 
-const MOBILE_BREAKPOINT = 768
+// 1280px altında panel alanı dar kaldığından etiketleri erişilebilir tutan çekmeceyi kullan.
+const MOBILE_BREAKPOINT = 1280
 
 export function useIsMobile() {
   const [isMobile, setIsMobile] = React.useState<boolean | undefined>(undefined)

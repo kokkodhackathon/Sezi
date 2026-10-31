@@ -21,6 +21,7 @@ import { Tours } from './pages/Tours';
 import { WorkEdit } from './pages/WorkEdit';
 import { Works } from './pages/Works';
 
+import { Users } from './pages/Users';
 // Panel service worker kullanmaz. Aynı adreste (localhost:3000) daha önce çalışan başka bir projenin
 // service worker'ı kalırsa tüm istekleri kendi CSP'siyle engeller: kaldırılır ve sayfa bir kez yenilenir.
 if ('serviceWorker' in navigator) {
@@ -47,6 +48,7 @@ const router = createBrowserRouter([
       { path: 'fotograflar', element: <Inbox /> },
       { path: 'bildirimler', element: <Reports /> },
       { path: 'topluluk-fotograflari', element: <CommunityPhotos /> },
+      { path: 'kullanicilar', element: <Users /> },
       { path: 'noktalar', element: <Points /> },
       { path: 'turlar', element: <Tours /> },
       { path: 'rota-testi', element: <RouteTest /> },

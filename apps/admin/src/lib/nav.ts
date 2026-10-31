@@ -1,5 +1,6 @@
 import {
   Building2,
+  Users,
   Camera,
   FilePlus2,
   FileText,
@@ -90,6 +91,7 @@ export const NAV: NavGroup[] = [
         icon: Camera,
         badge: (d) => d.community.pending,
       },
+      { to: '/kullanicilar', title: 'Kullanıcılar', hint: 'Kullanıcı hesaplarını, katkılarını ve erişim durumlarını yönet.', icon: Users },
     ],
   },
   {
