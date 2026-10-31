@@ -1,0 +1,121 @@
+# Mobil uygulamada (ya da ortak motorda) değişiklik main'e gelince Android release APK'sı derlenir
+# ve GitHub Releases'e "mobil-<çalıştırma no>" etiketiyle eklenir. Elle de başlatılabilir.
+#
+# Gerekli secret'lar (Settings → Secrets and variables → Actions):
+#   EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_KEY, EXPO_PUBLIC_SUPABASE_ANON_KEY, EXPO_PUBLIC_MAPBOX_TOKEN
+#     → uygulama paketine gömülen istemci anahtarları (apps/mobile/.env ile aynı).
+#   ANDROID_KEYSTORE_BASE64 → yerelde kullanılan imza anahtarı (base64). Aynı anahtar olmazsa telefondaki
+#     uygulamanın üzerine kurulamaz; kaldırıp yeniden kurmak gerekir ve cihazdaki veriler silinir.
+name: android-release
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/mobile/**"
+      - "packages/shared/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/android-release.yml"
+  workflow_dispatch:
+
+# Art arda push'larda yalnız son commit derlenir (dakika harcamaz).
+concurrency:
+  group: android-release
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+      EXPO_PUBLIC_SUPABASE_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_KEY }}
+      EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+      EXPO_PUBLIC_MAPBOX_TOKEN: ${{ secrets.EXPO_PUBLIC_MAPBOX_TOKEN }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Bağımlılıklar
+        run: pnpm install --frozen-lockfile
+
+      - name: Secret kontrolü
+        run: |
+          for name in EXPO_PUBLIC_SUPABASE_URL EXPO_PUBLIC_SUPABASE_KEY EXPO_PUBLIC_MAPBOX_TOKEN; do
+            if [ -z "${!name}" ]; then echo "::error::$name secret'ı tanımlı değil"; exit 1; fi
+          done
+          if [ -z "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" ]; then echo "::error::ANDROID_KEYSTORE_BASE64 secret'ı tanımlı değil"; exit 1; fi
+
+      - name: Ortam dosyası ve sürüm numarası
+        working-directory: apps/mobile
+        run: |
+          {
+            echo "EXPO_PUBLIC_SUPABASE_URL=$EXPO_PUBLIC_SUPABASE_URL"
+            echo "EXPO_PUBLIC_SUPABASE_KEY=$EXPO_PUBLIC_SUPABASE_KEY"
+            echo "EXPO_PUBLIC_SUPABASE_ANON_KEY=$EXPO_PUBLIC_SUPABASE_ANON_KEY"
+            echo "EXPO_PUBLIC_MAPBOX_TOKEN=$EXPO_PUBLIC_MAPBOX_TOKEN"
+          } > .env
+          # Her derleme bir öncekinden büyük versionCode alır; telefondaki sürümün üzerine güncelleme olarak kurulur.
+          jq --argjson code "${{ github.run_number }}" '.expo.android.versionCode = $code' app.json > app.tmp.json
+          mv app.tmp.json app.json
+
+      - name: Tür denetimi
+        run: pnpm --filter @sezi/mobile typecheck
+
+      - name: Native proje (expo prebuild)
+        working-directory: apps/mobile
+        run: pnpm exec expo prebuild --platform android --no-install
+
+      - name: İmza anahtarı
+        working-directory: apps/mobile/android/app
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 -d > debug.keystore
+
+      - name: Release APK (yalnız arm64)
+        working-directory: apps/mobile/android
+        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --no-daemon
+
+      - name: Release'e yükle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(jq -r '.expo.version' apps/mobile/app.json)
+          tag="mobil-${{ github.run_number }}"
+          apk="sezi-${version}-${{ github.run_number }}.apk"
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "$apk"
+          prev=$(git tag --list 'mobil-*' --sort=-v:refname | head -1)
+          {
+            echo "Commit: ${GITHUB_SHA::7}"
+            echo
+            echo "Değişiklikler (mobil ve ortak motor):"
+            git log --format='- %s' ${prev:+$prev..}HEAD -- apps/mobile packages/shared | head -30
+            echo
+            echo "Kurulum: APK'yı telefona indirip açın. Debug anahtarıyla imzalıdır; Play Store sürümü değildir."
+          } > notes.md
+          gh release create "$tag" "$apk" --target "$GITHUB_SHA" --title "Sezi mobil ${version} (${{ github.run_number }})" --notes-file notes.md
+
+      # Her APK ~90 MB; yalnız son 10 mobil sürüm tutulur.
+      - name: Eski sürümleri temizle
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release list --limit 100 --json tagName --jq '.[].tagName' | grep '^mobil-' | sort -t- -k2 -n -r | tail -n +11 | while read -r tag; do
+            gh release delete "$tag" --yes --cleanup-tag
+          done
