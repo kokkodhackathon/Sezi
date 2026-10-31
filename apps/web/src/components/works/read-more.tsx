@@ -39,11 +39,11 @@ export function ReadMore({
   const shown = !long || open ? splitParagraphs(text) : [excerpt(text, PREVIEW)];
   const minutes = Math.max(1, Math.round(text.length / CHARS_PER_MIN));
 
+  // Kısaltınca bölüm başlığına dönülür; uzun metnin sonunda kalınmaz.
   const handleToggle = () => {
     if (open) {
       setOpen(false);
-      const heading = document.getElementById(headingId);
-      heading?.scrollIntoView({ block: "start" });
+      document.getElementById(headingId)?.scrollIntoView({ block: "start" });
     } else {
       setOpen(true);
     }
@@ -51,7 +51,7 @@ export function ReadMore({
 
   return (
     <div className="grid gap-3">
-      <div id={contentId} className="grid gap-3 text-base leading-relaxed text-foreground">
+      <div id={contentId} className="grid gap-3 text-lg leading-[1.6] text-foreground">
         {shown.map((paragraph, index) => (
           <p key={index}>{paragraph}</p>
         ))}
@@ -62,6 +62,7 @@ export function ReadMore({
             type="button"
             variant="outline"
             size="sm"
+            className="min-h-12"
             aria-expanded={open}
             aria-controls={contentId}
             onClick={handleToggle}

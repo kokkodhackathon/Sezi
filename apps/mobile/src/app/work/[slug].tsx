@@ -12,7 +12,7 @@ import { SeziLoader } from '@/components/sezi-loader';
 import { PhotoScrim, photoOverlayInk } from '@/components/photo-card';
 import { SeziMap, WorkPin } from '@/components/map';
 import { PhotoViewer } from '@/components/photo-viewer';
-import { formatPhotoCredit, PhotoSourceTag, PhotoSourceThumbTag } from '@/components/photo-source';
+import { formatPhotoCredit, PhotoSourceThumbTag } from '@/components/photo-source';
 import { ReadAlongText } from '@/components/read-along-text';
 import { ReadMore } from '@/components/read-more';
 import { Badge, Button, Card, Chip, EmptyState, ListRow, Note } from '@/components/ui';
@@ -137,14 +137,11 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
   const tone = t.tones[toneForType(work.type_slug)];
   const inv = inventorySource(work);
   const ref = inv?.page ? (inv.volume ? tr('inv.refShort', { v: inv.volume, page: inv.page }) : tr('inv.refPage', { page: inv.page })) : null;
-  const fs = work.facts_source;
-  const factsRef = fs ? [fs.title, fs.page ? tr('inv.refPage', { page: fs.page }) : null].filter(Boolean).join(', ') : null;
   const otherSources = work.sources.filter((x) => x.kind !== 'inventory');
   const route = profile && hasRouteTo(work.slug) ? planRoute(work.slug, profile) : null;
   const canHear = profile?.hearing !== 'deaf';
   const place = [work.district, city].filter(Boolean).join(', ');
-  const photoCredits = [...new Set(work.photos.filter(isAttributed).flatMap((p) => formatPhotoCredit(p, lang) ?? []))];
-  const inventoryCredit = work.photos.find((p) => !isAttributed(p) && p.credit)?.credit;
+  const coverCredit = cover && isAttributed(cover) ? formatPhotoCredit(cover, lang) : null;
   const readable = useMemo(
     () => ({ summary: splitReadAlong(summary), history: splitReadAlong(history), architecture: splitReadAlong(architecture) }),
     [summary, history, architecture],
@@ -266,87 +263,57 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
             <Pressable onPress={() => setViewer(0)} accessibilityRole="imagebutton" accessibilityLabel={`${loc(cover.alt, lang)}. ${tr('work.openPhotos')}`}>
               <Image source={{ uri: photoUrl(cover, 'full') }} placeholder={{ uri: photoUrl(cover, 'thumb') }} placeholderContentFit="cover" style={[s.heroImg, { height: heroHeight }]} contentFit="cover" transition={150} accessible={false} />
               <PhotoScrim height="60%" />
-              <View style={[s.heroText, t.outlined && { backgroundColor: t.background, padding: space.md }, isAttributed(cover) && { paddingRight: 140 }]} pointerEvents="none">
+              <View style={[s.heroText, t.outlined && { backgroundColor: t.background, padding: space.md }]} pointerEvents="none">
                 <Text style={[type.meta, s.onPhotoDim]}>{kind}</Text>
-                <Text style={[type.editorial, s.onPhoto]} accessibilityRole="header">
-                  {name}
-                </Text>
+                <Text style={[type.editorial, s.onPhoto]} accessibilityRole="header">{name}</Text>
                 <Text style={[type.meta, s.onPhotoDim]}>{place}</Text>
               </View>
             </Pressable>
-            <PhotoSourceTag photo={cover} />
           </View>
         ) : (
-          <View onLayout={(e) => header.coverHeight.set(e.nativeEvent.layout.height)} style={[s.plainHero, { paddingTop: insets.top + 64, backgroundColor: t.soft }, t.outlined && { borderBottomWidth: 2, borderBottomColor: t.border }]}>
-            <View style={[s.glyphTile, { backgroundColor: tone.fill }, outline(t)]}>
-              <WorkGlyphInline slug={work.type_slug} color={tone.ink} size={32} />
-            </View>
-            <Text style={[type.meta, { color: t.textMuted }]}>{kind}</Text>
-            <Text style={[type.editorial, { color: t.text }]} accessibilityRole="header">
-              {name}
-            </Text>
-            <Text style={[type.meta, { color: t.textMuted }]}>{place}</Text>
+          <View onLayout={(e) => header.coverHeight.set(e.nativeEvent.layout.height)} style={[s.plainHero, { paddingTop: insets.top + 64, backgroundColor: tone.fill }, t.outlined && { borderBottomWidth: 2, borderBottomColor: t.border }]}>
+            <WorkGlyphInline slug={work.type_slug} color={tone.ink} size={96} />
+            <Text style={[type.meta, { color: tone.ink }]}>{kind}</Text>
+            <Text style={[type.editorial, { color: tone.ink }]} accessibilityRole="header">{name}</Text>
+            <Text style={[type.meta, { color: tone.ink }]}>{place}</Text>
           </View>
         )}
-
+        {coverCredit ? (
+          <Text style={[type.meta, s.coverCredit, { color: t.text }]}>{coverCredit}</Text>
+        ) : null}
         <View ref={bodyRef} style={s.body} onLayout={(e) => (bodyY.current = e.nativeEvent.layout.y)}>
-          {ref || work.unesco || has(work.slug) ? (
+          {work.unesco || has(work.slug) ? (
             <FadeInItem index={0} style={s.badges}>
-              {ref ? <Badge label={ref} /> : null}
               {work.unesco ? <Badge label={tr('work.unesco')} tone="accent" /> : null}
               {has(work.slug) ? <Badge label={tr('work.visited')} tone="primary" /> : null}
             </FadeInItem>
           ) : null}
-          <View style={{ gap: space.sm }}>
-            {!has(work.slug) && work.location_precision === 'exact' && hasLocation(work) ? (
-              <Button
-                variant="secondary"
-                label={tr('checkin.here')}
-                disabled={checking}
-                icon={(color) => <PinIcon color={color} />}
-                onPress={() => {
-                  void checkHere();
-                }}
-              />
-            ) : null}
-            {checkinNote ? <Note text={checkinNote} /> : null}
-            {user && !community.data?.length ? (
-              <Button
-                variant="outline"
-                label={tr('photos.add')}
-                onPress={() => router.push({ pathname: '/photos/new', params: { work: work.slug } })}
-              />
-            ) : null}
-          </View>
+          {checkinNote ? <Note text={checkinNote} /> : null}
+          {user && !community.data?.length ? (
+            <Button variant="outline" label={tr('photos.add')} onPress={() => router.push({ pathname: '/photos/new', params: { work: work.slug } })} />
+          ) : null}
 
-          <FadeInItem index={1} style={s.actions}>
-            {canHear ? (
-              <Button
-                style={{ flex: 1 }}
-                label={speaking ? tr('work.stop') : tr('work.listen')}
-                onPress={toggleSpeech}
-                icon={(c) => (speaking ? <StopIcon color={c} /> : <PlayIcon color={c} />)}
-              />
-            ) : null}
+          <FadeInItem index={1} style={s.actionGroup}>
             {hasRouteTo(work.slug) ? (
-              <Button
-                style={{ flex: 1 }}
-                variant={canHear ? 'outline' : 'primary'}
-                label={tr('work.directions')}
-                icon={(c) => <TurnIcon turn="slight_right" color={c} />}
-                onPress={() => router.push({ pathname: '/navigate', params: { dest: work.slug } })}
-              />
+              <Button label={tr('work.directions')} icon={(c) => <TurnIcon turn="slight_right" color={c} />} onPress={() => router.push({ pathname: '/navigate', params: { dest: work.slug } })} />
+            ) : canHear ? (
+              <Button label={speaking ? tr('work.stop') : tr('work.listen')} onPress={toggleSpeech} icon={(c) => speaking ? <StopIcon color={c} /> : <PlayIcon color={c} />} />
+            ) : !has(work.slug) ? (
+              <Button variant="primary" label={tr('checkin.here')} disabled={checking} icon={(c) => <PinIcon color={c} />} onPress={() => void checkHere()} />
             ) : null}
+            <View style={s.secondaryActions}>
+              {hasRouteTo(work.slug) && canHear ? (
+                <Button style={{ flex: 1 }} variant="secondary" label={speaking ? tr('work.stop') : tr('work.listen')} onPress={toggleSpeech} icon={(c) => speaking ? <StopIcon color={c} /> : <PlayIcon color={c} />} />
+              ) : null}
+              {!has(work.slug) && (hasRouteTo(work.slug) || canHear) ? (
+                <Button style={{ flex: 1 }} variant="secondary" label={tr('checkin.here')} disabled={checking} icon={(c) => <PinIcon color={c} />} onPress={() => void checkHere()} />
+              ) : null}
+            </View>
           </FadeInItem>
 
           {/* Bölümlere hızlı geçiş: dokununca bölüme kayar, ekran okuyucu odağı bölüm başlığına geçer. */}
-          <FadeInItem index={2}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              accessibilityLabel={tr('work.sections')}
-              contentContainerStyle={{ gap: space.sm, paddingHorizontal: space.xl }}
-              style={{ marginHorizontal: -space.xl }}>
+          <FadeInItem index={2} style={s.sectionJumps}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} accessibilityLabel={tr('work.sections')} contentContainerStyle={{ gap: space.sm, paddingHorizontal: space.xl }} style={{ marginHorizontal: -space.xl }}>
               {sections.map((x) => (
                 <View key={x.key} accessibilityHint={tr('work.sectionGo', { section: x.label })}>
                   <Chip label={x.label} selected={false} onPress={() => goTo(x.key)} />
@@ -360,7 +327,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
               <Section title={tr('work.summary')} t={t} onLayout={place_('summary')} headerRef={headerRef('summary')}>
                 <Card style={{ gap: space.md }}>
                   {readBody('summary', summary, true)}
-                  {factsRef ? <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.summarySource', { ref: factsRef })}</Text> : null}
+                  <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.summarySource')}</Text>
                 </Card>
                 {listen('summary')}
               </Section>
@@ -448,10 +415,12 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
             </Section>
           ) : null}
 
-          {/* Kitaptan alınan metnin atfı: metinlerin hemen altında (kaynaklar bölümü sayfanın sonunda). */}
+          {/* Kitaptan alınan metnin atfı, metin bölümlerinin ardından bir kez gösterilir. */}
           {(history || architecture) && inv ? (
-            <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.textSource', { book: [inv.title, ref].filter(Boolean).join(', ') })}</Text>
+            // Kitap başlığı cildi zaten içerir ("… — Cilt 1"); burada yalnız sayfa eklenir.
+            <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.textSource', { book: [inv.title, inv.page ? tr('inv.refPage', { page: inv.page }) : null].filter(Boolean).join(', ') })}</Text>
           ) : null}
+ 
 
           <Section title={tr('design.location')} t={t} onLayout={place_('location')} headerRef={headerRef('location')}>
             {address ? <Text style={[type.body, { color: t.text }]}>{address}</Text> : null}
@@ -484,7 +453,7 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
             {inv ? (
               <View style={{ gap: space.xs }}>
                 <Text style={[type.itemTitle, { color: t.text }]}>{inv.title}</Text>
-                <Text style={[type.meta, { color: t.textMuted }]}>{[inv.page ? tr('inv.refPage', { page: inv.page }) : null, 'Vakıf Katılım', inv.year ? String(inv.year) : null].filter(Boolean).join(' · ')}</Text>
+                <Text style={[type.meta, { color: t.textMuted }]}>{[ref, 'Vakıf Katılım', inv.year ? String(inv.year) : null].filter(Boolean).join(' · ')}</Text>
                 <View style={s.links}>
                   {inv.url ? <Button compact variant="ghost" label={tr('inv.openBook')} hint={tr('inv.openBookHint')} icon={(c) => <ExternalIcon color={c} />} onPress={() => Linking.openURL(inv.url!)} /> : null}
                   {citation ? <Button compact variant="ghost" label={tr('inv.cite')} onPress={() => Share.share({ message: citation })} /> : null}
@@ -503,12 +472,6 @@ function Detail({ work, t, s }: { work: WorkRow; t: SweetTheme; s: ReturnType<ty
               />
             ))}
             {!inv && otherSources.length === 0 ? <Text style={[type.body, { color: t.textMuted }]}>{tr('work.noSources')}</Text> : null}
-            {photoCredits.map((cLine) => (
-              <Text key={cLine} style={[type.meta, { color: t.textMuted }]}>
-                {cLine}
-              </Text>
-            ))}
-            {inventoryCredit ? <Text style={[type.meta, { color: t.textMuted }]}>{tr('work.photoCredit', { credit: inventoryCredit })}</Text> : null}
           </Section>
         </View>
       </Animated.ScrollView>
@@ -563,11 +526,13 @@ const makeStyles = (t: SweetTheme) =>
     heroText: { position: 'absolute', left: space.xl, right: space.xl, bottom: space.xl, gap: 2 },
     onPhoto: { color: t.outlined ? t.text : photoOverlayInk(t) },
     onPhotoDim: { color: t.outlined ? t.text : photoOverlayInk(t) },
-    plainHero: { paddingHorizontal: space.xl, paddingBottom: space.xl, gap: space.xs },
-    glyphTile: { width: 56, height: 56, borderRadius: radius.md, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center', marginBottom: space.xs },
-    body: { paddingHorizontal: space.xl, paddingTop: space.lg, gap: space.xl },
+    plainHero: { paddingHorizontal: space.xl, paddingBottom: space.xxl, gap: space.sm, minHeight: 320, justifyContent: 'center' },
+    coverCredit: { paddingHorizontal: space.xl, paddingTop: space.sm },
+    body: { paddingHorizontal: space.xl, paddingTop: space.lg, gap: space.xxl },
     badges: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
-    actions: { flexDirection: 'row', gap: space.sm },
+    actionGroup: { gap: space.sm },
+    secondaryActions: { flexDirection: 'row', gap: space.sm },
+    sectionJumps: { marginTop: space.xs },
     readingBar: { position: 'absolute', left: space.lg, right: space.lg, flexDirection: 'row', alignItems: 'center', gap: space.md, paddingVertical: space.sm, paddingLeft: space.lg, paddingRight: space.sm, borderRadius: radius.xl, borderCurve: 'continuous' },
     thumb: { width: 132, height: 132, borderRadius: radius.lg, borderCurve: 'continuous', backgroundColor: t.soft },
     map: { height: 180, borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden', backgroundColor: t.soft },

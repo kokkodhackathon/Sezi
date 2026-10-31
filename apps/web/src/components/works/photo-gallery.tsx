@@ -1,7 +1,7 @@
 "use client";
 
-import { isAttributed, loc, type WorkPhoto } from "@sezi/shared";
-import { ChevronLeftIcon, ChevronRightIcon, ExpandIcon } from "lucide-react";
+import { loc, type WorkPhoto } from "@sezi/shared";
+import { ChevronLeftIcon, ChevronRightIcon, ExpandIcon, LandmarkIcon } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 
@@ -13,19 +13,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { WorkThumb } from "@/components/work-thumb";
 import { Lens } from "@/components/works/lens";
-import {
-  PhotoSourceBadge,
-  PhotoSource,
-  photoCreditLine,
-} from "@/components/works/photo-source";
+import { photoCreditLine } from "@/components/works/photo-source";
 import { useT } from "@/lib/i18n-client";
 import { photoUrl } from "@/lib/media";
+import { toneClass } from "@/lib/tone";
+import { cn } from "@/lib/utils";
 
 /**
- * Eser fotoğraf galerisi: her fotoğrafın altında varsa `credit` yazılır; fareyle üstünde gezince büyüteç
- * (`Lens`), tıklayınca `Dialog` içinde büyük boy açılır. Fotoğraf yoksa tür tonunda glif karosu ve bilgi notu gösterilir.
+ * Eser fotoğraf galerisi: büyütülebilir kapak fotoğrafı, görünür atıf ve küçük fotoğraf seçici.
  */
 export function PhotoGallery({
   photos,
@@ -42,13 +38,11 @@ export function PhotoGallery({
 
   if (photos.length === 0) {
     return (
-      <div className="w-full">
-        <WorkThumb
-          photo={undefined}
-          typeSlug={typeSlug}
-          alt=""
-          className="h-28 w-full rounded-lg sm:h-36"
-        />
+      <div
+        aria-hidden
+        className={cn("grid h-52 w-full place-items-center overflow-hidden rounded-lg sm:h-60", toneClass(typeSlug))}
+      >
+        <LandmarkIcon className="size-20" strokeWidth={1.5} />
       </div>
     );
   }
@@ -66,11 +60,10 @@ export function PhotoGallery({
   const activeCreditLine = activePhoto ? photoCreditLine(activePhoto, t) : null;
 
   return (
-    <section aria-label={t("works.detail.photosTitle")} className="grid gap-2">
-      {/* Büyük tepe fotoğrafı */}
-      <figure className="grid gap-1.5">
+    <div role="group" aria-label={t("works.detail.photosTitle")} className="grid gap-2">
+      <figure className="grid gap-2">
         <Lens src={photoUrl(currentPhoto, "full")}>
-          <div className="group relative aspect-[16/9] max-h-[480px] w-full overflow-hidden rounded-lg border bg-muted sm:aspect-[21/9]">
+          <div className="group relative aspect-[4/3] max-h-[560px] w-full overflow-hidden rounded-lg border bg-muted md:aspect-[16/9]">
             <button
               type="button"
               onClick={() => setActiveIndex(selectedPhotoIndex)}
@@ -84,26 +77,34 @@ export function PhotoGallery({
                 priority={selectedPhotoIndex === 0}
                 fetchPriority={selectedPhotoIndex === 0 ? "high" : "auto"}
                 quality={selectedPhotoIndex === 0 ? 50 : 75}
-                sizes="(min-width: 896px) 864px, calc(100vw - 2rem)"
+                sizes="(min-width: 1280px) 1152px, calc(100vw - 2rem)"
                 className="object-cover"
               />
               <span
                 aria-hidden
-                className="absolute bottom-3 right-3 inline-flex size-10 items-center justify-center rounded-lg border bg-card/90 text-foreground"
+                className="absolute bottom-3 right-3 inline-flex size-12 items-center justify-center rounded-lg border bg-card text-foreground"
               >
-                <ExpandIcon className="size-4" />
+                <ExpandIcon className="size-5" />
               </span>
             </button>
-            {isAttributed(currentPhoto) ? (
-              <div className="absolute bottom-3 left-3 z-20">
-                <PhotoSource photo={currentPhoto} />
-              </div>
-            ) : null}
           </div>
         </Lens>
         {currentCreditLine ? (
-          <figcaption className="text-right text-xs text-muted-foreground">
-            {currentCreditLine}
+          <figcaption className="text-sm leading-relaxed text-muted-foreground">
+            {t("works.detail.photoCreditLine", { credit: currentCreditLine })}
+            {currentPhoto.source_url ? (
+              <>
+                {" · "}
+                <a
+                  href={currentPhoto.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-12 items-center font-medium text-link underline"
+                >
+                  {t("works.detail.openSourceUrl")}
+                </a>
+              </>
+            ) : null}
           </figcaption>
         ) : null}
       </figure>
@@ -120,10 +121,8 @@ export function PhotoGallery({
                 onClick={() => setSelectedPhotoIndex(idx)}
                 aria-current={isSelected ? "true" : undefined}
                 aria-label={loc(p.alt, lang) || `${workName} — ${idx + 1}`}
-                className={`relative h-14 w-20 shrink-0 overflow-hidden rounded-lg border transition-all ${
-                  isSelected
-                    ? "ring-2 ring-primary ring-offset-2"
-                    : "opacity-75 hover:opacity-100"
+                className={`relative h-14 w-20 shrink-0 overflow-hidden rounded-lg border ${
+                  isSelected ? "ring-2 ring-primary ring-offset-2" : "opacity-75 hover:opacity-100"
                 }`}
               >
                 <Image
@@ -133,7 +132,7 @@ export function PhotoGallery({
                   sizes="80px"
                   className="object-cover"
                 />
-                {isAttributed(p) ? <PhotoSourceBadge photo={p} /> : null}
+                
               </button>
             );
           })}
@@ -144,7 +143,11 @@ export function PhotoGallery({
         open={activeIndex !== null}
         onOpenChange={(open) => !open && setActiveIndex(null)}
       >
-        <DialogContent className="sm:max-w-4xl">
+        <DialogContent
+          className="sm:max-w-4xl"
+          closeLabel={t("works.detail.closeDialog")}
+          closeButtonClassName="min-h-12 min-w-12"
+        >
           <DialogHeader>
             <DialogTitle>
               {t("works.detail.photoDialogTitle", {
@@ -165,16 +168,25 @@ export function PhotoGallery({
                   sizes="(min-width: 1024px) 896px, 100vw"
                   className="object-contain"
                 />
-                {isAttributed(activePhoto) ? (
-                  <div className="absolute bottom-3 left-3 z-10">
-                    <PhotoSource photo={activePhoto} />
-                  </div>
-                ) : null}
+
               </div>
               <div className="flex flex-wrap items-center justify-between gap-2">
                 {activeCreditLine ? (
                   <p className="text-sm text-muted-foreground">
-                    {activeCreditLine}
+                    {t("works.detail.photoCreditLine", { credit: activeCreditLine })}
+                    {activePhoto.source_url ? (
+                      <>
+                        {" · "}
+                        <a
+                          href={activePhoto.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex min-h-12 items-center font-medium text-link underline"
+                        >
+                          {t("works.detail.openSourceUrl")}
+                        </a>
+                      </>
+                    ) : null}
                   </p>
                 ) : (
                   <span />
@@ -185,6 +197,7 @@ export function PhotoGallery({
                       type="button"
                       variant="outline"
                       size="sm"
+                      className="min-h-12"
                       aria-label={t("works.detail.prevPhoto")}
                       onClick={() =>
                         setActiveIndex((prev) =>
@@ -201,6 +214,7 @@ export function PhotoGallery({
                       type="button"
                       variant="outline"
                       size="sm"
+                      className="min-h-12"
                       aria-label={t("works.detail.nextPhoto")}
                       onClick={() =>
                         setActiveIndex((prev) =>
@@ -218,6 +232,6 @@ export function PhotoGallery({
           ) : null}
         </DialogContent>
       </Dialog>
-    </section>
+    </div>
   );
 }

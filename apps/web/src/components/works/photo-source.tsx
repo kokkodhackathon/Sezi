@@ -25,7 +25,7 @@ export function photoCreditLine(
     const author = photo.author?.trim() || t("works.commons.authorUnknown");
     return [author, photo.license?.trim(), isCommons(photo) ? "Wikimedia Commons" : null].filter(Boolean).join(" · ");
   }
-  return photo.credit ? t("works.detail.photoCredit", { credit: photo.credit }) : null;
+  return photo.credit?.trim() || null;
 }
 
 /**
@@ -38,7 +38,7 @@ export function PhotoSourceBadge({ photo, className }: { photo: WorkPhoto; class
     <span
       aria-hidden
       className={cn(
-        "pointer-events-none absolute bottom-1 right-1 max-w-[calc(100%-0.5rem)] truncate rounded bg-background/85 px-1 py-0.5 text-[9px] font-semibold leading-none text-foreground backdrop-blur-xs",
+        "pointer-events-none absolute bottom-1 right-1 max-w-[calc(100%-0.5rem)] truncate rounded border bg-background px-2 py-1 text-sm font-semibold leading-tight text-foreground",
         "contrast:bg-background contrast:text-foreground contrast:outline-1 contrast:outline-foreground",
         className,
       )}
@@ -88,8 +88,7 @@ export function PhotoSource({
             e.stopPropagation();
           }}
           className={cn(
-            "min-h-12 min-w-12 max-w-56 rounded-md bg-background/85 px-2 text-xs font-semibold text-foreground backdrop-blur-xs shadow-xs",
-            "hover:bg-background hover:text-foreground",
+            "min-h-12 min-w-12 max-w-56 rounded-md border bg-background px-3 text-sm font-semibold text-foreground",
             "focus-visible:ring-2 focus-visible:ring-ring outline-none",
             "contrast:bg-background contrast:text-foreground contrast:outline-2 contrast:outline-foreground",
             className,
@@ -102,7 +101,7 @@ export function PhotoSource({
         align={align}
         side={side}
         className={cn(
-          "w-72 max-w-[calc(100vw-2rem)] rounded-lg bg-popover p-3 text-xs text-popover-foreground shadow-md contrast:outline-2 contrast:outline-border",
+          "w-72 max-w-[calc(100vw-2rem)] rounded-lg border bg-popover p-3 text-sm text-popover-foreground contrast:outline-2 contrast:outline-border",
           popoverContentClassName,
         )}
         onClick={(e) => {
@@ -143,7 +142,7 @@ export function PhotoSource({
 
           {/* 4. Kaynak sayfası */}
           {photo.source_url ? (
-            <div className="border-t border-border/50 pt-2">
+            <div className="pt-2">
               <a
                 href={photo.source_url}
                 target="_blank"

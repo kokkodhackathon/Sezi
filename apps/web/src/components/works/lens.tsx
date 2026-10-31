@@ -34,7 +34,7 @@ export function Lens({ src, children }: { src: string; children: ReactNode }) {
       {at ? (
         <div
           aria-hidden
-          className="pointer-events-none absolute z-10 overflow-hidden rounded-full border-4 border-card shadow-lg contrast:border-foreground"
+          className="pointer-events-none absolute z-10 overflow-hidden rounded-full border-4 border-card contrast:border-foreground"
           style={{ width: SIZE, height: SIZE, left: at.x - SIZE / 2, top: at.y - SIZE / 2 }}
         >
           {/* eslint-disable-next-line @next/next/no-img-element -- büyütülmüş kopya; Next görseli burada boyut hesabını bozar */}

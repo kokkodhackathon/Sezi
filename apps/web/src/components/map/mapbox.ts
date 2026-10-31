@@ -28,7 +28,17 @@ export interface MapLook {
 
 export const mapPitch = (look: MapLook) => (look.pitched ? MAP_PITCH : 0);
 
-export function createMap(container: HTMLElement, center: [number, number], zoom: number, look: MapLook): mapboxgl.Map {
+export function createMap(
+  container: HTMLElement,
+  center: [number, number],
+  zoom: number,
+  look: MapLook,
+  options: { miniMap: boolean; zoomInLabel: string; zoomOutLabel: string } = {
+    miniMap: false,
+    zoomInLabel: "Zoom in",
+    zoomOutLabel: "Zoom out",
+  },
+): mapboxgl.Map {
   const m = new mapboxgl.Map({
     container,
     style: "mapbox://styles/mapbox/standard",
@@ -45,12 +55,21 @@ export function createMap(container: HTMLElement, center: [number, number], zoom
     zoom,
     pitch: mapPitch(look),
     pitchWithRotate: look.pitched,
-    cooperativeGestures: true,
+    cooperativeGestures: !options.miniMap,
+    scrollZoom: !options.miniMap,
     // Etiket solması haritayı yüzlerce milisaniye meşgul eder; rota katmanı solmadan da okunur.
     fadeDuration: 0,
   });
   if (!look.pitched) m.touchPitch.disable();
-  m.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
+  const navigation = new mapboxgl.NavigationControl({ showCompass: false });
+  m.addControl(navigation, "top-right");
+  if (options.miniMap) {
+    const container = m.getContainer();
+    const zoomIn = container.querySelector<HTMLButtonElement>(".mapboxgl-ctrl-zoom-in");
+    const zoomOut = container.querySelector<HTMLButtonElement>(".mapboxgl-ctrl-zoom-out");
+    if (zoomIn) zoomIn.setAttribute("aria-label", options.zoomInLabel);
+    if (zoomOut) zoomOut.setAttribute("aria-label", options.zoomOutLabel);
+  }
   return m;
 }
 

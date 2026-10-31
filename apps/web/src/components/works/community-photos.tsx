@@ -49,7 +49,7 @@ export function PhotoImage({
   );
 }
 
-export function CommunityPhotos({ slug }: { slug: string }) {
+export function CommunityPhotos({ slug, className }: { slug: string; className?: string }) {
   const { t, lang } = useT();
   const { user } = useAccount();
   const headingId = useId();
@@ -64,9 +64,9 @@ export function CommunityPhotos({ slug }: { slug: string }) {
   if (result.loading || (!result.error && !result.data?.photos.length))
     return null;
   return (
-    <section aria-labelledby={headingId} className="grid gap-4 border-t pt-6">
+    <section aria-labelledby={headingId} className={cn("work-detail-section grid gap-4", className)}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 id={headingId} className="font-heading text-lg font-bold">
+        <h2 id={headingId} className="font-heading text-2xl font-bold">
           {t("works.community")}
         </h2>
         {user ? (
@@ -99,7 +99,7 @@ export function CommunityPhotos({ slug }: { slug: string }) {
                 alt={photo.alt_text}
               />
             </a>
-            <figcaption className="mt-2 text-sm text-muted-foreground">
+            <figcaption className="mt-2 text-base leading-relaxed text-muted-foreground">
               {photo.credit_name
                 ? t("photos.credit", { name: photo.credit_name })
                 : null}

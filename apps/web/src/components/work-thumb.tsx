@@ -11,10 +11,8 @@ import { PhotoSourceBadge } from "@/components/works/photo-source";
 import { cn } from "@/lib/utils";
 
 /**
- * Eser görseli: kapak fotoğrafı ya da fotoğraf yoksa tür tonunda glif karosu (dekoratif; tür adı yanında yazılı).
- * Fotoğraf yüklenirken ışıltılı yer tutucu, yüklenince yumuşak beliriş (hareket azaltmada anlık).
- * Glif karosu hafif: tonun açığı, üstünde ince nokta deseni (çini dokusu) ve küçük simge; fotoğraflı kartlardan
- * ayrılır ama listede göze batmaz. `imageClassName` kart üzerine gelme efekti içindir (ör. yakınlaşma).
+ * Eser görseli: fotoğraf ya da fotoğraf yoksa tür tonunda sade dekoratif glif.
+ * `imageClassName` fotoğraflara kart üzeri efekt verir.
  */
 export function WorkThumb({
   photo,
@@ -60,12 +58,8 @@ export function WorkThumb({
     );
   }
   return (
-    <div className={cn("relative grid place-items-center overflow-hidden", toneClass(typeSlug), className)} aria-hidden>
-      <div className="absolute inset-0 bg-card/30" />
-      <div className="absolute inset-0 bg-[radial-gradient(currentColor_1px,transparent_1.5px)] bg-[length:14px_14px] opacity-35" />
-      <span className="relative grid size-14 place-items-center rounded-full bg-card/80 contrast:outline-2 contrast:outline-border">
-        <LandmarkIcon className="size-7" strokeWidth={1.75} />
-      </span>
+    <div className={cn("grid place-items-center overflow-hidden", toneClass(typeSlug), className)} aria-hidden>
+      <LandmarkIcon className="size-12" strokeWidth={1.5} />
     </div>
   );
 }

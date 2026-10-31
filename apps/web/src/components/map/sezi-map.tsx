@@ -68,6 +68,8 @@ export interface SeziMapProps {
   label: string;
   center: LngLat;
   zoom?: number;
+  /** Küçük, statik hisli konum haritasında kaydırma yakınlaştırmasını kapatır. */
+  miniMap?: boolean;
   /** [batı, güney, doğu, kuzey]: verilirse harita buna sığdırılır. */
   bounds?: [number, number, number, number] | null;
   /** Sığdırırken kenar boşluğu (px); haritanın üstündeki panel için. */
@@ -316,7 +318,11 @@ export default function SeziMap(props: SeziMapProps) {
     if (!box.current || !MAPBOX_TOKEN) return;
     const th = themeRef.current;
     const look = lookRef.current;
-    const m = createMap(box.current, latest.current.center, latest.current.zoom ?? 15, look);
+    const m = createMap(box.current, latest.current.center, latest.current.zoom ?? 15, look, {
+      miniMap: latest.current.miniMap ?? false,
+      zoomInLabel: t("map.zoomIn"),
+      zoomOutLabel: t("map.zoomOut"),
+    });
     let flowTimer: number | undefined;
     let flowWatch: IntersectionObserver | undefined;
     map.current = m;
@@ -448,7 +454,7 @@ export default function SeziMap(props: SeziMapProps) {
     };
     // Tema, sade harita ya da eğik bakış değişince harita yeniden kurulur (taban harita ayarları ve katman renkleri).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contrast, plain, pitched, reducedMotion]);
+  }, [contrast, plain, pitched, reducedMotion, t]);
 
   useEffect(sync);
 

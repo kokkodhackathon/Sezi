@@ -37,7 +37,7 @@ const CONDITION_KEYS: Record<WorkCondition, MessageKey> = {
   unknown: "works.condition.unknown",
 };
 
-/** Envanter kitabı atfı: "Kitap, Cilt X, s. Y" (cilt yoksa ya da kitap adında zaten yazılıysa "Kitap, s. Y"). */
+/** Envanter kitabı atfı: cilt başlıkta yoksa ayrıca yazılır; varsa yinelenmez. */
 function formatBookAttribution(inv: WorkSource | undefined, lang: Lang): string | null {
   if (!inv) return null;
   const volumeInTitle = inv.volume !== null && new RegExp(`(Cilt|Vol\\.?|Volume)\\s*${inv.volume}\\b`, "i").test(inv.title);
@@ -47,6 +47,9 @@ function formatBookAttribution(inv: WorkSource | undefined, lang: Lang): string 
       volume: inv.volume,
       page: inv.page,
     });
+  }
+  if (inv.volume !== null && !volumeInTitle) {
+    return t(lang, "works.detail.refVolume", { title: inv.title, volume: inv.volume });
   }
   if (inv.page) {
     return t(lang, "works.detail.refPageOnly", {
@@ -138,6 +141,8 @@ export default async function WorkDetailPage({
   // Ses kaydı: dilde varsa o, yoksa Türkçe kayıt (varsa); hiçbiri yoksa oynatıcı gösterilmez.
   const audioPath = lang === "en" ? (work.audio_en ?? work.audio_tr) : work.audio_tr;
 
+  // Metin bölümü yoksa (fotoğrafsız/metinsiz eser) sayfa tek sütundur; boş sol sütun bırakılmaz.
+  const hasText = Boolean(summary || audioPath || history || architecture);
   const siteBase = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://sezi.info").replace(/\/$/, "");
   const jsonLd: Record<string, unknown> = {
     "@context": "https://schema.org",
@@ -165,275 +170,291 @@ export default async function WorkDetailPage({
   };
 
   return (
-    <PageContainer className="grid max-w-4xl gap-8">
+    <PageContainer className="work-detail-page grid gap-8 lg:gap-12">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      {/* 1. Büyük tepe fotoğrafı / karo */}
       <PhotoGallery photos={work.photos} workName={name} typeSlug={work.type_slug} />
 
-      {/* 2. Ad + tek satırda tür, il/ilçe + birincil eylemler */}
-      <header className="grid gap-3">
-        <h1 className="text-3xl font-extrabold tracking-tight sm:text-4xl">{name}</h1>
-
-        <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+      <header className="grid gap-4">
+        <h1 className="line-clamp-2 max-w-[20ch] text-[clamp(2.25rem,5vw,4.5rem)] font-extrabold leading-[0.98] tracking-[-0.04em]">
+          {name}
+        </h1>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base text-foreground [&_[data-slot=badge]]:h-auto [&_[data-slot=badge]]:min-h-8 [&_[data-slot=badge]]:text-base">
           <Link
             href={href(lang, `/?tur=${work.type_slug}`)}
-            className="font-medium text-foreground hover:underline"
+            className="inline-flex min-h-12 items-center font-semibold underline-offset-4 hover:underline"
           >
             {typeName}
           </Link>
           <span aria-hidden>·</span>
           <Link
             href={href(lang, `/il/${work.city_slug}`)}
-            className="font-medium text-foreground hover:underline"
+            className="inline-flex min-h-12 items-center font-semibold underline-offset-4 hover:underline"
           >
             {[work.district, cityName].filter(Boolean).join(", ")}
           </Link>
-          <span aria-hidden>·</span>
           <PrecisionBadge precision={work.location_precision} lang={lang} />
-          {work.unesco ? <Badge variant="secondary">{t(lang, "works.unesco")}</Badge> : null}
+          {work.unesco ? <Badge variant="secondary" className="h-auto min-h-8 text-base">{t(lang, "works.unesco")}</Badge> : null}
         </div>
-
-        {/* Birincil eylemler: yalnız iki düğme */}
-        <div className="flex flex-wrap items-center gap-3 pt-1">
+        <div className="flex flex-wrap items-center gap-3">
           {isPilot ? (
-            <Button asChild>
+            <Button asChild className="min-h-12">
               <Link href={href(lang, `/rota?hedef=${work.slug}`)}>
                 <RouteIcon aria-hidden />
                 <span>{t(lang, "works.detail.planRoute")}</span>
               </Link>
             </Button>
           ) : null}
-          <Button variant="outline" asChild>
+          <Button variant="outline" asChild className="min-h-12">
             <Link href={href(lang, `/bildirim?eser=${work.slug}`)}>
               <AlertTriangleIcon aria-hidden />
               <span>{t(lang, "works.detail.reportIssue")}</span>
             </Link>
           </Button>
         </div>
-
-        {summary ? (
-          <p className="pt-2 text-lg leading-relaxed text-foreground/90">{summary}</p>
-        ) : null}
       </header>
 
-      {/* Ses kaydı (varsa) */}
-      {audioPath ? (
-        <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
-          <Volume2Icon className="size-5 shrink-0 text-primary" aria-hidden />
-          <audio
-            controls
-            preload="none"
-            src={`${AUDIO_BASE}${audioPath}`}
-            aria-label={`${name} — ${t(lang, "works.detail.audioTitle")}`}
-            className="h-10 w-full"
-          />
+      {/* Sayfanın tek <main> öğesi düzende; burada yalnız sütunlar var. Yapışkan sütun yok: uzun yan sütun ekrana sığmayınca alt kısmı erişilmez kalıyordu. */}
+      <div
+        className={
+          hasText
+            ? "grid gap-12 lg:grid-cols-[minmax(0,1.55fr)_minmax(18rem,1fr)] lg:items-start lg:gap-16"
+            : "grid gap-12"
+        }
+      >
+        <div className="grid min-w-0 content-start gap-12 empty:hidden lg:max-w-[65ch] lg:gap-16">
+          {summary ? (
+            <section aria-labelledby="eser-ozet-heading" className="work-detail-section grid gap-4">
+              <h2 id="eser-ozet-heading" className="text-2xl font-bold leading-tight">
+                {t(lang, "works.detail.summaryTitle")}
+              </h2>
+              <p className="text-lg leading-[1.6] text-foreground">{summary}</p>
+            </section>
+          ) : null}
+
+          {audioPath ? (
+            <section aria-labelledby="eser-ses-heading" className="work-detail-section grid gap-4">
+              <h2 id="eser-ses-heading" className="text-2xl font-bold leading-tight">
+                {t(lang, "works.detail.audioTitle")}
+              </h2>
+              <div className="flex items-center gap-3 rounded-lg border bg-muted/30 p-3">
+                <Volume2Icon className="size-5 shrink-0 text-primary" aria-hidden />
+                <audio
+                  controls
+                  preload="none"
+                  src={`${AUDIO_BASE}${audioPath}`}
+                  aria-label={`${name} — ${t(lang, "works.detail.audioTitle")}`}
+                  className="h-12 w-full"
+                />
+              </div>
+            </section>
+          ) : null}
+
+          {history ? (
+            <section aria-labelledby="eser-tarihce-heading" className="work-detail-section grid gap-4">
+              <h2 id="eser-tarihce-heading" className="text-2xl font-bold leading-tight">
+                {t(lang, "works.detail.historyTitle")}
+              </h2>
+              <ReadMore
+                text={history}
+                headingId="eser-tarihce-heading"
+                contentId="eser-tarihce-icerik"
+              />
+            </section>
+          ) : null}
+
+          {architecture ? (
+            <section aria-labelledby="eser-mimari-heading" className="work-detail-section grid gap-4">
+              <h2 id="eser-mimari-heading" className="text-2xl font-bold leading-tight">
+                {t(lang, "works.detail.architectureTitle")}
+              </h2>
+              <ReadMore
+                text={architecture}
+                headingId="eser-mimari-heading"
+                contentId="eser-mimari-icerik"
+              />
+            </section>
+          ) : null}
+          {bookAttribution && (history || architecture) ? (
+            <p className="text-sm leading-relaxed text-muted-foreground">
+              {t(lang, "works.detail.bookAttribution", { attribution: bookAttribution })}
+            </p>
+          ) : null}
+          <CommunityPhotos slug={work.slug} />
         </div>
-      ) : null}
 
-      <CommunityPhotos slug={work.slug} />
+        {/* Metinsiz eserde künye, harita ve kaynaklar geniş ekranda iki sütuna yayılır; sağda boşluk kalmaz. */}
+        <div
+          className={
+            hasText
+              ? "grid min-w-0 content-start gap-12"
+              : "grid min-w-0 content-start items-start gap-12 lg:grid-cols-2 lg:gap-16"
+          }
+        >
+          <section aria-labelledby="eser-kunye-heading" className="work-detail-section grid gap-4">
+            <h2 id="eser-kunye-heading" className="text-2xl font-bold leading-tight">
+              {t(lang, "works.detail.infoTitle")}
+            </h2>
+            <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+              {period ? (
+                <div>
+                  <dt className="text-sm text-muted-foreground">{t(lang, "works.detail.infoPeriod")}</dt>
+                  <dd className="text-base font-medium text-foreground">{period}</dd>
+                </div>
+              ) : null}
+              {work.built_year !== null ? (
+                <div>
+                  <dt className="text-sm text-muted-foreground">{t(lang, "works.detail.infoBuiltYear")}</dt>
+                  <dd className="num text-base font-medium text-foreground">{work.built_year}</dd>
+                </div>
+              ) : null}
+              {work.founder ? (
+                <div>
+                  <dt className="text-sm text-muted-foreground">{t(lang, "works.detail.infoFounder")}</dt>
+                  <dd className="text-base font-medium text-foreground">{work.founder}</dd>
+                </div>
+              ) : null}
+              {address ? (
+                <div className="sm:col-span-2 lg:col-span-1">
+                  <dt className="text-sm text-muted-foreground">{t(lang, "works.detail.infoAddress")}</dt>
+                  <dd className="text-base font-medium text-foreground">{address}</dd>
+                </div>
+              ) : null}
+              {work.condition !== "unknown" ? (
+                <div>
+                  <dt className="text-sm text-muted-foreground">{t(lang, "works.detail.infoCondition")}</dt>
+                  <dd className="text-base font-medium text-foreground">
+                    {t(lang, CONDITION_KEYS[work.condition])}
+                    {conditionNote ? (
+                      <span className="block text-sm font-normal text-muted-foreground">
+                        {conditionNote}
+                      </span>
+                    ) : null}
+                  </dd>
+                </div>
+              ) : null}
+              {work.complex_slug && complexName ? (
+                <div>
+                  <dt className="text-sm text-muted-foreground">{t(lang, "works.detail.infoComplex")}</dt>
+                  <dd className="text-base font-medium">
+                    <Link
+                      href={href(lang, `/kulliye/${work.complex_slug}`)}
+                      className="text-link underline-offset-4 hover:underline"
+                    >
+                      {complexName}
+                    </Link>
+                  </dd>
+                </div>
+              ) : null}
+              {invSection ? (
+                <div>
+                  <dt className="text-sm text-muted-foreground">{t(lang, "works.detail.infoBookSection")}</dt>
+                  <dd className="text-base font-medium text-foreground">{invSection}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </section>
 
-      {/* 3. Tarihçe ve Mimari (ReadMore) */}
-      {history ? (
-        <section aria-labelledby="eser-tarihce-heading" className="grid gap-2 border-t pt-6">
-          <h2 id="eser-tarihce-heading" className="font-heading text-lg font-bold">
-            {t(lang, "works.detail.historyTitle")}
-          </h2>
-          <ReadMore
-            text={history}
-            headingId="eser-tarihce-heading"
-            contentId="eser-tarihce-icerik"
-          />
-          {bookAttribution ? (
-            <p className="text-xs text-muted-foreground">
-              {t(lang, "works.detail.bookAttribution", { attribution: bookAttribution })}
-            </p>
+          {hasLocation(work) ? (
+            <section aria-labelledby="eser-harita-heading" className="work-detail-section grid gap-4">
+              <h2 id="eser-harita-heading" className="text-2xl font-bold leading-tight">
+                {t(lang, "works.detail.mapTitle")}
+              </h2>
+              <LazySeziMap
+                label={`${name} — ${t(lang, "works.detail.mapTitle")}`}
+                center={[work.lng, work.lat]}
+                zoom={work.location_precision === "exact" ? 16.5 : 15}
+                miniMap
+                markers={[
+                  {
+                    id: work.slug,
+                    location: [work.lng, work.lat],
+                    label: name,
+                    typeSlug: work.type_slug,
+                    approximate: work.location_precision !== "exact",
+                    emphasis: "dest",
+                  },
+                ]}
+                className="mini-map h-64 w-full rounded-lg border"
+              />
+            </section>
           ) : null}
-        </section>
-      ) : null}
 
-      {architecture ? (
-        <section aria-labelledby="eser-mimari-heading" className="grid gap-2 border-t pt-6">
-          <h2 id="eser-mimari-heading" className="font-heading text-lg font-bold">
-            {t(lang, "works.detail.architectureTitle")}
-          </h2>
-          <ReadMore
-            text={architecture}
-            headingId="eser-mimari-heading"
-            contentId="eser-mimari-icerik"
-          />
-          {bookAttribution ? (
-            <p className="text-xs text-muted-foreground">
-              {t(lang, "works.detail.bookAttribution", { attribution: bookAttribution })}
-            </p>
-          ) : null}
-        </section>
-      ) : null}
-
-      {/* 4. Kompakt künye listesi: yalnız dolu alanlar */}
-      <section aria-label={t(lang, "works.detail.infoTitle")} className="border-t pt-6">
-        <h2 className="mb-3 font-heading text-lg font-bold">{t(lang, "works.detail.infoTitle")}</h2>
-        <dl className="grid grid-cols-2 gap-x-6 gap-y-3 sm:grid-cols-3 lg:grid-cols-4 text-sm">
-          {period ? (
-            <div>
-              <dt className="text-xs text-muted-foreground">{t(lang, "works.detail.infoPeriod")}</dt>
-              <dd className="font-medium text-foreground">{period}</dd>
-            </div>
-          ) : null}
-          {work.built_year !== null ? (
-            <div>
-              <dt className="text-xs text-muted-foreground">{t(lang, "works.detail.infoBuiltYear")}</dt>
-              <dd className="font-medium text-foreground num">{work.built_year}</dd>
-            </div>
-          ) : null}
-          {work.founder ? (
-            <div>
-              <dt className="text-xs text-muted-foreground">{t(lang, "works.detail.infoFounder")}</dt>
-              <dd className="font-medium text-foreground">{work.founder}</dd>
-            </div>
-          ) : null}
-          {address ? (
-            <div className="col-span-2">
-              <dt className="text-xs text-muted-foreground">{t(lang, "works.detail.infoAddress")}</dt>
-              <dd className="font-medium text-foreground">{address}</dd>
-            </div>
-          ) : null}
-          {work.condition !== "unknown" ? (
-            <div>
-              <dt className="text-xs text-muted-foreground">{t(lang, "works.detail.infoCondition")}</dt>
-              <dd className="font-medium text-foreground">
-                {t(lang, CONDITION_KEYS[work.condition])}
-                {conditionNote ? (
-                  <span className="block text-xs font-normal text-muted-foreground">
-                    {conditionNote}
+        {inv || otherSources.length > 0 ? (
+          <section aria-labelledby="eser-kaynak-heading" className="work-detail-section grid gap-4">
+            <h2 id="eser-kaynak-heading" className="text-2xl font-bold leading-tight">
+              {t(lang, "works.detail.sourcesTitle")}
+            </h2>
+            <div className="grid gap-3 text-base leading-relaxed text-foreground">
+              {inv ? (
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span>{bookAttribution ?? inv.title}</span>
+                  {inv.url ? (
+                    <a
+                      href={inv.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-12 items-center gap-1 font-semibold text-link underline"
+                    >
+                      <span>{t(lang, "works.detail.openBookPdf")}</span>
+                      <ExternalLinkIcon className="size-4" aria-hidden />
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
+              {otherSources.map((src) => (
+                <div key={src.id} className="flex flex-wrap items-center justify-between gap-2">
+                  <span>
+                    {[
+                      src.title,
+                      src.publisher,
+                      src.year ? String(src.year) : null,
+                      src.page ? `s. ${src.page}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
                   </span>
-                ) : null}
-              </dd>
+                  {src.url ? (
+                    <a
+                      href={src.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-12 items-center gap-1 font-semibold text-link underline"
+                    >
+                      <span>{t(lang, "works.detail.openSourceUrl")}</span>
+                      <ExternalLinkIcon className="size-4" aria-hidden />
+                    </a>
+                  ) : null}
+                </div>
+              ))}
             </div>
-          ) : null}
-          {work.complex_slug && complexName ? (
-            <div>
-              <dt className="text-xs text-muted-foreground">{t(lang, "works.detail.infoComplex")}</dt>
-              <dd>
+          </section>
+        ) : null}
+          {complexName && work.complex_slug && complexSiblings.length > 0 ? (
+            <section aria-labelledby="eser-kulliye-heading" className="work-detail-section grid gap-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 id="eser-kulliye-heading" className="text-2xl font-bold leading-tight">
+                  {t(lang, "works.detail.complexTitle")}
+                </h2>
                 <Link
                   href={href(lang, `/kulliye/${work.complex_slug}`)}
-                  className="font-medium text-link hover:underline"
+                  className="inline-flex min-h-12 items-center text-base font-semibold text-link underline-offset-4 hover:underline"
                 >
-                  {complexName}
+                  {t(lang, "works.detail.complexAllLink", { name: complexName })}
                 </Link>
-              </dd>
-            </div>
+              </div>
+              <div className="grid gap-4">
+                {complexSiblings.slice(0, 3).map((sibling) => (
+                  <WorkCard key={sibling.slug} work={sibling} lang={lang} />
+                ))}
+              </div>
+            </section>
           ) : null}
-          {invSection ? (
-            <div>
-              <dt className="text-xs text-muted-foreground">{t(lang, "works.detail.infoBookSection")}</dt>
-              <dd className="font-medium text-foreground">{invSection}</dd>
-            </div>
-          ) : null}
-        </dl>
-      </section>
-
-      {/* 5. Mini harita */}
-      {hasLocation(work) ? (
-        <section aria-labelledby="eser-harita-heading" className="grid gap-2 border-t pt-6">
-          <h2 id="eser-harita-heading" className="font-heading text-lg font-bold">
-            {t(lang, "works.detail.mapTitle")}
-          </h2>
-          <LazySeziMap
-            label={`${name} — ${t(lang, "works.detail.mapTitle")}`}
-            center={[work.lng, work.lat]}
-            zoom={work.location_precision === "exact" ? 16.5 : 15}
-            markers={[
-              {
-                id: work.slug,
-                location: [work.lng, work.lat],
-                label: name,
-                typeSlug: work.type_slug,
-                approximate: work.location_precision !== "exact",
-                emphasis: "dest",
-              },
-            ]}
-            className="h-64 w-full"
-          />
-        </section>
-      ) : null}
-
-      {/* 6. Aynı külliyedeki eserler */}
-      {work.complex_slug && complexSiblings.length > 0 ? (
-        <section aria-labelledby="eser-kulliye-heading" className="grid gap-4 border-t pt-6">
-          <div className="flex items-center justify-between gap-2">
-            <h2 id="eser-kulliye-heading" className="font-heading text-lg font-bold">
-              {t(lang, "works.detail.complexTitle")}
-            </h2>
-            <Link
-              href={href(lang, `/kulliye/${work.complex_slug}`)}
-              className="text-xs font-bold text-link hover:underline"
-            >
-              {t(lang, "works.detail.complexAllLink", {
-                name: complexName || work.complex_slug,
-              })}
-            </Link>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {complexSiblings.slice(0, 3).map((sibling) => (
-              <WorkCard key={sibling.slug} work={sibling} lang={lang} />
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {/* 7. Kaynaklar: details içinde katlanmış */}
-      <details className="group rounded-lg border p-4 text-sm">
-        <summary className="cursor-pointer font-heading font-bold text-foreground hover:text-link">
-          {t(lang, "works.detail.sourcesTitle")}
-        </summary>
-        <div className="mt-3 grid gap-2.5 pt-2 text-muted-foreground">
-          {inv ? (
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span>{bookAttribution ?? inv.title}</span>
-              {inv.url ? (
-                <a
-                  href={inv.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-link underline"
-                >
-                  <span>{t(lang, "works.detail.openBookPdf")}</span>
-                  <ExternalLinkIcon className="size-3" aria-hidden />
-                </a>
-              ) : null}
-            </div>
-          ) : null}
-          {otherSources.map((src) => (
-            <div key={src.id} className="flex flex-wrap items-center justify-between gap-2">
-              <span>
-                {[
-                  src.title,
-                  src.publisher,
-                  src.year ? String(src.year) : null,
-                  src.page ? `s. ${src.page}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(" · ")}
-              </span>
-              {src.url ? (
-                <a
-                  href={src.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-link underline"
-                >
-                  <span>{t(lang, "works.detail.openSourceUrl")}</span>
-                  <ExternalLinkIcon className="size-3" aria-hidden />
-                </a>
-              ) : null}
-            </div>
-          ))}
         </div>
-      </details>
+      </div>
     </PageContainer>
   );
 }
