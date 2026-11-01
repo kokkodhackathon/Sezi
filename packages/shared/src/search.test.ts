@@ -27,6 +27,11 @@ const sample = [
 ];
 
 describe("searchWorks", () => {
+  it("sohbet soruları ve ayrı/bitişik Ulucami yazımı doğru eseri bulur", () => {
+    const works = [w("Ulucami", "cami", "Cami", "Osmangazi"), w("Orhan Bey Camii", "cami", "Cami", "Osmangazi"), w("Alaaddin-i Mısri Türbesi", "turbe", "Türbe", "İznik"), w("Birgi Camii", "cami", "Cami", "Ödemiş")];
+    expect(searchWorks("Ulu Cami hakkında biraz bilgi verir misin?", works).map(x => x.name.tr)).toEqual(["Ulucami"]);
+    expect(searchWorks("Orhan Bey Camii’nin tarihini anlatır mısın?", works).map(x => x.name.tr)).toEqual(["Orhan Bey Camii"]);
+  });
   it("eser adına kesmeyle gelen Türkçe ek başka eserleri zorunlu aday yapmaz", () => {
     const works = [w("Ulucami", "cami", "Cami", "Osmangazi"), w("Yıldırım Camii", "cami", "Cami", "Yıldırım")];
     for (const question of ["Bursa Ulucami’yi kim yaptırdı?", "Bursa Ulucami'yi kim yaptırdı?"]) {

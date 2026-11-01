@@ -12,7 +12,8 @@ export function normalize(s: string): string {
     .replace(/[ıİ]/g, "i")
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s]/g, " ");
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\bulu\s*cami(i)?\b/g, "ulu cami$1");
 }
 
 // Soru kelimesi → tür eşlemesi (kökler; ekli halleri de yakalar).
@@ -54,6 +55,9 @@ const TYPE_HINTS: [string, string[]][] = [
 ];
 
 const STOP = new Set([
+  "hakkinda", "biraz", "bilgi", "ver", "verir", "verebilir", "misin", "musun",
+  "anlat", "anlatir", "anlatabilir", "biliyorsun", "lutfen", "peki",
+  "kim", "yaptirdi", "yaptirmis", "tarihi", "tarihini", "tarihcesi", "mimarisi", "mimarisini",
   "hangi",
   "hangileri",
   "nerede",

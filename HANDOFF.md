@@ -4,6 +4,8 @@ Son güncelleme: 1 Kasım 2026. Yeni oturum önce [AGENTS.md](AGENTS.md)'yi, son
 
 ## Şu an neredeyiz
 
+- **Sohbet arama denemesi (1 Kasım):** gerçek `works_view` listesi + mobilin `searchWorks` araması + canlı `ask` ile 8 soru denendi. İlk turdaki Ulu Cami ayrı/bitişik yazımı ve sohbet sözcüklerinin (misin, biraz, anlatır vb.) adayları elemesi düzeltildi. Tekrar: 8/8 geçti; 7 kaynaklı cevap, 1 bilinmeyen ziyaret saatine red. Testler 155/155, typecheck ve mobil lint temiz. Şehirsiz Ulu Cami sorusu çok adaylı; model Bursa'yı varsayabiliyor, şehir netleştirme ileride ele alınmalı.
+
 - **1 Kasım arama düzeltmesi:** mobil önerideki `Ulucami’yi` sorusunda kesme sonrası `yi` eki Yıldırım eserleriyle eşleşip Ulucami'yi eliyordu. Sorguda kesme sonrası ek ayrıştırılır; düz/eğri kesme regresyon testi ve birebir mobil soru canlı değerlendirmeye eklendi.
 
 - **Dal:** `feature/seziye-sor` (kullanıcının istediği ad; Sezi'ye Sor geliştirmesi), taban `main` / `origin/main` (`https://github.com/kokkodhackathon/Sezi`). Henüz push/PR yok.

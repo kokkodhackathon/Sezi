@@ -36,6 +36,8 @@ Son güncelleme: 15 Ekim 2026. Görevi bitiren, durum sütununu günceller. Anl�
 
 ## Backlog
 
+1 Kasım — #11 sohbet denemesi: gerçek eser listesiyle 8 canlı soruda bulunan ayrı/bitişik Ulucami ve sohbet sözcüğü sorunları düzeltildi; ikinci tur 8/8. Bekleyen: birden fazla şehirde aynı adlı eser varsa şehir netleştirmesi.
+
 1 Kasım — #11: `Ulucami’yi` gibi kesmeli eser adlarının aday eşleşmesini bozan ek ayrıştırması düzeltildi; düz/eğri kesme için regresyon testi eklendi.
 
 1 Kasım — #11: web ve mobilin ortak yayımlanmış eser kayıtlarını kullanan Sezi'ye Sor yanıtları kısa ve sohbet diline geçirildi; kaynak işaretleri korunur. Çalışma dalı kullanıcı isteğiyle `feature/seziye-sor` olarak adlandırıldı.
