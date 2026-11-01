@@ -22,7 +22,7 @@ export const AskCitationSchema = z.object({
   index: z.number().int().positive(),
   workSlug: z.string(),
   workName: z.string(),
-  section: z.enum(["facts", "summary", "history", "architecture"]),
+  section: z.enum(["facts", "summary", "history", "architecture", "app"]),
   sourceTitle: z.string(),
   sourcePublisher: z.string().nullable(),
   sourceYear: z.number().int().nullable(),

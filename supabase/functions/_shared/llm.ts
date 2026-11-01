@@ -3,7 +3,7 @@ import { z } from 'npm:zod@3';
 export type LlmContext = {
   id: string;
   workName: string;
-  section: 'facts' | 'summary' | 'history' | 'architecture';
+  section: 'facts' | 'summary' | 'history' | 'architecture' | 'app';
   sourceTitle: string;
   sourcePage: string | null;
   content: string;
@@ -24,8 +24,21 @@ const DeepSeekResponse = z.object({
 const AnswerJson = z.object({
   status: z.enum(['answer', 'insufficient']),
   answer: z.string().max(2_000),
-  citations: z.array(z.string().regex(/^K\d+$/)).max(6).default([]),
+  citations: z.array(z.string()).max(12).default([]),
 });
+
+function parseAnswerJson(raw: string): LlmAnswer {
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if (start < 0 || end < start) throw new Error('DeepSeek JSON yanıtı bulunamadı');
+  const parsed = AnswerJson.parse(JSON.parse(raw.slice(start, end + 1)));
+  const citationIds = [...new Set(
+    parsed.citations
+      .map((id) => id.replace(/^\[(K\d+)\]$/, '$1'))
+      .filter((id) => /^K\d+$/.test(id)),
+  )].slice(0, 6);
+  return { status: parsed.status, answer: parsed.answer.trim(), citationIds };
+}
 
 const SYSTEM = `You are Sezi, a source-bound assistant for Türkiye's foundation heritage inventory.
 
@@ -60,29 +73,45 @@ export class DeepSeekProvider implements LLMProvider {
       ? input.history.map((m) => `${m.role === 'user' ? 'User' : 'Sezi'}: ${m.text}`).join('\n')
       : '(none)';
     const user = `LANGUAGE: ${input.lang}\n\nCONVERSATION HISTORY (not evidence):\n${history}\n\nCONTEXT:\n${context}\n\nCURRENT QUESTION:\n${input.question}`;
-    const res = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(45_000),
-      body: JSON.stringify({
-        model: this.model,
-        messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: user }],
-        thinking: { type: 'disabled' },
-        temperature: 0.2,
-        max_tokens: 700,
-        response_format: { type: 'json_object' },
-        stream: false,
-      }),
+    const body = JSON.stringify({
+      model: this.model,
+      messages: [{ role: 'system', content: SYSTEM }, { role: 'user', content: user }],
+      thinking: { type: 'disabled' },
+      temperature: 0,
+      max_tokens: 700,
+      response_format: { type: 'json_object' },
+      stream: false,
     });
-    if (!res.ok) {
-      const detail = (await res.text()).slice(0, 400);
-      throw new Error(`DeepSeek ${res.status}: ${detail}`);
+
+    let lastError: unknown;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      try {
+        const res = await fetch(`${this.baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(45_000),
+          body,
+        });
+        if (!res.ok) {
+          const detail = (await res.text()).slice(0, 400);
+          const error = new Error(`DeepSeek ${res.status}: ${detail}`);
+          if (res.status !== 429 && res.status < 500) throw error;
+          lastError = error;
+        } else {
+          const envelope = DeepSeekResponse.parse(await res.json());
+          const raw = envelope.choices[0]!.message.content;
+          if (!raw) throw new Error('DeepSeek boş yanıt döndürdü');
+          return parseAnswerJson(raw);
+        }
+      } catch (error) {
+        lastError = error;
+        if (error instanceof Error && /^DeepSeek 4\d\d:/.test(error.message) && !/^DeepSeek 429:/.test(error.message)) {
+          throw error;
+        }
+      }
+      if (attempt === 0) await new Promise((resolve) => setTimeout(resolve, 300));
     }
-    const envelope = DeepSeekResponse.parse(await res.json());
-    const raw = envelope.choices[0]!.message.content;
-    if (!raw) throw new Error('DeepSeek boş yanıt döndürdü');
-    const parsed = AnswerJson.parse(JSON.parse(raw));
-    return { status: parsed.status, answer: parsed.answer.trim(), citationIds: parsed.citations };
+    throw lastError instanceof Error ? lastError : new Error('DeepSeek yanıtı alınamadı');
   }
 }
 

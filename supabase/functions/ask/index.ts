@@ -28,7 +28,7 @@ const Chunk = z.object({
   chunk_id: z.string().uuid(),
   work_slug: z.string(),
   work_name: z.string(),
-  section: z.enum(['facts', 'summary', 'history', 'architecture']),
+  section: z.enum(['facts', 'summary', 'history', 'architecture', 'app']),
   content: z.string(),
   source_title: z.string(),
   source_publisher: z.string().nullable(),
