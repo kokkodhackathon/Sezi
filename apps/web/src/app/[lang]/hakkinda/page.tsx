@@ -10,7 +10,7 @@ const TEAM_MEMBERS: { name: string; roleKey: MessageKey }[] = [
   { name: "Ediz", roleKey: "about.team.ediz.role" },
   { name: "Eda", roleKey: "about.team.eda.role" },
   { name: "İnci", roleKey: "about.team.inci.role" },
-  { name: "Zehra", roleKey: "about.team.zehra.role" },
+  { name: "Sıla", roleKey: "about.team.sila.role" },
 ];
 
 export async function generateMetadata({

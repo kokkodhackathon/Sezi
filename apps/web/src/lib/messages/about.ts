@@ -23,7 +23,7 @@ export const tr = {
   "about.team.ediz.role": "Backend",
   "about.team.eda.role": "Frontend",
   "about.team.inci.role": "Tasarım",
-  "about.team.zehra.role": "Veri",
+  "about.team.sila.role": "Veri",
 
   // Veri politikası ve telif
   "about.copyright.title": "Veri politikası ve telif",
@@ -68,7 +68,7 @@ export const en: Record<keyof typeof tr, string> = {
   "about.team.ediz.role": "Backend",
   "about.team.eda.role": "Frontend",
   "about.team.inci.role": "Design",
-  "about.team.zehra.role": "Data",
+  "about.team.sila.role": "Data",
 
   // Data policy and copyright
   "about.copyright.title": "Data policy and copyright",

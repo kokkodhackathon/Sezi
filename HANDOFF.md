@@ -41,7 +41,7 @@ Tespit: motor Lynch'e göre rota seçmiyor (yalnız mesafe), sokak adlarını (1
 ## Bilinen sorunlar
 
 - **Rotalar fazla dönüşlü** (ör. Zafer Plaza'dan ilk 270 m'de 7 dönüş). Dijkstra yalnız mesafe/profil ağırlığına bakıyor; "düz harita" hissi buradan.
-- Lynch noktaları ekip bilgisine dayanıyor, hepsi `verified: false` — Zehra sahada doğrulayacak.
+- Lynch noktaları ekip bilgisine dayanıyor, hepsi `verified: false` — Sıla sahada doğrulayacak.
 - Çevrimdışı önbellek yok (ROADMAP #4, P0): uçak modunda Keşfet boş açılır; rota/rehberlik gömülü grafikle çalışır.
 - Yeniden tasarlanmamış ekranlar: Sor, Profil, Ayarlar, Hakkında, Onboarding (eski stil, çalışıyor).
 - Supabase advisor'da tek uyarı: `auth_leaked_password_protection` (dashboard ayarı, ücretli özellik; kabul edildi).
@@ -60,7 +60,7 @@ Tespit: motor Lynch'e göre rota seçmiyor (yalnız mesafe), sokak adlarını (1
 5. **CI** (ROADMAP #13, ~1 saat): typecheck + test her push'ta.
 6. Kalan ekranların Çini tasarımına geçirilmesi.
 
-Ekip işleri ROADMAP'te: Zehra (Lynch noktalarını sahada doğrulama, fotoğraf kutusu, konum iğneleri), İnci (ikon, splash), Eda (TalkBack denetimi).
+Ekip işleri ROADMAP'te: Sıla (Lynch noktalarını sahada doğrulama, fotoğraf kutusu, konum iğneleri), İnci (ikon, splash), Eda (TalkBack denetimi).
 
 ## Erişim ve hesaplar
 

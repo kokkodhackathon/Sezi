@@ -6,7 +6,7 @@ Bu dosyayı işe başlamadan önce okuyun. Son durum ve sıradaki işler: [HANDO
 
 - **Sezi:** vakıf eserlerine Kevin Lynch'in bilişsel haritalama yaklaşımıyla (landmark / node / path / district) yön tarif eden, çok duyulu ve erişilebilir keşif uygulaması.
 - **Bağlam:** 42 Türkiye x Vakıf Katılım KÖK&KOD Hackathon, takım LAHMACUN. Final ve canlı demo 7–8 Kasım 2026.
-- **Ekip:** Ediz (backend), Eda (frontend), İnci (tasarım), Zehra (veri).
+- **Ekip:** Ediz (backend), Eda (frontend), İnci (tasarım), Sıla (veri).
 - **Kapsam:** Hatay, Konya ve Bursa. Veri, Vakıf Katılım'ın vakıf eserleri envanter kitaplarından geliyor.
 - **Pilot alan:** Bursa, Ulu Cami ve Hanlar Bölgesi. Sesli rehberlik ve rota yalnızca burada var.
 - **Dil:** Arayüz TR + EN. Kod tanımlayıcıları İngilizce; yorumlar, belgeler ve commit mesajları Türkçe.
