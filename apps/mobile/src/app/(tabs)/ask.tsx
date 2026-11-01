@@ -1,15 +1,15 @@
 import { loc, searchWorks, type AskCitation, type AskHistoryMessage, type SweetTheme, type WorkRow } from '@sezi/shared';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, FlatList, KeyboardAvoidingView, Linking, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AccessibilityInfo, FlatList, KeyboardAvoidingView, Linking, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Animated, { cancelAnimation, useAnimatedStyle, useSharedValue, withDelay, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { useTabBarSpace } from '@/components/app-tabs';
 import { ScreenHeader } from '@/components/screen-header';
-import { Chip, Eyebrow, Note } from '@/components/ui';
-import { ChevronIcon, InfoIcon, TurnIcon } from '@/design/icons';
-import { FadeInItem, outline, SoftPressable } from '@/design/sweet/components';
+import { Button, Eyebrow, Note } from '@/components/ui';
+import { ChatIcon, ChevronIcon, InfoIcon, PlusIcon, TurnIcon } from '@/design/icons';
+import { FadeInItem, IconBubble, outline, SoftPressable, SweetSheet } from '@/design/sweet/components';
 import { duration, ease, stagger } from '@/design/sweet/motion';
 import { radius, space, type } from '@/design/type';
 import { WorkGlyph } from '@/design/work-glyph';
@@ -37,18 +37,25 @@ export default function Ask() {
   const tabSpace = useTabBarSpace();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+  const [sheet, setSheet] = useState<'privacy' | 'reset' | null>(null);
+  const [sourceMessage, setSourceMessage] = useState<Message | null>(null);
+  const [sourceError, setSourceError] = useState(false);
+  const [awayFromBottom, setAwayFromBottom] = useState(false);
+  const followBottom = useRef(true);
   const listRef = useRef<FlatList<Message>>(null);
   const nextId = useRef(1);
   const animatedIds = useRef(new Set<number>());
   const [waiting, setWaiting] = useState(false);
   const pending = useRef(false);
   const mounted = useRef(true);
-  useEffect(() => () => { mounted.current = false; }, []);
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   const ask = async (question: string) => {
     const q = question.trim();
     if (!q || pending.current) return;
     pending.current = true;
+    followBottom.current = true;
+    setAwayFromBottom(false);
     const message: Message = { id: nextId.current++, role: 'user', text: q };
     setMessages((m) => [...m, message]);
     setWaiting(true);
@@ -86,25 +93,44 @@ export default function Ask() {
     pending.current = false;
   };
 
-  const suggestions = [tr('ask.suggest1'), tr('ask.suggest2'), tr('ask.suggest3')];
+  const suggestions = [
+    { question: tr('ask.suggest1'), topic: tr('ask.topicHistory'), glyph: 'cami' },
+    { question: tr('ask.suggest2'), topic: tr('ask.topicArchitecture'), glyph: 'han' },
+    { question: tr('ask.suggest3'), topic: tr('ask.topicExplore'), glyph: 'carsi' },
+  ];
 
   const header = (
-    <View style={{ gap: space.lg, paddingBottom: space.md }}>
-      <ScreenHeader title={tr('ask.title')} />
-      <Text style={[type.body, { color: t.text }]}>{tr('design.askIntro')}</Text>
+    <View style={s.welcome}>
+      <View style={[s.welcomeMark, outline(t)]}><ChatIcon color={t.primary.ink} size={32} /></View>
+      <Text accessibilityRole="header" style={[type.editorial, { color: t.text }]}>{tr('ask.welcome')}</Text>
+      <Text style={[type.body, { color: t.textMuted }]}>{tr('ask.welcomeBody')}</Text>
       <View style={s.suggestions}>
-        {suggestions.map((q, index) => (
-          <FadeInItem key={q} index={index}>
-            <Chip label={q} selected={false} onPress={() => ask(q)} />
+        {suggestions.map(({ question, topic, glyph }, index) => (
+          <FadeInItem key={question} index={index}>
+            <SoftPressable onPress={() => ask(question)} disabled={waiting} accessibilityRole="button" accessibilityLabel={question} accessibilityState={{ disabled: waiting }} style={[s.suggestion, outline(t)]}>
+              <WorkGlyph slug={glyph} size={40} />
+              <View style={{ flex: 1, gap: space.xs }}>
+                <Text style={[type.meta, { color: t.textMuted }]}>{topic}</Text>
+                <Text style={[type.itemTitle, { color: t.text }]}>{question}</Text>
+              </View>
+              <ChevronIcon color={t.primaryText} size={18} />
+            </SoftPressable>
           </FadeInItem>
         ))}
       </View>
-      <Note text={tr('design.askScope')} icon={<InfoIcon color={t.textMuted} />} />
     </View>
   );
 
   return (
     <SafeAreaView style={s.screen} edges={['top']}>
+      <View style={s.topBar}>
+        <ScreenHeader title={tr('ask.title')} action={
+          <View style={{ flexDirection: 'row', gap: space.xs }}>
+            <IconBubble label={tr('ask.howTitle')} icon={c => <InfoIcon color={c} />} onPress={() => setSheet('privacy')} />
+            {messages.length > 0 && !waiting ? <IconBubble label={tr('ask.newChat')} icon={c => <PlusIcon color={c} />} onPress={() => { if (!pending.current) setSheet('reset'); }} /> : null}
+          </View>
+        } />
+      </View>
       {/* Android uçtan uca çizimde pencere klavyeyle küçülmüyor; yazı alanını klavyenin üstünde tutmak için iki platformda da padding. */}
       <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
         <FlatList
@@ -112,14 +138,26 @@ export default function Ask() {
           keyboardShouldPersistTaps="handled"
           data={messages}
           keyExtractor={(m) => String(m.id)}
-          ListHeaderComponent={header}
-          contentContainerStyle={s.list}
-          onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: !reducedMotion })}
+          ListEmptyComponent={header}
+          contentContainerStyle={[s.list, messages.length === 0 && { flexGrow: 1 }]}
+          keyboardDismissMode="on-drag"
+          onScroll={({ nativeEvent: e }) => {
+            const away = e.contentSize.height - e.layoutMeasurement.height - e.contentOffset.y > 100;
+            followBottom.current = !away;
+            setAwayFromBottom(away);
+          }}
+          scrollEventThrottle={100}
+          onContentSizeChange={() => { if (messages.length && followBottom.current) listRef.current?.scrollToEnd({ animated: !reducedMotion }); }}
           ListFooterComponent={waiting ? <WaitingIndicator label={tr('ask.waiting')} /> : null}
           renderItem={({ item }) => <MessageReveal id={item.id} eligible={item.id >= nextId.current - 2} animatedIds={animatedIds.current}>{item.role === 'user' ? <UserBubble text={item.text} t={t} label={tr('ask.you')} /> : SeziAnswer({ msg: item, t })}</MessageReveal>}
         />
+        {awayFromBottom && messages.length > 0 ? <Button compact label={tr('ask.latest')} variant="secondary" style={{ alignSelf: 'center', marginVertical: space.xs }} onPress={() => { followBottom.current = true; setAwayFromBottom(false); listRef.current?.scrollToEnd({ animated: !reducedMotion }); }} /> : null}
         {/* Yazı alanı yüzen sekme çubuğunun üstünde durur; klavye açıkken çubuk gizli, boşluk küçülür. */}
-        <View style={[s.composer, { marginBottom: tabSpace - space.lg }]}>
+        <View style={{ marginBottom: Math.max(0, tabSpace - space.lg) }}>
+        {messages.length === 0 ? <SoftPressable accessibilityRole="button" accessibilityLabel={tr('ask.privacyShort')} onPress={() => setSheet('privacy')} style={s.privacyLink}>
+          <InfoIcon color={t.textMuted} size={16} /><Text style={[type.meta, { color: t.textMuted, flexShrink: 1 }]}>{tr('ask.privacyShort')}</Text>
+        </SoftPressable> : null}
+        <View style={s.composer}>
           <TextInput
             value={input}
             onChangeText={setInput}
@@ -127,9 +165,11 @@ export default function Ask() {
             placeholderTextColor={t.textMuted}
             accessibilityLabel={tr('ask.placeholder')}
             returnKeyType="send"
+            multiline
+            submitBehavior="submit"
             onSubmitEditing={() => ask(input)}
             style={[type.body, s.input]}
-            maxLength={200}
+            maxLength={240}
           />
           <SoftPressable
             onPress={() => ask(input)}
@@ -141,7 +181,30 @@ export default function Ask() {
             <TurnIcon turn="straight" color={t.primary.ink} size={24} />
           </SoftPressable>
         </View>
+        {input.length >= 200 ? <Text style={[type.meta, { color: t.textMuted, textAlign: 'right', paddingHorizontal: space.xl }]}>{tr('ask.limit', { n: input.length })}</Text> : null}
+        </View>
       </KeyboardAvoidingView>
+      <SweetSheet visible={sheet === 'privacy'} onClose={() => setSheet(null)} title={tr('ask.howTitle')}>
+        <Text style={[type.body, { color: t.text }]}>{tr('design.askScope')}</Text>
+      </SweetSheet>
+      <SweetSheet visible={sheet === 'reset'} onClose={() => setSheet(null)} title={tr('ask.newChatTitle')}>
+        <View style={{ gap: space.lg }}>
+          <Text style={[type.body, { color: t.text }]}>{tr('ask.newChatBody')}</Text>
+          <Button label={tr('ask.newChat')} onPress={() => { if (pending.current) return; setMessages([]); setInput(''); animatedIds.current.clear(); followBottom.current = true; setAwayFromBottom(false); setSheet(null); }} />
+          <Button label={tr('ask.keepChat')} variant="ghost" onPress={() => setSheet(null)} />
+        </View>
+      </SweetSheet>
+      <SweetSheet visible={!!sourceMessage} onClose={() => setSourceMessage(null)} title={tr('ask.sources')}>
+        <ScrollView style={{ maxHeight: 420 }} contentContainerStyle={{ gap: space.md }}>
+          {sourceMessage?.citations?.map(c => <View key={c.index} style={[s.sourceCard, outline(t)]}>
+            <Text style={[type.itemTitle, { color: t.text }]}>[{c.index}] {c.workName}</Text>
+            <Text selectable style={[type.body, { color: t.text }]}>{c.sourceTitle}</Text>
+            <Text style={[type.meta, { color: t.textMuted }]}>{[c.sourcePublisher, c.sourceYear, c.sourceVolume ? tr('ask.volume', { n: c.sourceVolume }) : null, c.sourcePage ? tr('ask.page', { page: c.sourcePage }) : null].filter(Boolean).join(' · ')}</Text>
+            {c.sourceUrl ? <Button compact label={tr('ask.openSource')} variant="secondary" onPress={() => { setSourceError(false); void Linking.openURL(c.sourceUrl!).catch(() => setSourceError(true)); }} /> : null}
+          </View>)}
+          {sourceError ? <Text accessibilityLiveRegion="polite" style={[type.body, { color: t.danger }]}>{tr('ask.sourceError')}</Text> : null}
+        </ScrollView>
+      </SweetSheet>
     </SafeAreaView>
   );
 
@@ -149,36 +212,14 @@ export default function Ask() {
     return (
       <View style={[s.answer, outline(t)]} accessibilityLiveRegion="polite">
         <Eyebrow text={tr('ask.sezi')} />
-        <Text style={[type.body, { color: t.text }]}>{msg.text}</Text>
-        {msg.mode === 'local' ? <Note text={tr('ask.localFallback')} icon={<InfoIcon color={t.textMuted} />} /> : null}
+        <Text selectable style={[type.body, { color: t.text }]}>{msg.text}</Text>
+        {msg.mode === 'local' ? <View style={{ gap: space.sm }}>
+          <Note text={tr('ask.localFallback')} icon={<InfoIcon color={t.textMuted} />} />
+          {msg.id === messages[messages.length - 1]?.id && !waiting ? <Button compact variant="secondary" label={tr('ask.retry')} onPress={() => { const lastQuestion = [...messages].reverse().find(m => m.role === 'user'); if (lastQuestion) void ask(lastQuestion.text); }} /> : null}
+        </View> : null}
         {msg.citations?.length ? (
           <View style={s.citations}>
-            <Eyebrow text={tr('ask.sources')} />
-            {msg.citations.map((citation) => {
-              const detail = [
-                citation.sourcePublisher,
-                citation.sourceYear,
-                citation.sourceVolume ? tr('ask.volume', { n: citation.sourceVolume }) : null,
-                citation.sourcePage ? tr('ask.page', { page: citation.sourcePage }) : null,
-              ].filter(Boolean).join(' · ');
-              const body = (
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text style={[type.meta, { color: t.text }]}>[{citation.index}] {citation.workName}</Text>
-                  <Text style={[type.meta, { color: t.textMuted }]}>{citation.sourceTitle}{detail ? ` · ${detail}` : ''}</Text>
-                </View>
-              );
-              return citation.sourceUrl ? (
-                <SoftPressable
-                  key={citation.index}
-                  onPress={() => void Linking.openURL(citation.sourceUrl!)}
-                  accessibilityRole="link"
-                  accessibilityLabel={`[${citation.index}] ${citation.workName}, ${citation.sourceTitle}${detail ? `, ${detail}` : ''}`}
-                  accessibilityHint={tr('ask.sourceOpen')}
-                  style={s.citation}>
-                  {body}<ChevronIcon color={t.textMuted} />
-                </SoftPressable>
-              ) : <View key={citation.index} style={s.citation}>{body}</View>;
-            })}
+            <Button compact label={tr('ask.sourcesCount', { n: msg.citations.length })} variant="secondary" icon={c => <InfoIcon color={c} size={18} />} onPress={() => { setSourceError(false); setSourceMessage(msg); }} />
           </View>
         ) : null}
         {msg.works?.map((w) => {
@@ -195,7 +236,7 @@ export default function Ask() {
               <View style={{ flex: 1, gap: 2 }}>
                 <Text style={[type.itemTitle, { color: t.text }]}>{name}</Text>
                 <Text style={[type.meta, { color: t.textMuted }]}>
-                  {loc(w.type_name, lang)} · {tr('ask.sources')}: {w.sources.map((x) => x.publisher ?? x.title).join(', ')}
+                  {tr('ask.workDetail')} · {loc(w.type_name, lang)}
                 </Text>
               </View>
               <ChevronIcon color={t.textMuted} />
@@ -260,8 +301,14 @@ const bubble = StyleSheet.create({
 const makeStyles = (t: SweetTheme) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: t.background },
+    topBar: { paddingHorizontal: space.xl, paddingBottom: space.sm },
+    welcome: { gap: space.md, paddingTop: space.md, paddingBottom: space.lg },
+    welcomeMark: { width: 48, height: 48, borderRadius: radius.md, backgroundColor: t.primary.fill, alignItems: 'center', justifyContent: 'center', marginBottom: space.sm },
+    suggestion: { flexDirection: 'row', alignItems: 'center', gap: space.md, backgroundColor: t.surface, borderRadius: radius.lg, padding: space.lg, minHeight: 88 },
+    privacyLink: { minHeight: 48, paddingHorizontal: space.xl, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space.sm },
+    sourceCard: { padding: space.lg, gap: space.sm, backgroundColor: t.soft, borderRadius: radius.md },
     list: { paddingHorizontal: space.xl, paddingBottom: space.lg, gap: space.lg },
-    suggestions: { flexDirection: 'row', flexWrap: 'wrap', gap: space.sm },
+    suggestions: { gap: space.md, paddingTop: space.sm },
     answer: {
       gap: space.sm,
       padding: space.lg,
@@ -280,16 +327,9 @@ const makeStyles = (t: SweetTheme) =>
       borderTopColor: t.border,
     },
     citations: { gap: space.xs, paddingTop: space.xs },
-    citation: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: space.sm,
-      minHeight: 52,
-      paddingVertical: space.xs,
-    },
     composer: {
       flexDirection: 'row',
-      alignItems: 'center',
+      alignItems: 'flex-end',
       gap: space.sm,
       paddingHorizontal: space.lg,
       paddingVertical: space.sm,
@@ -300,6 +340,8 @@ const makeStyles = (t: SweetTheme) =>
     input: {
       flex: 1,
       minHeight: 54,
+      maxHeight: 140,
+      paddingVertical: space.md,
       paddingHorizontal: space.lg,
       borderRadius: radius.md,
       borderCurve: 'continuous',

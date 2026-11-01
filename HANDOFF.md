@@ -4,6 +4,8 @@ Son güncelleme: 1 Kasım 2026. Yeni oturum önce [AGENTS.md](AGENTS.md)'yi, son
 
 ## Şu an neredeyiz
 
+- **Sor UI/UX (1 Kasım):** kısa karşılama ve konulu soru kartları yalnız boş sohbette; sabit başlıkta açıklama paneli ve onaylı yeni sohbet. Kaynaklar yanıt altındaki sayaçtan panelde açılır; eser kartı sade. Çok satırlı 240 karakter alanı, beklerken gönderim engeli, yerel hatada yeniden dene, eski mesaj okunurken otomatik kaydırmayı bırakma ve son mesaja dönme. TR/EN ve tema token'ları korunur. iOS'ta örnek soru → yanıt → kaynak paneli ve yeni sohbet onayı denendi; Android ve ekran klavyesiyle fiziksel cihaz testi bekliyor.
+
 - **Sohbet arama denemesi (1 Kasım):** gerçek `works_view` listesi + mobilin `searchWorks` araması + canlı `ask` ile 8 soru denendi. İlk turdaki Ulu Cami ayrı/bitişik yazımı ve sohbet sözcüklerinin (misin, biraz, anlatır vb.) adayları elemesi düzeltildi. Tekrar: 8/8 geçti; 7 kaynaklı cevap, 1 bilinmeyen ziyaret saatine red. Testler 155/155, typecheck ve mobil lint temiz. Şehirsiz Ulu Cami sorusu çok adaylı; model Bursa'yı varsayabiliyor, şehir netleştirme ileride ele alınmalı.
 
 - **1 Kasım arama düzeltmesi:** mobil önerideki `Ulucami’yi` sorusunda kesme sonrası `yi` eki Yıldırım eserleriyle eşleşip Ulucami'yi eliyordu. Sorguda kesme sonrası ek ayrıştırılır; düz/eğri kesme regresyon testi ve birebir mobil soru canlı değerlendirmeye eklendi.

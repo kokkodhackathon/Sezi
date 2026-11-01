@@ -36,6 +36,8 @@ Son güncelleme: 15 Ekim 2026. Görevi bitiren, durum sütununu günceller. Anl�
 
 ## Backlog
 
+1 Kasım — #11 arayüzü: konulu örnek sorular, kaynak ayrıntı paneli, açıklama paneli, onaylı yeni sohbet, çok satırlı yazı alanı ve kontrollü otomatik kaydırma. iOS örnek soru/yanıt/kaynak/yeni sohbet akışı denendi; Android, ekran klavyesi ve büyük yazı saha kontrolü bekliyor.
+
 1 Kasım — #11 sohbet denemesi: gerçek eser listesiyle 8 canlı soruda bulunan ayrı/bitişik Ulucami ve sohbet sözcüğü sorunları düzeltildi; ikinci tur 8/8. Bekleyen: birden fazla şehirde aynı adlı eser varsa şehir netleştirmesi.
 
 1 Kasım — #11: `Ulucami’yi` gibi kesmeli eser adlarının aday eşleşmesini bozan ek ayrıştırması düzeltildi; düz/eğri kesme için regresyon testi eklendi.
