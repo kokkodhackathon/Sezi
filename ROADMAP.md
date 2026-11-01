@@ -36,6 +36,8 @@ Son güncelleme: 15 Ekim 2026. Görevi bitiren, durum sütununu günceller. Anl�
 
 ## Backlog
 
+1 Kasım — #11: kimlik/selamlaşma çevrimdışı da doğal yanıt; genel şehir keşfi için ortak `searchAskWorks`, kaynaklı yer önerileri ve istemci boşken sunucu araması. Uzun konuşma geçmişinin 600 karakter sınırı düzeltildi. Canlı değerlendirme 17/17, birim testleri 158/158.
+
 1 Kasım — #11 arayüzü: konulu örnek sorular, kaynak ayrıntı paneli, açıklama paneli, onaylı yeni sohbet, çok satırlı yazı alanı ve kontrollü otomatik kaydırma. iOS örnek soru/yanıt/kaynak/yeni sohbet akışı denendi; Android, ekran klavyesi ve büyük yazı saha kontrolü bekliyor.
 
 1 Kasım — #11 sohbet denemesi: gerçek eser listesiyle 8 canlı soruda bulunan ayrı/bitişik Ulucami ve sohbet sözcüğü sorunları düzeltildi; ikinci tur 8/8. Bekleyen: birden fazla şehirde aynı adlı eser varsa şehir netleştirmesi.

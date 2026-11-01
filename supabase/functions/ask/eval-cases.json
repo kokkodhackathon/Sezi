@@ -1,4 +1,9 @@
 [
+  { "name": "Sohbet kimlik", "lang": "tr", "question": "Senin adın ne", "candidateSlugs": [], "expectMode": "conversation", "expectWorkSlugs": [], "expectAnswerIncludes": "Sezi" },
+  { "name": "Sohbet merhaba", "lang": "tr", "question": "Merhaba Sezi", "candidateSlugs": [], "expectMode": "conversation", "expectWorkSlugs": [] },
+  { "name": "Bursa geniş keşif sunucu araması", "lang": "tr", "question": "Bursa da nerelere gidebilirim", "candidateSlugs": [], "expectMode": "rag", "expectWorkSlugs": [], "expectWorkPrefix": "bursa-" },
+  { "name": "Konya keşif sunucu araması", "lang": "tr", "question": "Konya'da gezilecek yer önerir misin?", "candidateSlugs": [], "expectMode": "rag", "expectWorkSlugs": [], "expectWorkPrefix": "konya-" },
+  { "name": "Bursa keşif İngilizce", "lang": "en", "question": "What can I visit in Bursa?", "candidateSlugs": [], "expectMode": "rag", "expectWorkSlugs": [], "expectWorkPrefix": "bursa-" },
   { "name": "Ulucami mobil öneri Türkçe kesme", "lang": "tr", "question": "Bursa Ulucami’yi kim yaptırdı?", "candidateSlugs": ["bursa-ulucami"], "expectMode": "rag", "expectWorkSlugs": ["bursa-ulucami"] },
   { "name": "Ulucami bani", "lang": "tr", "question": "Bursa Ulucami'yi kim yaptırdı?", "candidateSlugs": ["bursa-ulucami"], "expectMode": "rag", "expectWorkSlugs": ["bursa-ulucami"] },
   { "name": "Ulucami tarih", "lang": "tr", "question": "Ulucami ne zaman yapıldı?", "candidateSlugs": ["bursa-ulucami"], "expectMode": "rag", "expectWorkSlugs": ["bursa-ulucami"] },
@@ -10,5 +15,5 @@
   { "name": "İngilizce yanıt", "lang": "en", "question": "Who commissioned Bursa Grand Mosque?", "candidateSlugs": ["bursa-ulucami"], "expectMode": "rag", "expectWorkSlugs": ["bursa-ulucami"] },
   { "name": "Bağlamlı takip", "lang": "tr", "question": "Peki mimarisinde öne çıkan ne?", "candidateSlugs": ["bursa-ulucami"], "history": [{ "role": "user", "text": "Ulucami'yi kim yaptırdı?" }, { "role": "assistant", "text": "Doğrulanmış kaynaklara göre yanıt verildi." }], "expectMode": "rag", "expectWorkSlugs": ["bursa-ulucami"] },
   { "name": "Kaynak dışı gelecek", "lang": "tr", "question": "Ulucami 2035 yılında nasıl görünecek?", "candidateSlugs": ["bursa-ulucami"], "expectMode": "insufficient", "expectWorkSlugs": [] },
-  { "name": "Öznel hüküm", "lang": "tr", "question": "Bursa'nın en güzel vakıf eseri hangisi?", "candidateSlugs": [], "expectMode": "insufficient", "expectWorkSlugs": [] }
+  { "name": "Öznel soruda kaynaklı seçenekler", "lang": "tr", "question": "Bursa'nın en güzel vakıf eseri hangisi?", "candidateSlugs": [], "expectMode": "rag", "expectWorkSlugs": [], "expectWorkPrefix": "bursa-" }
 ]

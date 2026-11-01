@@ -33,7 +33,7 @@ export const AskCitationSchema = z.object({
 export type AskCitation = z.infer<typeof AskCitationSchema>;
 
 export const AskResponseSchema = z.object({
-  mode: z.enum(["rag", "insufficient"]),
+  mode: z.enum(["rag", "insufficient", "conversation"]),
   answer: z.string().trim().min(1).max(2_000),
   citations: z.array(AskCitationSchema).max(6),
   workSlugs: z.array(z.string()).max(10),

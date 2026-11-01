@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { normalize, searchWorks, type SearchableWork } from "./index";
+import { normalize, searchWorks, searchAskWorks, type SearchableWork } from "./index";
 
 const w = (
   name: string,
@@ -27,6 +27,20 @@ const sample = [
 ];
 
 describe("searchWorks", () => {
+  it("geniş keşif sorularında şehirdeki anlatımı dolu eserleri önerir", () => {
+    const works = [
+      {...w("Davut Çeşmesi", "cesme", "Çeşme", "Osmangazi"), summary: null},
+      {...w("Ulucami", "cami", "Cami", "Osmangazi"), summary: {tr: "Yayımlanmış özet"}},
+      {...w("Başka Cami", "cami", "Cami", "Meram", "Konya"), summary: {tr: "Özet"}},
+    ];
+    for (const question of ["Bursa da nerelere gidebilirim", "Bursa'da gezilecek yer önerir misin?", "What can I visit in Bursa?"]) {
+      const found = searchAskWorks(question, works);
+      expect(found[0]?.name.tr).toBe("Ulucami");
+      expect(found.every(x => x.city_name.tr === "Bursa")).toBe(true);
+    }
+    expect(searchAskWorks("Bursa'da hangi çeşmeleri görebilirim?", works).map(x => x.name.tr)).toEqual(["Davut Çeşmesi"]);
+    expect(searchAskWorks("Bursa Ulucami'yi kim yaptırdı?", works).map(x => x.name.tr)).toEqual(["Ulucami"]);
+  });
   it("sohbet soruları ve ayrı/bitişik Ulucami yazımı doğru eseri bulur", () => {
     const works = [w("Ulucami", "cami", "Cami", "Osmangazi"), w("Orhan Bey Camii", "cami", "Cami", "Osmangazi"), w("Alaaddin-i Mısri Türbesi", "turbe", "Türbe", "İznik"), w("Birgi Camii", "cami", "Cami", "Ödemiş")];
     expect(searchWorks("Ulu Cami hakkında biraz bilgi verir misin?", works).map(x => x.name.tr)).toEqual(["Ulucami"]);

@@ -30,10 +30,13 @@ for (const test of cases) {
   const worksOk = test.expectWorkSlugs.every((slug) => cited.has(slug));
   const sections = new Set((body?.citations || []).map((citation) => citation.section));
   const sectionsOk = (test.expectSections || []).every((section) => sections.has(section));
-  const sourcesOk = test.expectMode === 'insufficient' || (body?.citations?.length > 0 && body.citations.every((c) => body.answer.includes(`[${c.index}]`)));
-  const ok = modeOk && worksOk && sectionsOk && sourcesOk;
+  const sourcesOk = test.expectMode !== 'rag' || (body?.citations?.length > 0 && body.citations.every((c) => body.answer.includes(`[${c.index}]`)));
+  const cityOk = !test.expectWorkPrefix || (body?.workSlugs?.length > 0 && body.workSlugs.every(slug => slug.startsWith(test.expectWorkPrefix)));
+  const answerOk = !test.expectAnswerIncludes || body?.answer?.includes(test.expectAnswerIncludes);
+  const ok = modeOk && worksOk && sectionsOk && sourcesOk && cityOk && answerOk;
   console.log(`${ok ? '✓' : '✗'} ${test.name}: HTTP ${res.status}, ${body?.mode || body?.error || 'yanıt yok'}`);
   if (!ok) failed += 1;
+  if (process.env.EVAL_SHOW_ANSWERS === '1') console.log(JSON.stringify({ answer: body?.answer, works: body?.workSlugs }));
 }
 
 if (failed) throw new Error(`${failed}/${cases.length} değerlendirme başarısız`);

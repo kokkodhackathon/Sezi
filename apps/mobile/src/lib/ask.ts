@@ -1,4 +1,4 @@
-import { AskResponseSchema, searchWorks, type AskHistoryMessage, type AskResponse, type WorkRow } from '@sezi/shared';
+import { AskResponseSchema, askConversationReply, searchAskWorks, type AskHistoryMessage, type AskResponse, type WorkRow } from '@sezi/shared';
 
 import { deviceId } from './device';
 import type { Lang } from './i18n';
@@ -22,15 +22,17 @@ export async function askSezi(
   history: AskHistoryMessage[],
   previousWorkSlugs: string[],
 ): Promise<AskResult> {
-  const local = searchWorks(question, works).slice(0, MAX_CANDIDATES);
-  const candidateSlugs = [...new Set([...local.map((w) => w.slug), ...previousWorkSlugs])].slice(0, 10);
+  const conversation = askConversationReply(question, lang);
+  if (conversation) return { response: { mode: 'conversation', answer: conversation, citations: [], workSlugs: [] }, works: [] };
+  const local = searchAskWorks(question, works).slice(0, MAX_CANDIDATES);
+  const candidateSlugs = [...new Set(local.length ? local.map((w) => w.slug) : previousWorkSlugs)].slice(0, 10);
   const { data, error } = await supabase.functions.invoke('ask', {
     body: {
       question,
       lang,
       deviceId: deviceId(),
       candidateSlugs,
-      history: history.slice(-6),
+      history: history.slice(-6).map(m => ({ ...m, text: m.text.slice(0, 600) })),
     },
   });
   if (error) throw error;

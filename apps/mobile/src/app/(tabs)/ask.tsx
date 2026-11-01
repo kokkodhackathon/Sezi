@@ -1,4 +1,4 @@
-import { loc, searchWorks, type AskCitation, type AskHistoryMessage, type SweetTheme, type WorkRow } from '@sezi/shared';
+import { loc, searchAskWorks, type AskCitation, type AskHistoryMessage, type SweetTheme, type WorkRow } from '@sezi/shared';
 import { router } from 'expo-router';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, FlatList, KeyboardAvoidingView, Linking, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -25,7 +25,7 @@ type Message = {
   text: string;
   works?: WorkRow[];
   citations?: AskCitation[];
-  mode?: 'rag' | 'insufficient' | 'local';
+  mode?: 'rag' | 'insufficient' | 'conversation' | 'local';
 };
 
 export default function Ask() {
@@ -76,7 +76,7 @@ export default function Ask() {
       };
     } catch {
       // İnternet, Edge Function ya da LLM kullanılamıyorsa doğrulanmış kayıtların cihazdaki yerel araması çalışır.
-      const found = searchWorks(q, works ?? []).slice(0, 10);
+      const found = searchAskWorks(q, works ?? []).slice(0, 10);
       answer = {
         id: nextId.current++,
         role: 'sezi',

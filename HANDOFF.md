@@ -4,6 +4,10 @@ Son güncelleme: 1 Kasım 2026. Yeni oturum önce [AGENTS.md](AGENTS.md)'yi, son
 
 ## Şu an neredeyiz
 
+- **Son cihaz doğrulaması:** localhost Metro bağlantısıyla iOS'ta `Senin adın ne?` → Sezi tanıtımı, `Bursa da nerelere gidebilirim` → üç Bursa eseri + üç kaynak ve eser kartları doğrulandı.
+
+- **Geniş sorular ve sohbet (1 Kasım):** `askConversationReply` kimlik/selam/teşekkürü cihazda ve sunucuda `conversation` moduyla yanıtlar. `searchAskWorks` keşif sorularında şehir/tür filtresi ve anlatım kapsamını kullanır; açık eser adı korunur. İstemci aday gönderemezse sunucu aynı aramayla yalnız `verified` eserleri okur. Yeni konu bulunduğunda önceki eserler karıştırılmaz; konuşma geçmişi ileti başına 600 karakterle sınırlanır. Öneride 3 yer ve kaynaklı seçenekler; güzellik hükmü yerine alternatifler. 158 test, typecheck ve mobil lint temiz; canlı değerlendirme 17/17. Simulator'ın eski ağ adresi güncel kodu almasını engelliyordu, localhost geliştirme bağlantısına dönüldü.
+
 - **Sor UI/UX (1 Kasım):** kısa karşılama ve konulu soru kartları yalnız boş sohbette; sabit başlıkta açıklama paneli ve onaylı yeni sohbet. Kaynaklar yanıt altındaki sayaçtan panelde açılır; eser kartı sade. Çok satırlı 240 karakter alanı, beklerken gönderim engeli, yerel hatada yeniden dene, eski mesaj okunurken otomatik kaydırmayı bırakma ve son mesaja dönme. TR/EN ve tema token'ları korunur. iOS'ta örnek soru → yanıt → kaynak paneli ve yeni sohbet onayı denendi; Android ve ekran klavyesiyle fiziksel cihaz testi bekliyor.
 
 - **Sohbet arama denemesi (1 Kasım):** gerçek `works_view` listesi + mobilin `searchWorks` araması + canlı `ask` ile 8 soru denendi. İlk turdaki Ulu Cami ayrı/bitişik yazımı ve sohbet sözcüklerinin (misin, biraz, anlatır vb.) adayları elemesi düzeltildi. Tekrar: 8/8 geçti; 7 kaynaklı cevap, 1 bilinmeyen ziyaret saatine red. Testler 155/155, typecheck ve mobil lint temiz. Şehirsiz Ulu Cami sorusu çok adaylı; model Bursa'yı varsayabiliyor, şehir netleştirme ileride ele alınmalı.

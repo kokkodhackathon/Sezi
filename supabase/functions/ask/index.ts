@@ -4,6 +4,8 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { z } from 'npm:zod@3';
 
 import { llmProviderFromEnv, type LlmContext } from '../_shared/llm.ts';
+import { askConversationReply } from '../../../packages/shared/src/ask-conversation.ts';
+import { searchAskWorks } from '../../../packages/shared/src/search.ts';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -57,13 +59,25 @@ Deno.serve(async (req) => {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return json(400, { error: 'bad_request' });
 
+  const conversation = askConversationReply(parsed.data.question, parsed.data.lang);
+  if (conversation) return json(200, { mode: 'conversation', answer: conversation, citations: [], workSlugs: [] });
+
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
+  // İstemci listesi boşsa da şehir/keşif sorularını sunucudaki yayımlanmış kayıtlardan çöz.
+  let candidates = parsed.data.candidateSlugs;
+  if (!candidates.length) {
+    const catalog = await admin.from('works_view')
+      .select('slug,name,type_slug,type_name,district,city_name,summary')
+      .eq('status', 'verified').order('slug').limit(1000);
+    if (catalog.error) return json(500, { error: 'db' });
+    candidates = searchAskWorks(parsed.data.question, catalog.data ?? []).slice(0, 8).map(w => w.slug);
+  }
   const found = await admin.rpc('search_ask_chunks', {
     p_query: parsed.data.question,
     p_lang: parsed.data.lang,
-    p_work_slugs: parsed.data.candidateSlugs,
+    p_work_slugs: candidates,
     p_limit: 12,
   });
   if (found.error) {

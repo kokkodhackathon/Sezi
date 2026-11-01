@@ -143,3 +143,31 @@ export function searchWorks<W extends SearchableWork>(query: string, works: W[])
     .sort((a, b) => b.score - a.score)
     .map((x) => x.work);
 }
+
+type AskSearchableWork = SearchableWork & {
+  slug: string;
+  summary?: { tr?: string; en?: string } | null;
+  history?: { tr?: string; en?: string } | null;
+};
+
+/** Genel liste aramasından farklı olarak sohbetin keşif niyetini ve yayımlanmış anlatım kapsamını kullanır. */
+export function searchAskWorks<W extends AskSearchableWork>(query: string, works: W[]): W[] {
+  const q = normalize(query.replace(/['’ʼ][\p{L}]+/gu, ''));
+  const words = q.split(/\s+/);
+  const cities = [...new Set(works.flatMap(w => [w.city_name.tr, w.city_name.en]).filter((city): city is string => !!city))]
+    .filter(city => (` ${q} `).includes(` ${normalize(city)} `));
+  const pool = cities.length ? works.filter(w => cities.some(city => [w.city_name.tr, w.city_name.en].includes(city))) : works;
+  // Açık eser adı varsa genel öneriden önce o eseri koru.
+  const named = pool.filter(w => [w.name.tr, w.name.en].some(name => name && (` ${q} `).includes(` ${normalize(name)} `)));
+  if (named.length) return named;
+  const exploring = /(nereler|nereye|nereyi|gide|geze|gezil|gore|goru|oner|kesfet|guzel|visit|explor|recommend|what.*see|where.*go|best|beautiful)/.test(q);
+  if (exploring && cities.length) {
+    const typeWords = words.filter(word => !word.startsWith('hangi') && TYPE_HINTS.some(([stem]) => word.startsWith(stem) && (stem.length >= 3 || word === stem)));
+    const selected = typeWords.length ? searchWorks(typeWords.join(' '), pool) : pool;
+    return [...selected].sort((a, b) => {
+      const coverage = (w: W) => Number(!!(w.summary?.tr || w.summary?.en)) * 2 + Number(!!(w.history?.tr || w.history?.en));
+      return coverage(b) - coverage(a) || a.slug.localeCompare(b.slug);
+    });
+  }
+  return searchWorks(query, works);
+}
