@@ -84,7 +84,8 @@ const tokens = (...parts: (string | null | undefined)[]) => normalize(parts.filt
  * hiçbir eserde geçmeyen kelime ("hangi", "da") yok sayılır. Sıra: adın ilk kelimesi, ad, tür, yer eşleşmesi.
  */
 export function searchWorks<W extends SearchableWork>(query: string, works: W[]): W[] {
-  const words = normalize(query)
+  // Kesmeden sonraki ek bağımsız ad değildir: Ulucami’yi → Ulucami (yi → Yıldırım olmasın).
+  const words = normalize(query.replace(/['’ʼ][\p{L}]+/gu, ""))
     .split(/\s+/)
     .filter((w) => w.length > 0 && !STOP.has(w));
   if (words.length === 0) return [];

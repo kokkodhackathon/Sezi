@@ -27,6 +27,12 @@ const sample = [
 ];
 
 describe("searchWorks", () => {
+  it("eser adına kesmeyle gelen Türkçe ek başka eserleri zorunlu aday yapmaz", () => {
+    const works = [w("Ulucami", "cami", "Cami", "Osmangazi"), w("Yıldırım Camii", "cami", "Cami", "Yıldırım")];
+    for (const question of ["Bursa Ulucami’yi kim yaptırdı?", "Bursa Ulucami'yi kim yaptırdı?"]) {
+      expect(searchWorks(question, works).map((x) => x.name.tr)).toEqual(["Ulucami"]);
+    }
+  });
   it("Osmangazi'deki hamamlar sorgusu yalnız Osmangazi'deki hamamları döndürür", () => {
     const res = searchWorks("Osmangazi'deki hamamlar", sample);
     expect(res.map((x) => x.name.tr)).toEqual(["İbrahim Paşa Hamamı", "Kayıhan Hamamı"]);

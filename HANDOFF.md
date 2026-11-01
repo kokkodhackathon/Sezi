@@ -4,9 +4,11 @@ Son güncelleme: 1 Kasım 2026. Yeni oturum önce [AGENTS.md](AGENTS.md)'yi, son
 
 ## Şu an neredeyiz
 
+- **1 Kasım arama düzeltmesi:** mobil önerideki `Ulucami’yi` sorusunda kesme sonrası `yi` eki Yıldırım eserleriyle eşleşip Ulucami'yi eliyordu. Sorguda kesme sonrası ek ayrıştırılır; düz/eğri kesme regresyon testi ve birebir mobil soru canlı değerlendirmeye eklendi.
+
 - **Dal:** `feature/seziye-sor` (kullanıcının istediği ad; Sezi'ye Sor geliştirmesi), taban `main` / `origin/main` (`https://github.com/kokkodhackathon/Sezi`). Henüz push/PR yok.
 - **Yanıt dili (1 Kasım):** web ve mobilin ortak yayımlanmış eser bilgileri geçerli kaynak; ikinci kitap alıntısı şartı yok. Sezi kısa, günlük dille sohbet eder; kaynak numaraları korunur, eksik bilgiyi doğal dille söyler.
-- **Testler:** `pnpm test` → 153 test geçiyor. `pnpm typecheck` ve `expo lint` temiz. Sezi'ye Sor canlı değerlendirmesi 11/11, `public` şeması lint'i temiz.
+- **Testler:** `pnpm test` → 154 test geçiyor. `pnpm typecheck` ve `expo lint` temiz. Sezi'ye Sor canlı değerlendirmesi 12/12 (mobil önerideki eğri kesmeli Ulucami sorusu dahil), `public` şeması lint'i temiz.
 - **Navigasyon yeniden tasarımı (17 Ekim, ROADMAP #21):**
   - Noktalar tek tabloda: `nav_points` (roller `start`, `landmark`, `story`, `arrival`), admin → **Noktalar**. `data/lynch` silindi; 12 nokta veritabanında.
   - Mobil: tek `navigate` ekranı (nereden: konumum / başlangıç noktası / haritada seçilen yer; nereye: eser, tur, gezinti). Eski `route/[slug]`, `guide/[slug]`, `walk` ekranları kaldırıldı. Oturum `lib/navigation/session.ts`.
