@@ -40,8 +40,8 @@ const Chunk = z.object({
 });
 
 const insufficient = (lang: 'tr' | 'en') => lang === 'tr'
-  ? 'Doğrulanmış kaynaklarda bu soruyu yanıtlayacak yeterli bilgi bulamadım.'
-  : 'I could not find enough information in the verified sources to answer this question.';
+  ? 'Bu konuda elimde yeterli bilgi yok. Sezi’de yayımlanan bilgilerle henüz yanıtlayamıyorum.'
+  : 'I don’t have enough information on this yet. The details published in Sezi don’t cover it.';
 
 async function subjectHash(deviceId: string, req: Request, secret: string): Promise<string> {
   const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0]!.trim();

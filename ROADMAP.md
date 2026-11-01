@@ -36,6 +36,8 @@ Son güncelleme: 15 Ekim 2026. Görevi bitiren, durum sütununu günceller. Anl�
 
 ## Backlog
 
+1 Kasım — #11: web ve mobilin ortak yayımlanmış eser kayıtlarını kullanan Sezi'ye Sor yanıtları kısa ve sohbet diline geçirildi; kaynak işaretleri korunur. Çalışma dalı kullanıcı isteğiyle `feature/seziye-sor` olarak adlandırıldı.
+
 Öncelik: **P0** demo için şart, **P1** jüri puanını artırır, **P2** zaman kalırsa.
 
 | # | Öncelik | Görev | Sahip | Kabul ölçütü | Durum |
