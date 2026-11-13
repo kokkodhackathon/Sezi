@@ -1,6 +1,6 @@
 # Sezi
 
-**Vakıf eserlerine yön tarif eden, çok duyulu ve erişilebilir keşif uygulaması.**
+**Vakıf eserlerine yön tarif eden, çok duyulu ve erişilebilir keşif uygulamasıdır.**
 
 Sezi, "100 metre sonra sağa dönün" yerine "Sebilin su sesini duyunca meydanın sağına yönelin" der. Yön tarifini koordinatlara değil, Kevin Lynch'in bilişsel haritalama yaklaşımına (yer işareti, düğüm, yol, bölge) dayandırır. Yer işaretlerini ortam sesleriyle, titreşimle ve sesli anlatımla birleştirir. Rota, kullanıcının görme, hareket ve işitme profiline göre hesaplanır: tekerlekli sandalye kullanan biri basamaklı yoldan geçmez, görme engelli biri gürültülü sokaktan uzak tutulur.
 
